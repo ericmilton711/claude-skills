@@ -1,0 +1,53 @@
+# Home Directory Git Ignore
+
+# System and cache files
+.cache/
+.local/
+.config/
+.mozilla/
+.thunderbird/
+.npm/
+.ssh/
+.cups/
+
+# Claude Code
+.claude.json
+.claude.json.backup
+.claude/debug/
+.claude/file-history/
+.claude/history.jsonl
+.claude/session-env/
+.claude/shell-snapshots/
+.claude/stats-cache.json
+.claude/statsig/
+.claude/telemetry/
+.claude/todos/
+.claude/.credentials.json
+
+# Bash history
+.bash_history
+
+# STL and CAD files (specific to your current projects)
+*.stl
+*.scad
+*.ino
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Keep these directories but ignore their contents
+Desktop/*
+Documents/*
+Downloads/*
+Music/*
+Pictures/*
+Public/*
+Templates/*
+Videos/*
+
+# Don't ignore hidden directories we want to track
+!.claude/skills/
+!.claude/CLAUDE.md
