@@ -8,12 +8,13 @@ Sync Claude Code skills and commands across multiple devices using GitHub.
 
 ## Skills Locations on This Computer
 
-| Location | Contents |
-|----------|----------|
-| `C:\Users\ericm\.claude\skills\` | Claude Code skills (midi-keyboard, 3d-printing) |
-| `C:\Users\ericm\.claude\commands\` | Claude Code commands (esp32-closet-lights) |
-| `C:\Users\ericm\skills\` | Project skills (esp32-door-led-strip, esp32-cam-pan-tilt, galaxy-watch-dock) |
-| `C:\Users\ericm\claude-skills\` | Local git repository synced to GitHub |
+| Location | Type | Points To |
+|----------|------|-----------|
+| `C:\Users\ericm\claude-skills\` | Git repo | GitHub (source of truth) |
+| `C:\Users\ericm\.claude\skills\` | Junction | → `claude-skills\skills\` |
+| `C:\Users\ericm\.claude\commands\` | Junction | → `claude-skills\commands\` |
+
+**Note:** Junctions were set up so saving to `~/.claude/skills/` automatically saves to the git repo. No manual copying needed.
 
 ## Current Skills Inventory
 
@@ -55,16 +56,22 @@ gh auth login --web --git-protocol https
 git clone https://github.com/ericmilton711/claude-skills.git
 ```
 
-### 4. Copy Skills to Claude Code Directory
+### 4. Set Up Junctions (Recommended - Windows)
 
-**Windows:**
-```bash
-mkdir -p ~/.claude/skills ~/.claude/commands
-cp -r claude-skills/skills/* ~/.claude/skills/
-cp -r claude-skills/commands/* ~/.claude/commands/
+Junctions link Claude's config to the git repo so everything stays in sync automatically.
+
+```cmd
+mklink /J C:\Users\ericm\.claude\skills C:\Users\ericm\claude-skills\skills
+mklink /J C:\Users\ericm\.claude\commands C:\Users\ericm\claude-skills\commands
 ```
 
-**macOS/Linux:**
+**macOS/Linux (symlinks):**
+```bash
+ln -s ~/claude-skills/skills ~/.claude/skills
+ln -s ~/claude-skills/commands ~/.claude/commands
+```
+
+### Alternative: Copy Files (if junctions not desired)
 ```bash
 mkdir -p ~/.claude/skills ~/.claude/commands
 cp -r claude-skills/skills/* ~/.claude/skills/
@@ -73,29 +80,23 @@ cp -r claude-skills/commands/* ~/.claude/commands/
 
 ## Syncing Skills
 
-### Push New Skills to GitHub
+### Push Skills to GitHub
+With junctions set up, just commit and push - no copying needed:
 ```bash
 cd ~/claude-skills
-
-# Copy new skills from Claude directory
-cp -r ~/.claude/skills/* skills/
-cp -r ~/.claude/commands/* commands/
-
-# Commit and push
 git add -A
 git commit -m "Add new skills"
 git push
 ```
 
+Or tell Claude: **"push skills to GitHub"**
+
 ### Pull Skills from GitHub
 ```bash
 cd ~/claude-skills
 git pull
-
-# Copy to Claude directory
-cp -r skills/* ~/.claude/skills/
-cp -r commands/* ~/.claude/commands/
 ```
+Skills are immediately available (junctions point to the repo).
 
 ## GitHub Account
 
@@ -142,6 +143,9 @@ This skill was created during a conversation where:
 4. Authenticated with GitHub (opened browser for secure login)
 5. Created repository: https://github.com/ericmilton711/claude-skills
 6. Pushed all skills (19 files total)
+7. Deleted duplicate local folders (kept only git repo)
+8. Created Windows junctions so `~/.claude/skills` → git repo
+9. Now "save to skills" automatically saves to git repo, ready to push
 
 ### Files Uploaded
 ```
