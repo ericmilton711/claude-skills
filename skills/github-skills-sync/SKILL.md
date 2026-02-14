@@ -81,15 +81,17 @@ cp -r claude-skills/commands/* ~/.claude/commands/
 ## Syncing Skills
 
 ### Push Skills to GitHub
-With junctions set up, just commit and push - no copying needed:
+When user says **"save to skills"** or **"save and document this to skills"**, Claude will:
+1. Save the skill file to `~/.claude/skills/`
+2. **Immediately** commit and push to GitHub (no extra command needed)
+
+Manual push if needed:
 ```bash
 cd ~/claude-skills
 git add -A
 git commit -m "Add new skills"
 git push
 ```
-
-Or tell Claude: **"push skills to GitHub"**
 
 ### Pull Skills from GitHub
 ```bash
@@ -145,7 +147,7 @@ This skill was created during a conversation where:
 6. Pushed all skills (19 files total)
 7. Deleted duplicate local folders (kept only git repo)
 8. Created Windows junctions so `~/.claude/skills` → git repo
-9. Now "save to skills" automatically saves to git repo, ready to push
+9. "Save to skills" now auto-saves AND auto-pushes to GitHub immediately
 
 ### Files Uploaded
 ```
