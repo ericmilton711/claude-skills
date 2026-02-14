@@ -2,6 +2,13 @@
 
 Sync Claude Code skills and commands across multiple devices using GitHub.
 
+## Instructions for Claude
+
+**IMPORTANT:** When the user says "save to skills" or "save and document this to skills":
+1. Save the content to `~/.claude/skills/` (or appropriate subfolder)
+2. **Immediately** run: `cd ~/claude-skills && git add -A && git commit -m "description" && git push`
+3. Do NOT wait for user to say "push" - auto-push is the default behavior.
+
 ## Repository
 
 **GitHub:** https://github.com/ericmilton711/claude-skills
