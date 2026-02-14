@@ -1,0 +1,315 @@
+Galaxy Watch Charging Dock - Wiring Guide
+==========================================
+
+DETECTION METHOD OPTIONS
+------------------------
+This project supports multiple detection methods. Choose one:
+
+1. INA219 Current Sensor - Complex but accurate (detects actual charging)
+2. Reed Switch - Simple but may not work (charger has permanent magnets)
+3. IR Proximity Sensor - Recommended, reliable detection
+4. Always On - Simplest, LEDs on when powered
+
+
+COMPONENTS (Base)
+-----------------
+- Arduino Nano (with USB cable)
+- WS2812B 7-LED Ring (DIYmall)
+- 100-1000µF Electrolytic Capacitor (for LED power smoothing)
+- Jumper wires
+- Semi-transparent 3D printed block
+- Samsung Galaxy Watch magnetic charger
+
+COMPONENTS (Choose One Detection Method)
+----------------------------------------
+Option A: INA219 Current Sensor Module + USB-C breakout boards
+Option B: Reed Switch Module
+Option C: IR Proximity Sensor Module
+Option D: None (always on)
+
+WIRING DIAGRAM
+--------------
+
+    Arduino Nano              WS2812B LED Ring
+    ============              ================
+
+        5V  ----+------------> VCC
+                |
+              [+|             100-1000µF capacitor across VCC/GND
+               |]             (smooths power, prevents flicker)
+                |
+        GND ----+------------> GND
+        D6  -----------------> DIN
+
+
+    Arduino Nano              INA219 Sensor
+    ============              =============
+
+        5V  -----------------> VCC
+        GND -----------------> GND
+        A4  -----------------> SDA
+        A5  -----------------> SCL
+
+
+    INA219 Power Path (measures Samsung charger current)
+    =====================================================
+
+    USB 5V -----> INA219 VIN+
+                  INA219 VIN- -----> Samsung Charger 5V (red wire)
+    USB GND ----------------------------> Samsung Charger GND (black wire)
+
+
+COMPLETE WIRING (text diagram)
+------------------------------
+
+                    +-------------+
+                    |   USB 5V    |
+                    +------+------+
+                           |
+              +------------+------------+
+              |            |            |
+              v            v            v
+         Nano 5V      INA219 VCC   INA219 VIN+
+                                        |
+                                        v
+                                   INA219 VIN-
+                                        |
+                                        v
+                              Samsung Charger 5V
+                              (cut & splice red wire)
+
+                    +-------------+
+                    |   USB GND   |
+                    +------+------+
+                           |
+              +------------+------------+
+              |            |            |
+              v            v            v
+         Nano GND     INA219 GND   Samsung Charger GND
+
+
+OPTION A: CUT & SPLICE SAMSUNG CABLE
+-------------------------------------
+1. Cut open the Samsung USB-C cable outer sheath (carefully)
+2. Inside you'll find 4 wires:
+   - Red   = 5V (VCC)
+   - Black = GND
+   - Green = Data+
+   - White = Data-
+3. Cut ONLY the red wire
+4. Connect USB-side red → INA219 VIN+
+5. Connect charger-side red → INA219 VIN-
+6. Leave black/green/white intact
+7. Wrap with electrical tape or heat shrink
+
+         Samsung Cable (inside)
+    ════════════════════════════════════
+    USB Plug                    Charger
+       │                           │
+       │  ┌─── Red (5V) ─────┐    │
+       │  │                  │    │
+       │  │   ┌─────────┐    │    │
+       │  └──►│ INA219  │────┘    │
+       │      │ VIN+ -  │         │
+       │      └────┬────┘         │
+       │           │              │
+       │  Black ───┼───────────── │ (stays connected)
+       │  Green ───┼───────────── │ (stays connected)
+       │  White ───┼───────────── │ (stays connected)
+    ════════════════════════════════════
+
+
+OPTION B: USB-C BREAKOUT BOARD (no cutting)
+-------------------------------------------
+Use a USB-C breakout board to access power pins without
+cutting the Samsung cable.
+
+Parts needed:
+- 2x USB-C breakout boards (one for input, one for output)
+- OR 1x male-to-female pass-through breakout
+
+Wiring with breakout boards:
+
+    Wall Adapter
+         │
+         ▼
+    ┌─────────────────┐
+    │  USB-C Breakout │ (female, receives power)
+    │  Board #1       │
+    │                 │
+    │  VBUS ──────────┼────► INA219 VIN+
+    │  GND  ──────────┼────► Common GND
+    └─────────────────┘
+                             │
+                             ▼
+                        INA219 VIN-
+                             │
+                             ▼
+    ┌─────────────────┐
+    │  USB-C Breakout │ (male, plugs into Samsung charger)
+    │  Board #2       │
+    │                 │
+    │  VBUS ◄─────────┼──── (from INA219 VIN-)
+    │  GND  ◄─────────┼──── Common GND
+    └─────────────────┘
+         │
+         ▼
+    Samsung Charger Puck
+
+
+USB-C BREAKOUT BOARDS (Amazon):
+- Treedix 4pcs USB-C Breakout (~$8): https://www.amazon.com/Treedix-Type-C-Breakout-Connector-Converter/dp/B096M2HQLK
+- SparkFun USB-C Breakout (~$5): https://www.amazon.com/Electronics123-SparkFun-USB-C-Breakout/dp/B07M6R37L8
+- LGDehome 5pcs USB-C Breakout (~$7): https://www.amazon.com/Type-C-Breakout-Serial-Connector-Converter/dp/B09KC1SMGD
+
+
+PHYSICAL LAYOUT (side view)
+---------------------------
+
+    +------------------------+
+    |   Galaxy Watch         |  <- Watch sits on top
+    +------------------------+
+    |   Magnetic Charger     |  <- Samsung charger puck
+    +------------------------+
+    |   3D Printed Block     |  <- Semi-transparent, glows from below
+    +------------------------+
+    |   WS2812B LED Ring     |  <- LEDs face upward into block
+    +------------------------+
+    |   Arduino Nano         |  <- Hidden in base/underneath
+    |   + INA219 Sensor      |
+    +------------------------+
+
+
+HOW IT WORKS
+------------
+1. INA219 sits inline with the Samsung charger's power
+2. When watch is placed on charger, current flows (200-500mA)
+3. Arduino detects current > 50mA threshold
+4. LEDs turn on with breathing orange/amber glow
+5. When watch is removed or fully charged, current drops
+6. LEDs turn off
+
+
+SETUP INSTRUCTIONS
+------------------
+1. Install Arduino IDE (https://www.arduino.cc/en/software)
+
+2. Install required libraries:
+   - Open Arduino IDE
+   - Go to: Sketch -> Include Library -> Manage Libraries
+   - Search and install: "Adafruit NeoPixel"
+   - Search and install: "Adafruit INA219"
+
+3. Connect Arduino Nano via USB
+
+4. Select board:
+   - Tools -> Board -> Arduino Nano
+   - Tools -> Processor -> ATmega328P (or "Old Bootloader" if upload fails)
+   - Tools -> Port -> (select your COM port)
+
+5. Open galaxy_watch_dock.ino and click Upload
+
+6. Wire everything as shown above
+
+7. To splice Samsung charger:
+   - Cut the red (5V) wire of the Samsung charger cable
+   - Connect the USB side to INA219 VIN+
+   - Connect the charger side to INA219 VIN-
+   - This puts the sensor inline to measure current
+
+
+CUSTOMIZATION
+-------------
+In the .ino file you can change:
+
+- CURRENT_ON_THRESHOLD_MA: Turn on when current exceeds this (default 50mA)
+- CURRENT_OFF_THRESHOLD_MA: Turn off when current drops below (default 30mA)
+  This hysteresis prevents flickering near the threshold
+
+- baseColor[3]: Change the RGB color
+  {255, 80, 0}    = Orange/Amber (default)
+  {255, 150, 0}   = More yellow/gold
+  {255, 50, 0}    = More orange/red
+
+- BRIGHTNESS: 0-255, lower = dimmer
+
+- BREATH_SPEED: Breathing speed (default 10ms)
+  Lower = faster breathing, higher = slower
+
+
+TROUBLESHOOTING
+---------------
+- LEDs don't light up when charging:
+  Open Serial Monitor (115200 baud) to see current readings
+  Adjust CURRENT_THRESHOLD_MA if needed
+
+- LEDs stay on all the time:
+  Current threshold too low, increase CURRENT_THRESHOLD_MA
+
+- INA219 not detected:
+  Check SDA/SCL wiring (A4/A5)
+  Check VCC/GND connections
+
+- Wrong colors:
+  Try changing NEO_GRB to NEO_RGB in the code
+
+- Upload fails:
+  Try "ATmega328P (Old Bootloader)" under Processor
+
+- Readings show 0 or negative:
+  VIN+ and VIN- may be swapped
+
+
+===========================================================================
+ALTERNATIVE: REED SWITCH (Simpler, but may not work with Samsung charger)
+===========================================================================
+
+NOTE: Samsung charger has permanent magnets. Reed switch may trigger
+constantly. Test before committing to this approach.
+
+REED SWITCH WIRING
+------------------
+    Reed Switch Module    Arduino Nano
+    ==================    ============
+         VCC  ──────────►  5V
+         GND  ──────────►  GND
+         DO   ──────────►  D2
+
+REED SWITCH PLACEMENT
+---------------------
+Position the reed switch near the edge of the Samsung charger's
+magnetic field. The goal is to detect the change when the watch
+(which may have its own magnets) is placed.
+
+Amazon Link: https://www.amazon.com/Sensor-Module-Magnetic-Normally-Arduino/dp/B07S58HH3Q
+
+
+===========================================================================
+ALTERNATIVE: IR PROXIMITY SENSOR (Recommended - most reliable)
+===========================================================================
+
+Detects physical presence of watch above the charger.
+Does not depend on magnets or current sensing.
+
+IR PROXIMITY SENSOR WIRING
+--------------------------
+    IR Sensor Module      Arduino Nano
+    ================      ============
+         VCC  ──────────►  5V
+         GND  ──────────►  GND
+         OUT  ──────────►  D2
+
+IR SENSOR PLACEMENT
+-------------------
+Mount the IR sensor facing upward, near the charger.
+Adjust the potentiometer on the sensor to set detection distance.
+
+
+===========================================================================
+ALTERNATIVE: ALWAYS ON (Simplest)
+===========================================================================
+
+No detection - LEDs breathe whenever Arduino is powered.
+Just remove all sensor code and run breathing effect in loop().
+
+Use the led_test.ino code (available in project history).

@@ -1,0 +1,41 @@
+ESP32 DOOR LED STRIP - PARTS LIST
+==================================
+
+REQUIRED PARTS
+--------------
+[ ] ESP32 Dev Board (ESP32-WROOM-32 or DevKitC)         $6-10
+[ ] WS2812B LED Strip (60 LEDs/m, 5V)                   $8-15
+[ ] HC-SR501 PIR Motion Sensor                          $2-3
+[ ] USB Power Bank (10,000mAh+, 5V 2A output)           $15-25
+[ ] Jumper Wires (female-to-female)                     $3-5
+[ ] USB Cable (Micro-USB or USB-C for ESP32)            $3-5
+
+OPTIONAL (RECOMMENDED)
+----------------------
+[ ] 1000µF Capacitor (protects LEDs from surges)        $1
+[ ] 330 Ohm Resistor (on data line)                     $0.10
+[ ] JST Connectors (clean LED connections)              $3
+[ ] Project Box / Enclosure                             $5-8
+
+ESTIMATED TOTAL: $40-70
+
+SEARCH TERMS FOR AMAZON
+-----------------------
+- "ESP32 development board"
+- "WS2812B LED strip 1m 60"
+- "HC-SR501 PIR sensor"
+- "Anker 10000mAh power bank"
+
+WIRING REFERENCE
+----------------
+ESP32 GPIO 5  --> LED Strip Data (green wire)
+ESP32 GPIO 13 --> PIR Sensor OUT
+Power Bank 5V --> LED Strip VCC + ESP32 VIN + PIR VCC
+All GNDs      --> Connect together
+
+NOTES
+-----
+- LED Strip: IP30 for indoor, IP65 for outdoor/waterproof
+- PIR Sensor: Set jumper to "L" (single trigger mode)
+- Capacitor goes across LED strip power (VCC to GND)
+- Resistor goes inline with data wire to first LED
