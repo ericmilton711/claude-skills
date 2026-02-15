@@ -1,0 +1,211 @@
+================================================================================
+    ESP32-CAM PAN-TILT WIRING GUIDE
+    Aideepen ESP32-CAM-MB + 2x SG90 Servos
+================================================================================
+
+COMPONENTS:
+  - ESP32-CAM-MB (with CH340G USB-Serial)
+  - 2x SG90 Micro Servos (or similar 5V servos)
+  - USB-C Power Module (5V 2-3A) for servo power
+  - Jumper wires
+  - OPTIONAL: Arduino UNO + Analog Joystick (for physical control)
+
+================================================================================
+                         ESP32-CAM-MB PINOUT
+================================================================================
+
+The ESP32-CAM has LIMITED GPIO pins available when camera is active.
+Safe pins for servos: GPIO 14 and GPIO 15
+
+        +---------------------------+
+        |  [OV2640 CAMERA MODULE]   |
+        |                           |
+   3V3 -|o                        o|- 5V
+   GND -|o                        o|- GND
+   IO12-|o                        o|- IO13
+   IO14-|o  <-- PAN SERVO         o|- IO15  <-- TILT SERVO
+   IO2 -|o                        o|- IO4 (Flash LED)
+   IO0 -|o                        o|- IO16
+        |                           |
+        |     [USB-C / CH340G]      |
+        +---------------------------+
+
+================================================================================
+                         WIRING DIAGRAM
+================================================================================
+
+USB-C Power Module (5V 3A)           Pan Servo (SG90)
++------------------+                +---------------+
+|              5V+ |------+--------|Red   (V+)     |
+|                  |      |        |               |
+|              GND |--+---|--------|Brown (GND)    |
++------------------+  |   |        |               |
+                      |   |   +----|Orange (Signal)|----> ESP32 GPIO14
+                      |   |   |    +---------------+
+                      |   |   |
+                      |   |   |     Tilt Servo (SG90)
+                      |   |   |    +---------------+
+                      |   +--------|Red   (V+)     |
+                      |       |    |               |
+                      +------------|Brown (GND)    |
+                      |       |    |               |
+                      |       +----|Orange (Signal)|----> ESP32 GPIO15
+                      |            +---------------+
+                      |
+                   ESP32-CAM-MB
+                  +-------------+
+                  |         GND |-----+ (COMMON GROUND - CRITICAL!)
+                  |             |
+                  |       GPIO14| Pan signal
+                  |       GPIO15| Tilt signal
+                  |             |
+                  |    [USB-C]  | <-- Powers ESP32 (separate from servos)
+                  +-------------+
+
+
+================================================================================
+                         WIRING SUMMARY
+================================================================================
+
+SERVO WIRE COLORS (SG90 standard):
+  - Red    = Power (V+)  --> USB-C module 5V+
+  - Brown  = Ground      --> USB-C module GND
+  - Orange = Signal      --> ESP32 GPIO pin
+
+CONNECTIONS:
+  +------------------+-------------------+--------------------+
+  | Component        | Wire              | Connects To        |
+  +------------------+-------------------+--------------------+
+  | Pan Servo        | Red (V+)          | USB-C 5V+          |
+  | Pan Servo        | Brown (GND)       | USB-C GND          |
+  | Pan Servo        | Orange (Signal)   | ESP32 GPIO14       |
+  +------------------+-------------------+--------------------+
+  | Tilt Servo       | Red (V+)          | USB-C 5V+          |
+  | Tilt Servo       | Brown (GND)       | USB-C GND          |
+  | Tilt Servo       | Orange (Signal)   | ESP32 GPIO15       |
+  +------------------+-------------------+--------------------+
+  | ESP32-CAM-MB     | GND               | USB-C GND          |
+  | ESP32-CAM-MB     | USB-C             | Computer/Charger   |
+  +------------------+-------------------+--------------------+
+
+================================================================================
+                         IMPORTANT NOTES
+================================================================================
+
+*** COMMON GROUND IS CRITICAL ***
+The ESP32 GND must connect to the same ground as the servo power supply.
+Without this connection, servo signals won't work!
+
+*** SEPARATE POWER FOR SERVOS ***
+- DO NOT power servos from ESP32's 5V pin (not enough current)
+- Use external 5V supply (USB-C module rated 2-3A)
+- ESP32-CAM-MB powered via its own USB-C from computer
+
+*** OPTIONAL CAPACITOR ***
+- Add 470uF-1000uF capacitor across servo power lines
+- Reduces voltage spikes when servos move
+- Longer leg (+) to 5V, shorter leg (-) to GND
+
+*** GPIO CONSIDERATIONS ***
+- GPIO14 and GPIO15 are safe for servos with camera active
+- Avoid GPIO0, GPIO2, GPIO4 (used for boot/flash)
+- GPIO12 affects boot if pulled high
+
+================================================================================
+                         TROUBLESHOOTING
+================================================================================
+
+Servos don't move:
+  [ ] Check common ground connection between ESP32 and servo power
+  [ ] Verify USB-C module outputs 5V (test with multimeter)
+  [ ] Confirm signal wires on GPIO14 and GPIO15
+  [ ] Check serial monitor for error messages
+
+Servos jitter/move erratically:
+  [ ] Add capacitor across servo power lines
+  [ ] Check for loose connections
+  [ ] Try a higher-rated power supply (3A)
+  [ ] Reduce servo movement speed in code
+
+Camera doesn't work:
+  [ ] Ensure camera ribbon cable is properly seated
+  [ ] Check that correct board is selected (AI Thinker ESP32-CAM)
+  [ ] Camera may conflict with certain GPIO pins
+
+WiFi won't connect:
+  [ ] Verify SSID and password in code
+  [ ] ESP32-CAM will fall back to AP mode (ESP32-CAM-PanTilt)
+  [ ] Check serial monitor for connection status
+
+================================================================================
+                         ARDUINO JOYSTICK (OPTIONAL)
+================================================================================
+
+Add physical joystick control using an Arduino UNO.
+
+JOYSTICK WIRING TO ARDUINO UNO:
+  +------------------+-------------------+
+  | Joystick Pin     | Arduino Pin       |
+  +------------------+-------------------+
+  | VCC              | 5V                |
+  | GND              | GND               |
+  | VRx              | A0                |
+  | VRy              | A1                |
+  | SW (button)      | D2                |
+  +------------------+-------------------+
+
+ARDUINO TO ESP32 CONNECTION:
+  +------------------+-------------------+
+  | Arduino Pin      | ESP32 Pin         |
+  +------------------+-------------------+
+  | TX (pin 1)       | GPIO13 (IO13)     |
+  | GND              | GND               |
+  +------------------+-------------------+
+
+DIAGRAM:
+
+    Arduino UNO                          ESP32-CAM-MB
+   +------------+                       +-------------+
+   |         TX |---------------------->| IO13        |
+   |        GND |---------------------->| GND         |
+   |            |                       |             |
+   |  Joystick  |                       |   Servos    |
+   |  VRx -> A0 |                       | GPIO14 (Pan)|
+   |  VRy -> A1 |                       | GPIO15(Tilt)|
+   |  SW  -> D2 |                       |             |
+   |  VCC -> 5V |                       |             |
+   |  GND -> GND|                       |             |
+   +------------+                       +-------------+
+
+JOYSTICK COMMANDS (sent from Arduino to ESP32):
+  - U = Tilt Up
+  - D = Tilt Down
+  - L = Pan Left
+  - R = Pan Right
+  - C = Center (press joystick button)
+
+NOTE: Communication is 115200 baud via Serial2 on GPIO13.
+      The ESP32 USB serial remains available for debugging.
+
+================================================================================
+                         PHYSICAL MOUNTING
+================================================================================
+
+Your 3D printed pan-tilt mount (servo_camera_mount.scad):
+  - Base Plate: Stationary base, mounts pan servo horn
+  - Pan Bracket: Rotates horizontally, holds tilt servo
+  - Tilt Bracket: Rotates vertically, connects to camera cradle
+  - Camera Cradle: Holds ESP32-CAM module
+
+ASSEMBLY ORDER:
+  1. Attach pan servo to base plate (horn fits in socket)
+  2. Mount pan bracket to pan servo horn
+  3. Attach tilt servo to pan bracket
+  4. Mount tilt bracket to tilt servo horn
+  5. Attach camera cradle to tilt bracket
+  6. Insert ESP32-CAM into camera cradle
+  7. Route wires through frame
+
+ESP32-CAM dimensions: ~27mm x 40mm x 5mm (fits 28mm cradle)
+
+================================================================================
