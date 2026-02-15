@@ -8,175 +8,143 @@ February 2026
 
 ---
 
-## Parts Purchased
+## Current Configuration
 
-### Already Owned
-- **Arduino Nano** - microcontroller
-- **Breadboard** - for prototyping
-- **USB Hub** - power source for components
-- **Semi-transparent 3D printed block** - diffuses LED light
-
-### Ordered from Amazon
-1. **WS2812B 7-LED Ring** (DIYmall)
-   - 7 individually addressable RGB LEDs
-   - Link: https://www.amazon.com/DIYmall-Integrated-Individually-Addressable-Raspberry/dp/B0C7C9HP9R
-
-2. **Samsung Galaxy Watch Charger** (25W dual USB-C)
-   - Magnetic wireless charging
-   - Link: https://www.amazon.com/Samsung-Charger-Wireless-Charging-MagneticWireless/dp/B0DTSQR99X
+| Setting | Value |
+|---------|-------|
+| Detection | TTP-223 Capacitive Touch Sensor (proximity mode) |
+| LED Effect | Breathing (slow fade in/out) |
+| Color | Orange/Amber `{255, 80, 0}` |
+| Brightness | 150/255 |
 
 ---
 
-## Detection Method Options Explored
+## Parts List
 
-### Option 1: INA219 Current Sensor (Complex)
-- Measures current flowing to Samsung charger
-- Detects when watch is drawing power (200-500mA)
-- **Pros:** Accurate, detects actual charging
-- **Cons:** Requires cutting Samsung cable or USB breakout boards, complex wiring
-- **Status:** Code written but deemed too complex
+### Have
+- Arduino Nano
+- WS2812B 7-LED Ring
+- TTP-223 Capacitive Touch Module
+- Jumper wires
+- Samsung Galaxy Watch magnetic charger
+- USB-C cord with power adapter
+- Semi-transparent 3D printed block
 
-### Option 2: Reed Switch (Simple but Uncertain)
-- Detects magnetic field from charger
-- **Pros:** Simple wiring (3 wires), cheap (~$2)
-- **Cons:** Samsung charger has permanent magnets - may trigger constantly
-- **Link:** https://www.amazon.com/Sensor-Module-Magnetic-Normally-Arduino/dp/B07S58HH3Q
-- **Status:** Uncertain if it will work - needs testing
-
-### Option 3: IR Proximity Sensor (Recommended)
-- Detects physical presence of watch above charger
-- **Pros:** Reliable, simple, doesn't depend on magnets or current
-- **Cons:** Needs correct positioning
-- **Status:** Not yet explored in detail
-
-### Option 4: Always On
-- LEDs breathe whenever Arduino is powered
-- **Pros:** Simplest possible
-- **Cons:** Not automatic
-- **Status:** Fallback option
+### Need
+- (None - all parts available)
 
 ---
 
-## Code Files Created
+## Wiring Summary
 
-### Main Code: `galaxy_watch_dock.ino`
-- Location: `C:\Users\ericm\Skills\galaxy-watch-dock\galaxy_watch_dock\`
-- Features:
-  - INA219 current detection with hysteresis (50mA on / 30mA off)
-  - 5-sample averaging for stable readings
-  - Orange/amber breathing effect
-  - LEDs off when not charging, breathing pulse when charging
-
-### Test Code: `led_test.ino` (Deleted)
-- Was a simple breathing test without sensor
-- Deleted because Arduino IDE combines all .ino files in same folder
-
----
-
-## Wiring Documentation
-
-### Basic LED Ring Wiring
 ```
-Arduino Nano          WS2812B LED Ring
-============          ================
-    5V  ──┬─────────► VCC
-          │
-        [+│-]         100-1000µF capacitor (recommended)
-          │
-    GND ──┴─────────► GND
-    D6  ────────────► DIN
+Arduino Nano    Component        Pin
+============    =========        ===
+5V              LED Ring         VCC
+5V              TTP-223          VCC
+GND             LED Ring         GND
+GND             TTP-223          GND
+D6              LED Ring         DIN
+D2              TTP-223          SIG
 ```
 
-### INA219 Wiring (if using current sensing)
-```
-Arduino Nano          INA219 Sensor
-============          =============
-    5V  ────────────► VCC
-    GND ────────────► GND
-    A4  ────────────► SDA
-    A5  ────────────► SCL
-
-INA219 VIN+ ◄──── USB 5V Power
-INA219 VIN- ────► Samsung Charger 5V (red wire)
-```
-
-### Reed Switch Wiring (if using magnetic detection)
-```
-Reed Switch Module    Arduino Nano
-==================    ============
-     VCC  ──────────►  5V
-     GND  ──────────►  GND
-     DO   ──────────►  D2
-```
+Total wires needed: 5 jumper wires (can share 5V and GND)
 
 ---
 
 ## Physical Layout
 ```
 +------------------------+
-|   Galaxy Watch         |  ← Watch sits on top
+|   Galaxy Watch         |  <- Watch sits on top
 +------------------------+
-|   Magnetic Charger     |  ← Samsung charger puck
+|   Magnetic Charger     |  <- Samsung charger puck
 +------------------------+
-|   3D Printed Block     |  ← Semi-transparent, glows from below
+|   TTP-223 Sensor       |  <- Detects watch placement
 +------------------------+
-|   WS2812B LED Ring     |  ← LEDs face upward into block
+|   3D Printed Block     |  <- Semi-transparent diffuser
 +------------------------+
-|   Arduino Nano         |  ← Hidden in base/underneath
+|   WS2812B LED Ring     |  <- LEDs face upward
++------------------------+
+|   Arduino Nano         |  <- Controller (hidden)
 +------------------------+
 ```
 
 ---
 
-## LED Effect Settings
-- **Color:** Orange/Amber `{255, 80, 0}`
-- **Effect:** Slow breathing (fade in/out)
-- **Speed:** 10ms between brightness steps
-- **Brightness:** 150 (out of 255)
+## How It Works
+
+1. TTP-223 capacitive sensor detects when watch is placed above it
+2. Arduino reads sensor state (HIGH = detected, LOW = not detected)
+3. When watch detected, LEDs display breathing orange glow
+4. When watch removed, LEDs turn off
+5. Debouncing prevents flicker during transitions
 
 ---
 
-## Libraries Required
-1. **Adafruit NeoPixel** - for WS2812B LED control
-2. **Adafruit INA219** - for current sensing (if using that method)
+## Files
 
-Install via: Arduino IDE → Sketch → Include Library → Manage Libraries
-
----
-
-## Next Steps
-1. Decide on detection method:
-   - Test reed switch with Samsung charger magnets
-   - OR get IR proximity sensor for reliable detection
-   - OR simplify to always-on or button toggle
-2. Order chosen sensor
-3. Wire up and test
-4. Build final enclosure
-
----
-
-## Parts Still Needed
-- [ ] Detection sensor (reed switch, IR proximity, or other)
-- [ ] 100-1000µF capacitor (recommended for LED power smoothing)
-- [ ] USB-C breakout boards (only if using INA219 without cutting cable)
-
----
-
-## Conversation Summary
-
-### Key Decisions Made
-1. Arduino Nano chosen as microcontroller (simple, cheap)
-2. Orange/amber color chosen for LEDs (not blue)
-3. Slow breathing effect preferred
-4. INA219 approach deemed too complex
-5. Reed switch may not work due to permanent magnets in charger
-6. IR proximity sensor recommended as most reliable option
-
-### Files in Project Folder
 ```
-C:\Users\ericm\Skills\galaxy-watch-dock\
-├── galaxy_watch_dock\
-│   └── galaxy_watch_dock.ino    ← Main Arduino code (INA219 version)
-├── WIRING.txt                    ← Detailed wiring instructions
-└── PROJECT_LOG.md                ← This file
+~/.claude/skills/galaxy-watch-dock/
+├── galaxy_watch_dock/
+│   └── galaxy_watch_dock.ino    <- Main Arduino code
+├── WIRING.txt                    <- Detailed wiring guide
+└── PROJECT_LOG.md                <- This file
 ```
+
+---
+
+## Setup Steps
+
+1. **Install Arduino IDE** from arduino.cc
+
+2. **Install library**: Sketch → Include Library → Manage Libraries → Search "Adafruit NeoPixel" → Install
+
+3. **Wire components** per WIRING.txt
+
+4. **Upload code**:
+   - Tools → Board → Arduino Nano
+   - Tools → Processor → ATmega328P (try "Old Bootloader" if fails)
+   - Tools → Port → (your COM port)
+   - Click Upload
+
+5. **Position sensor**: Mount TTP-223 facing up, under where watch sits
+
+6. **Test**: Place watch on charger, LEDs should breathe. Remove watch, LEDs off.
+
+---
+
+## TTP-223 Tips
+
+- Can sense through ~3-5mm of non-metallic material
+- Some modules have A/B jumper for toggle vs momentary mode
+- Position B (momentary) is better for proximity detection
+- May need adjustment if charger magnets interfere
+- Open Serial Monitor (115200 baud) to debug detection
+
+---
+
+## Customization Options
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `baseColor[3]` | `{255, 80, 0}` | RGB color (orange/amber) |
+| `BRIGHTNESS` | 150 | Overall brightness (0-255) |
+| `BREATH_SPEED` | 10 | Ms between steps (lower = faster) |
+| `SENSOR_PIN` | D2 | Arduino pin for TTP-223 |
+| `LED_PIN` | D6 | Arduino pin for LED ring |
+
+---
+
+## Project History
+
+### February 2026 - Initial Planning
+- Explored INA219 current sensing (too complex, requires cable cutting)
+- Explored reed switch (uncertain due to permanent magnets)
+- Explored IR proximity sensor (reliable but needs ordering)
+- Ordered WS2812B LED ring and Samsung charger
+
+### February 2026 - Reconfigured
+- Switched to TTP-223 capacitive touch sensor (already owned)
+- Simplified wiring (5 wires total vs 8+ for INA219)
+- No additional parts needed
+- Updated all code and documentation

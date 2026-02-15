@@ -1,67 +1,67 @@
 /*
  * Galaxy Watch Charging Dock LED Controller
  *
+ * Detection: TTP-223 Capacitive Touch Sensor (proximity mode)
+ * Effect: Orange/Amber breathing glow
+ *
  * Hardware:
- *   - Arduino Nano (ATmega328P)
+ *   - Arduino Nano
  *   - WS2812B 7-LED Ring
- *   - INA219 Current Sensor Module
+ *   - TTP-223 Capacitive Touch Module
  *
  * Wiring:
- *   Nano 5V  -> LED Ring VCC
- *   Nano 5V  -> INA219 VCC
- *   Nano GND -> LED Ring GND
- *   Nano GND -> INA219 GND
- *   Nano D6  -> LED Ring DIN
- *   Nano A4  -> INA219 SDA
- *   Nano A5  -> INA219 SCL
+ *   Arduino Nano       WS2812B LED Ring
+ *   -----------        ----------------
+ *   5V  --------------> VCC
+ *   GND --------------> GND
+ *   D6  --------------> DIN
  *
- *   INA219 VIN+ -> USB 5V (from power source)
- *   INA219 VIN- -> Samsung Charger VCC
- *   Samsung Charger GND -> USB GND (from power source)
+ *   Arduino Nano       TTP-223 Module
+ *   -----------        --------------
+ *   5V  --------------> VCC
+ *   GND --------------> GND
+ *   D2  --------------> SIG (or OUT/IO)
+ *
+ * TTP-223 Setup for Proximity Detection:
+ *   - The module can detect through thin non-metallic materials
+ *   - Mount it facing upward, underneath where the watch sits
+ *   - May need to adjust sensitivity or add a thin spacer
+ *   - Some modules have a small jumper (A/B) to toggle mode
  */
 
-#include <Wire.h>
-#include <Adafruit_INA219.h>
 #include <Adafruit_NeoPixel.h>
 
-#define LED_PIN     6      // Data pin connected to LED ring
-#define NUM_LEDS    7      // 7-bit LED ring
-#define BRIGHTNESS  150    // 0-255, adjust to taste
+// Pin definitions
+#define LED_PIN     6    // WS2812B data pin
+#define SENSOR_PIN  2    // TTP-223 signal pin
 
-// Current thresholds in mA with hysteresis for stable detection
-// Watch charging typically draws 200-500mA
-#define CURRENT_ON_THRESHOLD_MA   50.0   // Turn ON when current exceeds this
-#define CURRENT_OFF_THRESHOLD_MA  30.0   // Turn OFF when current drops below this
+// LED configuration
+#define NUM_LEDS    7    // 7-LED ring
+#define BRIGHTNESS  150  // 0-255
 
-// Number of readings to average for stable detection
-#define CURRENT_SAMPLES  5
+// Color: Orange/Amber (R, G, B)
+uint8_t baseColor[3] = {255, 80, 0};
 
-Adafruit_INA219 ina219;
+// Breathing effect settings
+#define BREATH_SPEED 10  // ms between brightness steps (lower = faster)
+
+// Debounce settings to prevent flicker
+#define DEBOUNCE_READINGS 5
+#define DEBOUNCE_DELAY_MS 20
+
 Adafruit_NeoPixel ring(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-// Colors (R, G, B)
-uint8_t baseColor[3] = {255, 80, 0};  // Orange/Amber - warm glow
-
-// Breathing state
+// State variables
 int breatheBrightness = 0;
-int breatheDirection = 1;  // 1 = getting brighter, -1 = getting dimmer
-
-// Timing
+int breatheDirection = 1;  // 1 = brighter, -1 = dimmer
 unsigned long lastBreathUpdate = 0;
-unsigned long lastCurrentCheck = 0;
-const int BREATH_SPEED = 10;        // ms between brightness steps (lower = faster)
-const int CURRENT_CHECK_INTERVAL = 500;  // ms between current readings
-
-bool isCharging = false;
+bool watchDetected = false;
 
 void setup() {
   Serial.begin(115200);
 
-  // Initialize INA219
-  if (!ina219.begin()) {
-    Serial.println("Failed to find INA219 chip");
-    // Continue anyway - LEDs will stay off
-  }
+  // Initialize sensor pin
+  pinMode(SENSOR_PIN, INPUT);
 
   // Initialize LED ring
   ring.begin();
@@ -70,26 +70,21 @@ void setup() {
   ring.show();
 
   Serial.println("Galaxy Watch Dock Ready");
+  Serial.println("Using TTP-223 proximity detection");
 }
 
 void loop() {
-  unsigned long currentTime = millis();
+  // Check if watch is detected (with debouncing)
+  watchDetected = readSensorDebounced();
 
-  // Check current periodically
-  if (currentTime - lastCurrentCheck >= CURRENT_CHECK_INTERVAL) {
-    lastCurrentCheck = currentTime;
-    checkCharging();
-  }
-
-  // Update LEDs
-  if (isCharging) {
-    // Breathing effect while charging
-    if (currentTime - lastBreathUpdate >= BREATH_SPEED) {
-      lastBreathUpdate = currentTime;
+  if (watchDetected) {
+    // Breathing effect when watch is present
+    if (millis() - lastBreathUpdate >= BREATH_SPEED) {
+      lastBreathUpdate = millis();
       updateBreathing();
     }
   } else {
-    // Turn off LEDs when not charging
+    // Turn off LEDs when watch is removed
     if (breatheBrightness > 0) {
       ring.clear();
       ring.show();
@@ -99,42 +94,33 @@ void loop() {
   }
 }
 
-void checkCharging() {
-  // Average multiple readings for stability
-  float totalCurrent = 0;
-  for (int i = 0; i < CURRENT_SAMPLES; i++) {
-    totalCurrent += ina219.getCurrent_mA();
-    delay(10);
+bool readSensorDebounced() {
+  // Read multiple samples for stability
+  int highCount = 0;
+
+  for (int i = 0; i < DEBOUNCE_READINGS; i++) {
+    if (digitalRead(SENSOR_PIN) == HIGH) {
+      highCount++;
+    }
+    delay(DEBOUNCE_DELAY_MS);
   }
-  float current_mA = totalCurrent / CURRENT_SAMPLES;
 
-  // Debug output
-  Serial.print("Current (avg): ");
-  Serial.print(current_mA);
-  Serial.println(" mA");
+  // Majority vote
+  bool detected = (highCount > DEBOUNCE_READINGS / 2);
 
-  // Hysteresis: different thresholds for turning on vs off
-  // Prevents flickering when current is near the threshold
-  bool wasCharging = isCharging;
-
-  if (!isCharging && current_mA > CURRENT_ON_THRESHOLD_MA) {
-    // Was off, current exceeded ON threshold -> turn on
-    isCharging = true;
-  } else if (isCharging && current_mA < CURRENT_OFF_THRESHOLD_MA) {
-    // Was on, current dropped below OFF threshold -> turn off
-    isCharging = false;
+  // Debug output (comment out for production)
+  static bool lastState = false;
+  if (detected != lastState) {
+    Serial.print("Watch ");
+    Serial.println(detected ? "DETECTED - LEDs ON" : "REMOVED - LEDs OFF");
+    lastState = detected;
   }
-  // Otherwise, keep current state (hysteresis zone between 30-50mA)
 
-  if (isCharging && !wasCharging) {
-    Serial.println("Charging started - LEDs ON");
-  } else if (!isCharging && wasCharging) {
-    Serial.println("Charging stopped - LEDs OFF");
-  }
+  return detected;
 }
 
 void updateBreathing() {
-  // Update brightness
+  // Update brightness level
   breatheBrightness += breatheDirection * 2;
 
   // Reverse direction at limits
@@ -146,14 +132,15 @@ void updateBreathing() {
     breatheDirection = 1;
   }
 
-  // Apply to LEDs
+  // Calculate dimmed color
   float factor = breatheBrightness / 255.0;
+  uint8_t r = baseColor[0] * factor;
+  uint8_t g = baseColor[1] * factor;
+  uint8_t b = baseColor[2] * factor;
+
+  // Apply to all LEDs
   for (int i = 0; i < NUM_LEDS; i++) {
-    ring.setPixelColor(i, ring.Color(
-      baseColor[0] * factor,
-      baseColor[1] * factor,
-      baseColor[2] * factor
-    ));
+    ring.setPixelColor(i, ring.Color(r, g, b));
   }
   ring.show();
 }
