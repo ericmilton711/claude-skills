@@ -50,4 +50,5 @@ Videos/*
 
 # Don't ignore hidden directories we want to track
 !.claude/skills/
+!.claude/skills/**/*.ino
 !.claude/CLAUDE.md
