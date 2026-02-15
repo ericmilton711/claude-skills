@@ -1,0 +1,198 @@
+Galaxy Watch Charging Dock - Wiring Guide
+==========================================
+
+CONFIGURATION
+-------------
+Detection Method: TTP-223 Capacitive Touch Sensor (proximity mode)
+LED Effect: Orange/Amber breathing
+Hardware: Arduino Nano + WS2812B 7-LED Ring + TTP-223 Module
+
+
+COMPONENTS NEEDED
+-----------------
+- Arduino Nano (with USB cable for power/programming)
+- WS2812B 7-LED Ring
+- TTP-223 Capacitive Touch Module
+- Jumper wires (5 wires total)
+- Samsung Galaxy Watch magnetic charger
+- USB-C cord with power adapter
+
+
+WIRING DIAGRAM
+--------------
+
+    Arduino Nano              WS2812B LED Ring
+    ============              ================
+
+        5V  -----------------> VCC
+        GND -----------------> GND
+        D6  -----------------> DIN
+
+
+    Arduino Nano              TTP-223 Module
+    ============              ==============
+
+        5V  -----------------> VCC
+        GND -----------------> GND
+        D2  -----------------> SIG (or OUT/IO)
+
+
+COMPLETE WIRING (text diagram)
+------------------------------
+
+                  +-------------+
+                  | Arduino Nano|
+                  +------+------+
+                         |
+         +-------+-------+-------+-------+
+         |       |       |       |       |
+        5V      GND     GND      D6      D2
+         |       |       |       |       |
+         |       |       |       |       |
+    +----+----+  |  +----+----+  |       |
+    |         |  |  |         |  |       |
+    v         v  v  v         v  v       v
+   VCC       GND   GND       DIN        SIG
+    |         |     |         |          |
+    +---------+     +---------+          |
+    | LED Ring|     |TTP-223  |          |
+    +---------+     +---------+----------+
+
+
+PIN SUMMARY
+-----------
+Arduino Nano Pin     Connected To
+================     ============
+5V                   LED Ring VCC, TTP-223 VCC
+GND                  LED Ring GND, TTP-223 GND
+D6                   LED Ring DIN
+D2                   TTP-223 SIG/OUT
+
+
+PHYSICAL LAYOUT (side view)
+---------------------------
+
+    +------------------------+
+    |   Galaxy Watch         |  <- Watch sits on top
+    +------------------------+
+    |   Magnetic Charger     |  <- Samsung charger puck
+    +------------------------+
+    |   TTP-223 Sensor       |  <- Capacitive sensor (detects watch)
+    +------------------------+
+    |   3D Printed Block     |  <- Semi-transparent, glows from below
+    +------------------------+
+    |   WS2812B LED Ring     |  <- LEDs face upward into block
+    +------------------------+
+    |   Arduino Nano         |  <- Hidden in base
+    +------------------------+
+
+
+TTP-223 SENSOR SETUP
+--------------------
+The TTP-223 is a capacitive touch sensor that can detect proximity
+through thin non-metallic materials.
+
+1. MOUNTING POSITION:
+   - Mount the sensor facing UPWARD
+   - Position it directly below where the watch will sit
+   - The sensor pad should be as close to the watch as possible
+   - Can detect through ~3-5mm of plastic/wood
+
+2. SENSITIVITY ADJUSTMENT:
+   Some TTP-223 modules have a small solder jumper labeled A/B:
+   - Position A: Toggle mode (touch to toggle on/off)
+   - Position B: Momentary mode (active only while touched)
+
+   For proximity detection, you may need Position B (momentary).
+   Check your specific module's documentation.
+
+3. TROUBLESHOOTING:
+   - If sensor triggers randomly: Add more distance/material between
+     sensor and charger
+   - If sensor doesn't detect watch: Move sensor closer, or try
+     positioning it at the edge where the watch band hangs
+   - Open Serial Monitor (115200 baud) to see detection state
+
+
+HOW IT WORKS
+------------
+1. TTP-223 detects capacitance change when watch is placed above
+2. Arduino reads sensor state on pin D2
+3. When watch detected (HIGH signal), LEDs breathe orange/amber
+4. When watch removed (LOW signal), LEDs turn off
+
+
+POWER SETUP
+-----------
+Option 1: Single USB power
+- Arduino powered via USB
+- Arduino 5V powers LED ring and TTP-223
+- Samsung charger plugged into separate USB port
+
+Option 2: USB hub
+- Plug Arduino and Samsung charger into same USB hub
+- Keeps wiring tidy
+
+
+SETUP INSTRUCTIONS
+------------------
+1. Install Arduino IDE (https://www.arduino.cc/en/software)
+
+2. Install required library:
+   - Open Arduino IDE
+   - Go to: Sketch -> Include Library -> Manage Libraries
+   - Search and install: "Adafruit NeoPixel"
+
+3. Connect Arduino Nano via USB
+
+4. Select board:
+   - Tools -> Board -> Arduino Nano
+   - Tools -> Processor -> ATmega328P (or "Old Bootloader" if upload fails)
+   - Tools -> Port -> (select your COM port)
+
+5. Open galaxy_watch_dock.ino and click Upload
+
+6. Wire components as shown above
+
+7. Position TTP-223 under charger and test detection
+
+
+CUSTOMIZATION
+-------------
+In the .ino file you can change:
+
+- baseColor[3]: Change the RGB color
+  {255, 80, 0}    = Orange/Amber (default)
+  {255, 150, 0}   = More yellow/gold
+  {255, 50, 0}    = More red-orange
+  {0, 100, 255}   = Blue
+  {255, 255, 255} = White
+
+- BRIGHTNESS: 0-255, lower = dimmer (default 150)
+
+- BREATH_SPEED: Breathing speed in ms (default 10)
+  Lower = faster breathing, higher = slower
+
+- SENSOR_PIN: Change if using different Arduino pin
+
+
+TROUBLESHOOTING
+---------------
+- LEDs don't light up:
+  Check D6 connection to LED ring DIN
+  Check 5V/GND connections
+
+- Wrong colors:
+  Try changing NEO_GRB to NEO_RGB in the code
+
+- Upload fails:
+  Try "ATmega328P (Old Bootloader)" under Processor
+
+- Sensor always triggered:
+  Move sensor further from charger magnets
+  Add insulating material between sensor and charger
+
+- Sensor never triggers:
+  Check D2 connection
+  Move sensor closer to watch position
+  Open Serial Monitor to debug
