@@ -24,7 +24,7 @@ uint8_t baseColor[3] = {255, 80, 0};
 #define BREATH_MAX   255     // maximum brightness
 
 // Sensitivity - require MORE consecutive readings to trigger
-#define READINGS_REQUIRED 10  // must see this many HIGH readings to trigger ON
+#define READINGS_REQUIRED 50  // must see this many HIGH readings to trigger ON
 #define READINGS_TO_CLEAR 60  // must see this many LOW readings to trigger OFF (~3 sec)
 
 Adafruit_NeoPixel ring(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
