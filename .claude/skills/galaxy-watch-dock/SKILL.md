@@ -59,3 +59,16 @@ In the .ino file:
 - `baseColor[3]` - RGB color values
 - `BRIGHTNESS` - 0-255
 - `BREATH_SPEED` - ms between steps (lower = faster)
+
+## Sensitivity Tuning
+The sensor is configured to avoid false triggers from the metal charging base:
+
+**Software settings:**
+- `DEBOUNCE_READINGS` - Number of samples (default: 10)
+- `REQUIRED_HIGH_COUNT` - Required HIGH readings (default: 9 of 10 = 90%)
+- `SUSTAINED_MS` - Must stay triggered for this long before activating (default: 500ms)
+- `COOLDOWN_MS` - Delay before re-detecting after removal (default: 1000ms)
+
+**Hardware adjustment:**
+- TTP-223 modules often have a small blue trimpot - turn counter-clockwise to reduce sensitivity
+- Some modules have solder jumper "A" to toggle modes
