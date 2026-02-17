@@ -37,7 +37,7 @@
 
 // LED configuration
 #define NUM_LEDS    7    // 7-LED ring
-#define BRIGHTNESS  50  // 0-255
+#define BRIGHTNESS  75  // 0-255
 
 // Color: Orange/Amber (R, G, B)
 uint8_t baseColor[3] = {255, 80, 0};
@@ -46,15 +46,15 @@ uint8_t baseColor[3] = {255, 80, 0};
 #define BREATH_SPEED 10  // ms between brightness steps (lower = faster)
 
 // Debounce settings to prevent flicker
-#define DEBOUNCE_READINGS 10
-#define DEBOUNCE_DELAY_MS 20
-#define REQUIRED_HIGH_COUNT 8      // Require 8 of 10 readings (80%)
+#define DEBOUNCE_READINGS 5
+#define DEBOUNCE_DELAY_MS 8
+#define REQUIRED_HIGH_COUNT 1      // Require 8 of 10 readings (80%)
 
 // Sustained detection - must stay triggered for this long
-#define SUSTAINED_MS 100           // 300ms sustained before activating
+#define SUSTAINED_MS 5           // 300ms sustained before activating
 
 // Cooldown after watch removed before re-detecting
-#define COOLDOWN_MS 500
+#define COOLDOWN_MS 10
 
 Adafruit_NeoPixel ring(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -72,6 +72,10 @@ bool watchConfirmed = false;  // Only true after sustained detection
 
 void setup() {
   Serial.begin(115200);
+
+  // Turn on onboard Pin 13 LED
+  pinMode(13, OUTPUT);
+  digitalWrite(13, HIGH);
 
   // Initialize sensor pin
   pinMode(SENSOR_PIN, INPUT);
