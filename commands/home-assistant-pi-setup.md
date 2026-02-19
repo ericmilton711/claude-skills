@@ -96,6 +96,8 @@ http://homeassistant.local:8123
 
 - First boot takes **~5 minutes** just to show the landing page
 - Full HA Core download and setup takes **20+ minutes** after that
+- The supervisor will auto-update itself on first boot and **restart** — this resets the 20-min timer, so total time can be 30-40 min
+- "Failed to fetch logs" error in browser during this time is normal — hit Retry or F5
 - If DNS error appears during setup, try selecting Google (8.8.8.8) — if that fails, just wait and retry
 - If page doesn't load, wait and refresh
 - If still not loading, try restarting your PC (helps with mDNS/network discovery)
@@ -136,3 +138,5 @@ ESPHome dashboard will appear in the HA sidebar.
 | DNS error during setup         | Try Google DNS; if fails, wait and retry — WiFi may still work   |
 | Preparing HA screen with logs  | Normal — HA Core is downloading, wait 20+ min                    |
 | wlan0 does not exist warning   | Benign during boot if WiFi not yet initialized                   |
+| Failed to fetch logs + Retry   | Supervisor restarted (auto-update) — hit Retry or F5, wait 20min |
+| Progress resets after ~10 min  | Supervisor updated itself and restarted — normal, just wait      |
