@@ -8,8 +8,10 @@ Reference documentation for installing Home Assistant OS on a Raspberry Pi.
 
 - **Pi Model:** Raspberry Pi 3 A+
 - **Storage:** microSD card (16GB+ recommended, 8GB minimum)
-- **Network:** Ethernet cable (required for initial setup)
+- **Network:** WiFi (Pi 3 A+ has NO ethernet port — see WiFi config step below)
 - **Power:** Micro USB power supply
+
+> **Note:** Pi 3 A+ has no ethernet port. WiFi must be pre-configured on the SD card before first boot (see Step 3b).
 
 ---
 
@@ -37,14 +39,50 @@ Then run the installer.
 5. Click **Next** → when asked about OS customization, click **No**
 6. Flash it
 
+> **If SD card not detected in Imager:** Claude can format it first using diskpart. SD card will show as drive letter after formatting.
+
 ---
 
 ### Step 3: Boot the Pi
 
 1. Eject microSD from PC
 2. Insert into Raspberry Pi
-3. Plug in ethernet cable
-4. Power on via micro USB
+3. Power on via micro USB
+
+---
+
+### Step 3b: Pre-configure WiFi (Pi 3 A+ only — no ethernet port)
+
+After flashing, **before booting**, put the SD card back in the PC and create a WiFi config file:
+
+The SD card should mount as a drive letter (e.g. D:) with a small FAT32 boot partition (~32MB).
+
+Create this file: `D:\CONFIG\network\my-network`
+
+```ini
+[connection]
+id=my-network
+uuid=72111c67-4a5d-4d5c-925e-f8ee26efb3eb
+type=802-11-wireless
+
+[802-11-wireless]
+mode=infrastructure
+ssid=YOUR_WIFI_NAME
+
+[802-11-wireless-security]
+auth-alg=open
+key-mgmt=wpa-psk
+psk=YOUR_WIFI_PASSWORD
+
+[ipv4]
+method=auto
+
+[ipv6]
+addr-gen-mode=stable-privacy
+method=auto
+```
+
+Eject SD card, insert into Pi, power on. HA will connect to WiFi automatically.
 
 ---
 
@@ -56,7 +94,9 @@ Open a browser on your PC and go to:
 http://homeassistant.local:8123
 ```
 
-- First boot takes **~5 minutes**
+- First boot takes **~5 minutes** just to show the landing page
+- Full HA Core download and setup takes **20+ minutes** after that
+- If DNS error appears during setup, try selecting Google (8.8.8.8) — if that fails, just wait and retry
 - If page doesn't load, wait and refresh
 - If still not loading, try restarting your PC (helps with mDNS/network discovery)
 
@@ -86,10 +126,13 @@ ESPHome dashboard will appear in the HA sidebar.
 
 ## Troubleshooting
 
-| Issue                          | Fix                                                    |
-|--------------------------------|--------------------------------------------------------|
-| homeassistant.local not loading| Wait 5 min, refresh, or restart PC                     |
-| Page loads but slow            | Normal on first boot, give it time                     |
-| Can't find microSD in Imager   | Try a different USB port or card reader                |
-| Pi won't boot                  | Re-flash the microSD card                              |
-| No ethernet activity lights    | Check cable, try different router port                 |
+| Issue                          | Fix                                                              |
+|--------------------------------|------------------------------------------------------------------|
+| homeassistant.local not loading| Wait 5 min, refresh, or restart PC                               |
+| Page loads but slow            | Normal on first boot, give it time                               |
+| Can't find microSD in Imager   | Have Claude format it with diskpart first                        |
+| Pi won't boot                  | Re-flash the microSD card                                        |
+| No ethernet activity lights    | Pi 3 A+ has no ethernet — use WiFi config method (Step 3b)       |
+| DNS error during setup         | Try Google DNS; if fails, wait and retry — WiFi may still work   |
+| Preparing HA screen with logs  | Normal — HA Core is downloading, wait 20+ min                    |
+| wlan0 does not exist warning   | Benign during boot if WiFi not yet initialized                   |
