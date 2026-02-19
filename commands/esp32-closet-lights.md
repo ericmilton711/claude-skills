@@ -7,9 +7,11 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 ## Project Overview
 
 - **Controller:** ESP32 DevKit V1 (or compatible)
-- **LED Type:** 12V LED Strip (single color)
+- **LED Type:** 12V LED Strip (single color, white)
 - **Trigger:** PIR Motion Sensor
-- **Features:** Basic on/off operation, automatic timeout
+- **Firmware:** ESPHome
+- **Integration:** Home Assistant (native, auto-discovered)
+- **Features:** Motion-triggered on/off, automatic timeout, WiFi, HA control
 
 ---
 
@@ -92,91 +94,128 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 
 ## Parts List
 
-| Component                  | Quantity | Notes                           |
-|----------------------------|----------|---------------------------------|
-| ESP32 DevKit V1            | 1        | Or ESP32-WROOM-32               |
-| 12V LED Strip (single color)| 1       | Short strip only (see note)     |
-| 2N3904 NPN Transistor      | 1        | For LED control channel         |
-| 1k Ohm Resistor            | 1        | Base resistor for transistor    |
-| HC-SR501 PIR Sensor        | 1        | Adjustable sensitivity/delay    |
-| 12V Power Supply           | 1        | Size for LED strip amperage     |
-| LM2596 Buck Converter      | 1        | 12V to 5V for ESP32             |
-| Prototype PCB / Perfboard  | 1        | For clean assembly              |
-| JST Connectors             | As needed| For modular wiring              |
-| Heat Shrink Tubing         | As needed| Wire protection                 |
+| Component                   | Quantity | Notes                           |
+|-----------------------------|----------|---------------------------------|
+| ESP32 DevKit V1             | 1        | Or ESP32-WROOM-32               |
+| 12V LED Strip (white)       | 1        | Short strip only (see note)     |
+| 2N3904 NPN Transistor       | 1        | For LED control channel         |
+| 1k Ohm Resistor             | 1        | Base resistor for transistor    |
+| HC-SR501 PIR Sensor         | 1        | Adjustable sensitivity/delay    |
+| 12V Power Supply            | 1        | Size for LED strip amperage     |
+| LM2596 Buck Converter       | 1        | 12V to 5V for ESP32             |
+| Prototype PCB / Perfboard   | 1        | For clean assembly              |
+| JST Connectors              | As needed| For modular wiring              |
+| Heat Shrink Tubing          | As needed| Wire protection                 |
 
 **Note:** 2N3904 transistors are limited to 200mA. This works for short LED strips (~10-15 segments). For longer strips, upgrade to IRLB8721 or IRLZ44N MOSFETs.
 
 ---
 
-## Basic Arduino Code
+## ESPHome Configuration
 
-```cpp
-// ESP32 Closet LED Controller
-// Trigger: PIR Motion Sensor
+### First-Time Setup
 
-#define PIN_LED    25
-#define PIN_PIR    32
-#define PIN_STATUS 2
+1. Install ESPHome: `pip install esphome`
+2. Create `secrets.yaml` in your ESPHome config folder:
 
-// PWM Configuration
-#define PWM_FREQ   5000
-#define PWM_RES    8
-
-// Timing
-#define LIGHT_TIMEOUT_MS  60000  // 60 seconds auto-off
-
-unsigned long lastTriggerTime = 0;
-bool lightsOn = false;
-
-void setup() {
-  Serial.begin(115200);
-
-  // Configure PWM channel
-  ledcSetup(0, PWM_FREQ, PWM_RES);
-  ledcAttachPin(PIN_LED, 0);
-
-  // Configure inputs
-  pinMode(PIN_PIR, INPUT);
-  pinMode(PIN_STATUS, OUTPUT);
-
-  // Start with lights off
-  setLight(0);
-
-  Serial.println("Closet LED Controller Ready");
-}
-
-void loop() {
-  bool motionDetected = digitalRead(PIN_PIR) == HIGH;
-
-  // Trigger lights on motion
-  if (motionDetected) {
-    if (!lightsOn) {
-      lightsOn = true;
-      setLight(255);  // Full brightness
-      digitalWrite(PIN_STATUS, HIGH);
-      Serial.println("Lights ON");
-    }
-    lastTriggerTime = millis();
-  }
-
-  // Auto-off after timeout
-  if (lightsOn) {
-    if (millis() - lastTriggerTime > LIGHT_TIMEOUT_MS) {
-      lightsOn = false;
-      setLight(0);
-      digitalWrite(PIN_STATUS, LOW);
-      Serial.println("Lights OFF (timeout)");
-    }
-  }
-
-  delay(100);  // Small debounce
-}
-
-void setLight(uint8_t brightness) {
-  ledcWrite(0, brightness);
-}
+```yaml
+wifi_ssid: "YourNetworkName"
+wifi_password: "YourWiFiPassword"
+api_encryption_key: "generate-at-esphome.io/encrypting"
+ota_password: "choose-a-password"
+fallback_password: "fallback-password"
 ```
+
+3. Flash via USB the first time: `esphome run closet-lights.yaml`
+4. All future updates are OTA over WiFi
+
+---
+
+### ESPHome YAML (`closet-lights.yaml`)
+
+```yaml
+esphome:
+  name: closet-lights
+  friendly_name: Closet Lights
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Closet Lights Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# LED strip output (PWM via LEDC)
+output:
+  - platform: ledc
+    pin: GPIO25
+    id: led_output
+
+# Expose as a dimmable light in Home Assistant
+light:
+  - platform: monochromatic
+    name: "Closet Light"
+    output: led_output
+    id: closet_light
+    restore_mode: ALWAYS_OFF
+
+# PIR motion sensor
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO32
+      mode:
+        input: true
+        pulldown: true
+    name: "Closet PIR"
+    id: closet_pir
+    device_class: motion
+    on_press:
+      - light.turn_on: closet_light
+      - script.stop: auto_off
+    on_release:
+      - script.execute: auto_off
+
+# Auto-off timer — restarts if motion stops then resumes
+script:
+  - id: auto_off
+    then:
+      - delay: 60s
+      - light.turn_off: closet_light
+
+# Onboard status LED
+status_led:
+  pin:
+    number: GPIO2
+    inverted: true
+```
+
+---
+
+### How It Works
+
+1. Motion detected → PIR goes HIGH → light turns on, auto-off timer cancelled
+2. Motion stops → PIR goes LOW → 60 second countdown starts
+3. If motion detected again before 60s → timer resets, light stays on
+4. After 60s with no motion → light turns off
+5. Home Assistant can also turn light on/off and adjust brightness manually at any time
 
 ---
 
@@ -184,7 +223,7 @@ void setLight(uint8_t brightness) {
 
 ### PIR Sensor (HC-SR501)
 - **Sensitivity:** Adjust via potentiometer (clockwise = more sensitive)
-- **Time Delay:** Set to minimum (jumper to "L" or lowest pot setting)
+- **Time Delay:** Set to minimum (jumper to "L" or lowest pot setting) — ESPHome handles the timeout
 - **Trigger Mode:** Use "H" (repeatable trigger) - keeps retriggering while motion continues
 
 ---
@@ -200,13 +239,15 @@ void setLight(uint8_t brightness) {
 
 ## Troubleshooting
 
-| Issue                    | Check                                       |
-|--------------------------|---------------------------------------------|
-| No lights                | 12V PSU, transistor connections, GPIO output|
-| Flickering               | PWM frequency, loose connections            |
-| PIR not triggering       | Sensitivity pot, power to sensor (5V)       |
-| Transistor getting hot   | Strip drawing too much current (>200mA)     |
-| ESP32 not booting        | Buck converter output (5V), connections     |
+| Issue                        | Check                                             |
+|------------------------------|---------------------------------------------------|
+| No lights                    | 12V PSU, transistor connections, GPIO output      |
+| Flickering                   | PWM frequency, loose connections                  |
+| PIR not triggering           | Sensitivity pot, power to sensor (5V)             |
+| Transistor getting hot       | Strip drawing too much current (>200mA)           |
+| ESP32 not booting            | Buck converter output (5V), connections           |
+| Not showing in Home Assistant| Check API encryption key, HA ESPHome integration  |
+| OTA not working              | ESP32 must be on same WiFi network as HA          |
 
 ---
 
@@ -320,3 +361,4 @@ Looking at sensor with dome facing you:
 | Right (Tx)      | Longer (~5 min)   | Shorter (~3 sec)  |
 
 **For testing:** Turn both pots **counter-clockwise** for shorter delay and less sensitivity.
+**For final install:** Set time delay pot to minimum — ESPHome controls the 60s timeout instead.
