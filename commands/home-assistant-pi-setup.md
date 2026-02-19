@@ -140,3 +140,6 @@ ESPHome dashboard will appear in the HA sidebar.
 | wlan0 does not exist warning   | Benign during boot if WiFi not yet initialized                   |
 | Failed to fetch logs + Retry   | Supervisor restarted (auto-update) — hit Retry or F5, wait 20min |
 | Progress resets after ~10 min  | Supervisor updated itself and restarted — normal, just wait      |
+| Repeated supervisor restarts   | Can happen 2-3 times as plugins update (dns, audio, observer, multicast) before HA Core downloads |
+| "Core installation in progress"| Good sign — steady every 15 sec means it's actually downloading, just slow on Pi 3 A+ |
+| Pi IP not what expected        | Check ARP table — Pi MAC starts with b8:27:eb (Raspberry Pi Foundation OUI) |
