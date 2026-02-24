@@ -253,6 +253,109 @@ This is why using Imager's built-in customization is essential.
 
 ---
 
+## Step 7: Pi CSI Camera Stream (Generic Camera in HA)
+
+For Pi cameras connected via the CSI ribbon cable port (not USB).
+
+### Install rpicam-apps and camera stream script
+
+```bash
+sudo apt-get install -y rpicam-apps-core
+```
+
+Save this script to `/home/pi/camera-stream.py`:
+
+```python
+#!/usr/bin/env python3
+import http.server, subprocess, threading, time, sys
+
+latest_frame = b''
+frame_lock = threading.Lock()
+
+def capture_frames():
+    global latest_frame
+    proc = subprocess.Popen(
+        ['rpicam-vid', '-t', '0', '--codec', 'mjpeg',
+         '--width', '640', '--height', '480', '--framerate', '15',
+         '--inline', '-o', '-', '--nopreview'],
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    buffer = b''
+    while True:
+        chunk = proc.stdout.read(4096)
+        if not chunk: break
+        buffer += chunk
+        start = buffer.find(b'\xff\xd8')
+        end = buffer.find(b'\xff\xd9')
+        if start != -1 and end != -1 and end > start:
+            with frame_lock:
+                latest_frame = buffer[start:end+2]
+            buffer = buffer[end+2:]
+
+class StreamHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/stream':
+            self.send_response(200)
+            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
+            self.end_headers()
+            try:
+                while True:
+                    with frame_lock: frame = latest_frame
+                    if frame:
+                        self.wfile.write(b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                    time.sleep(0.067)
+            except: pass
+        elif self.path == '/snapshot':
+            with frame_lock: frame = latest_frame
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/jpeg')
+            self.end_headers()
+            self.wfile.write(frame or b'')
+    def log_message(self, *args): pass
+
+threading.Thread(target=capture_frames, daemon=True).start()
+time.sleep(3)
+http.server.HTTPServer(('0.0.0.0', 8080), StreamHandler).serve_forever()
+```
+
+### Create systemd service
+
+```bash
+sudo tee /etc/systemd/system/camera-stream.service << 'EOF'
+[Unit]
+Description=Pi Camera MJPEG Stream
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/pi/camera-stream.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload && sudo systemctl enable camera-stream && sudo systemctl start camera-stream
+```
+
+### Add to Home Assistant
+
+In HA: **Settings → Devices & Services → + Add Integration → Generic Camera**
+- Still Image URL: `http://192.168.12.114:8080/snapshot`
+- Stream Source URL: `http://192.168.12.114:8080/stream`
+
+> **Note:** Camera stream is IN PROGRESS — still debugging image display in HA dashboard.
+> The snapshot endpoint works (returns valid JPEG) but HA dashboard shows blank.
+> Known issues to investigate next session:
+> - rpicam-vid may not produce parseable MJPEG stdout in all cases
+> - Try without `--inline` flag
+> - Check if HA Generic Camera needs a different stream format
+
+### Camera device info
+- Type: OV5647 (Pi Camera v1 compatible), CSI ribbon cable
+- Detected as `/dev/video0` (unicam) — NOT a USB camera
+- rpicam-apps-core required (not ffmpeg or motion — both have Trixie dep issues)
+
+---
+
 ## Notes
 
 - No Supervisor, no add-on store — everything installed as separate Docker containers
@@ -260,3 +363,6 @@ This is why using Imager's built-in customization is essential.
 - Much lower RAM usage than HA OS — should run fine on 512MB Pi 3 A+
 - ESPHome devices auto-discover in HA via the ESPHome integration (add by IP)
 - Plant moisture sensors, closet lights, etc. all show up as devices in HA dashboard
+- Pi IP address: 192.168.12.114 (as of last session)
+- SSH key auth set up — no password needed from Eric's PC
+- sudo NOPASSWD configured for pi user
