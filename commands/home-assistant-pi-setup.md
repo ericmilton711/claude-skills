@@ -143,3 +143,8 @@ ESPHome dashboard will appear in the HA sidebar.
 | Repeated supervisor restarts   | Can happen 2-3 times as plugins update (dns, audio, observer, multicast) before HA Core downloads |
 | "Core installation in progress"| Good sign — steady every 15 sec means it's actually downloading, just slow on Pi 3 A+ |
 | Pi IP not what expected        | Check ARP table — Pi MAC starts with b8:27:eb (Raspberry Pi Foundation OUI) |
+| Pi disappears from network mid-boot | Normal during supervisor restarts — Pi goes offline briefly 2-3 times, just wait and retry |
+| homeassistant.local stops resolving after working | Pi is in a restart cycle — wait a few minutes and refresh |
+| Pi not in ARP table at all     | Do a ping sweep to populate ARP: `for i in $(seq 1 254); do ping -n 1 -w 100 192.168.12.$i > /dev/null 2>&1 & done; sleep 10; arp -a` (adjust subnet) |
+| Pi still not found after ping sweep | Power cycle: unplug micro USB, wait 10 sec, plug back in — then wait 5+ min |
+| Pi was connecting then stopped entirely | Power cycle Pi and restart PC — both together usually fixes it |
