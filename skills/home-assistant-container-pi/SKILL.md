@@ -7,6 +7,7 @@ Use this approach when HA OS runs out of memory on the Pi 3 A+. Runs Home Assist
 ## Why This Approach
 
 - Pi 3 A+ only has 512MB RAM — too little for HA OS
+- HA OS also has a hardware conflict: the SD card and WiFi chip share the SDIO bus on Pi 3 A+, causing `brcmfmac` NAK errors and WiFi dropouts during heavy I/O (e.g. downloading HA Core) — makes HA OS unreliable
 - HA Container runs lighter, no Supervisor overhead
 - Trade-off: no add-on store — ESPHome must be installed separately as its own container
 
@@ -24,37 +25,122 @@ Use this approach when HA OS runs out of memory on the Pi 3 A+. Runs Home Assist
    - **Configure WiFi**: enter MILTONHAUS / wisdom22!!
    - Set WiFi country: **US**
    - Enable SSH (under Services tab)
+   - **Do NOT enable Raspberry Pi Connect** — not needed
+   - Use **password authentication** (not public key)
 6. Click **Save** → **Yes** to apply customization → flash it
 
 > **CRITICAL:** Always use Raspberry Pi Imager's built-in "Edit Settings" to configure WiFi and SSH.
 > Do NOT try to manually create `firstrun.sh` or `wpa_supplicant.conf` — it is unreliable on
 > Raspberry Pi OS Trixie (2025+) due to path and NetworkManager changes (see Troubleshooting below).
 
+> **Note:** After flashing, the SD card may not show up on Windows — this is normal. You do NOT need
+> to access the SD card after flashing. All settings are already baked in. Just eject and insert into Pi.
+
 ---
 
 ## Step 2: Boot and SSH In
 
 1. Insert SD card into Pi 3 A+, power on via micro USB
-2. Wait ~2 minutes for first boot
-3. Find Pi IP via ARP (Pi MAC starts with `b8:27:eb`):
+2. Wait **3-4 minutes** for first boot (runs setup scripts, may reboot once)
+3. Find Pi IP — do a ping sweep first to populate ARP, then check:
+   ```bash
+   for i in $(seq 1 254); do ping -n 1 -w 100 192.168.12.$i > /dev/null 2>&1 & done; sleep 10; arp -a
    ```
-   arp -a
-   ```
+   > **Note:** Pi 3 A+ MAC may be randomized on Trixie — won't always start with `b8:27:eb`
+
 4. SSH in:
    ```
    ssh pi@192.168.12.XXX
    ```
    Or try: `ssh pi@raspberrypi.local`
 
+### If WiFi didn't connect automatically
+
+Even with Imager's Edit Settings, WiFi sometimes doesn't auto-connect on first boot. If the Pi isn't found on the network, connect a monitor and keyboard and log in directly:
+
+```
+login: pi
+password: raspberry
+```
+
+Check WiFi status:
+```bash
+nmcli dev status
+```
+
+If `wlan0` shows `disconnected`, scan and connect manually:
+```bash
+sudo nmcli dev wifi list
+sudo nmcli dev wifi connect MILTONHAUS password 'wisdom22!!'
+```
+> **Important:** Use single quotes around the password — the `!!` will trigger bash history expansion without them.
+
+Then get the IP:
+```bash
+hostname -I
+```
+
 ---
 
-## Step 3: Install Docker
+## Step 3: Install Docker on Raspberry Pi OS Trixie
+
+> **WARNING:** The standard `get.docker.com` script does NOT work on Raspberry Pi OS Trixie.
+> It tries to use the Raspbian repo which has no Trixie release. Follow this sequence instead:
+
+### 3a: Fix apt sources (Trixie has broken Raspbian repo by default)
 
 ```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+# Remove broken Raspbian Trixie source
+sudo rm /etc/apt/sources.list.d/raspbian.sources
+
+# Update apt (now only using archive.raspberrypi.com)
+sudo apt-get update -qq
+```
+
+### 3b: Bootstrap the Debian archive keyring
+
+```bash
+# Temporarily trust Debian repo to install the keyring
+sudo tee /etc/apt/sources.list.d/debian-temp.sources << 'EOF'
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: trixie
+Components: main
+Trusted: yes
+EOF
+
+sudo apt-get update -qq
+sudo apt-get install -y --allow-unauthenticated debian-archive-keyring
+
+# Remove the temporary trusted source
+sudo rm /etc/apt/sources.list.d/debian-temp.sources
+```
+
+### 3c: Add proper Debian Trixie repo
+
+```bash
+sudo tee /etc/apt/sources.list.d/debian.sources << 'EOF'
+Types: deb
+URIs: http://deb.debian.org/debian/
+Suites: trixie trixie-updates
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+
+sudo apt-get update -qq
+```
+
+### 3d: Add Docker's Debian repo and install
+
+```bash
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=armhf signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian trixie stable" | sudo tee /etc/apt/sources.list.d/docker.list
+
+sudo apt-get update -qq
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# Add pi user to docker group
 sudo usermod -aG docker $USER
-newgrp docker
 ```
 
 ---
@@ -62,7 +148,7 @@ newgrp docker
 ## Step 4: Run Home Assistant Container
 
 ```bash
-docker run -d \
+sudo docker run -d \
   --name homeassistant \
   --privileged \
   --restart=unless-stopped \
@@ -73,6 +159,7 @@ docker run -d \
 ```
 
 > Use `raspberrypi3-homeassistant` (32-bit) for Pi 3 A+ with Raspberry Pi OS Lite 32-bit.
+> Image is large (~500MB+) — download takes several minutes on WiFi. This is normal.
 
 ---
 
@@ -82,7 +169,7 @@ docker run -d \
 http://192.168.12.XXX:8123
 ```
 
-First start takes a few minutes to download and initialize.
+First start takes a few minutes to download and initialize. Click **"Create my smart home"** to onboard.
 
 ---
 
@@ -91,7 +178,7 @@ First start takes a few minutes to download and initialize.
 Since there's no add-on store, run ESPHome in its own container:
 
 ```bash
-docker run -d \
+sudo docker run -d \
   --name esphome \
   --restart=unless-stopped \
   -v /home/pi/esphome:/config \
@@ -122,10 +209,24 @@ Same as HA OS — add via **Tuya** or **Local Tuya** integration in HA settings.
 
 ### Pi not showing up on network after boot
 
-1. Check `arp -a` — look for MAC starting with `b8:27:eb` in the `192.168.12.x` range
+1. Do a ping sweep to populate the ARP table:
+   ```bash
+   for i in $(seq 1 254); do ping -n 1 -w 100 192.168.12.$i > /dev/null 2>&1 & done; sleep 10; arp -a
+   ```
 2. Pi 3 A+ is **2.4GHz only** — ensure your router broadcasts 2.4GHz on MILTONHAUS
 3. Give it 3-4 minutes on first boot — it runs setup scripts and may reboot once
-4. If still nothing, pull SD card and re-flash using Imager with Edit Settings
+4. Pi MAC address may be randomized on Trixie — not always `b8:27:eb`
+5. If still not found, connect monitor/keyboard and manually connect via nmcli (see Step 2)
+6. If all else fails, pull SD card and re-flash using Imager with Edit Settings
+
+### WiFi manual connect (nmcli)
+
+```bash
+nmcli dev status                          # check wlan0 state
+sudo nmcli dev wifi list                  # scan for networks
+sudo nmcli dev wifi connect MILTONHAUS password 'wisdom22!!'  # single quotes required for !!
+hostname -I                               # get IP after connecting
+```
 
 ### Raspberry Pi OS Trixie (2025+) WiFi changes
 

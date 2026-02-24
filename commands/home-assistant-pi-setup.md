@@ -13,6 +13,12 @@ Reference documentation for installing Home Assistant OS on a Raspberry Pi.
 
 > **Note:** Pi 3 A+ has no ethernet port. WiFi must be pre-configured on the SD card before first boot (see Step 3b).
 
+> **WARNING:** HA OS is unreliable on the Pi 3 A+ due to two compounding issues:
+> 1. Only 512MB RAM — not enough for HA OS + Supervisor + downloading HA Core simultaneously
+> 2. The Pi 3 A+'s SD card and WiFi chip share the SDIO bus — heavy SD I/O during install causes `brcmfmac` NAK errors and WiFi dropouts
+>
+> If HA OS gets stuck in the "Preparing Home Assistant" loop for 30+ minutes, switch to the **HA Container approach** instead (`home-assistant-container-pi` skill).
+
 ---
 
 ## Installation Steps
