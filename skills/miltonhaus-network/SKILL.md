@@ -1,7 +1,7 @@
 # MILTONHAUS Network Rebuild Plan
 
 **Last Updated:** 2026-02-25
-**Status:** Planning — hardware arriving (Pi 4, Beelink EQ12)
+**Status:** Planning — Pi 4 arriving, Lenovo ThinkCentre M900 Tiny offer pending ($85)
 
 ---
 
@@ -20,13 +20,14 @@
 |---|---|---|
 | **USG 3P** | Router + VLAN enforcement + firewall | Active — 192.168.1.1 |
 | **Pi 4** (ethernet) | Pi-hole (kids DNS) + WireGuard VPN gateway | Arriving soon |
-| **Beelink EQ12** | Fedora Server — UniFi controller | Ordered (~$170-200, Amazon) |
-| **Cloud Key** | Retired (replaced by Beelink) | Retire after migration |
+| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — UniFi controller | Offer pending ($85, eBay item 226876134049) |
+| **Cloud Key** | Retired (replaced by Lenovo) | Retire after migration |
 | **Pi 3 A+** | Repurposed for other projects | Freed up |
 | **Windows PC** | Client + management (SSH to Lambert) | 192.168.1.9 |
 | **Mac** | Client only | 192.168.1.7 |
 
-**Beelink EQ12 Specs to buy:** 16GB RAM / 500GB SSD — search Amazon "Beelink EQ12", buy from Beelink Official Store
+**Lenovo ThinkCentre M900 Tiny specs:** Intel i5-6500T, 8GB RAM, 256GB SSD, Windows 11
+**Why chosen:** ~10-15W idle (very low power for 24/7 use), x86, runs Fedora Server, plenty for UniFi controller
 
 ---
 
@@ -45,7 +46,7 @@
 |---|---|---|
 | USG 3P | 192.168.1.1 | 1 (Management) |
 | Pi 4 | 192.168.1.x (static) | 1 (serves kids VLAN) |
-| Beelink EQ12 | 192.168.1.x (static) | 1 (Management) |
+| Lenovo M900 Tiny | 192.168.1.x (static) | 1 (Management) |
 | Kids devices | 192.168.10.x | 10 (Kids) |
 | Adult devices | 192.168.1.x | 1 (Admin) |
 
@@ -65,9 +66,9 @@ Kids' devices route `192.168.0.x` traffic through Pi 4 → WireGuard tunnel → 
 
 ## Setup Order
 
-### Phase 1 — Beelink EQ12 (Fedora Server + UniFi Controller)
+### Phase 1 — Lenovo ThinkCentre M900 Tiny (Fedora Server + UniFi Controller)
 
-1. Install Fedora Server on Beelink EQ12
+1. Install Fedora Server on Lenovo ThinkCentre M900 Tiny
 2. Install UniFi controller software
 3. Back up current config from Cloud Key
 4. Restore backup to new controller
