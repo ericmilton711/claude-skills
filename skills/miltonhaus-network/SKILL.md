@@ -31,6 +31,60 @@
 
 ---
 
+## Physical Wiring Diagram
+
+### Final Setup (once all hardware arrives)
+
+```
+Modem/ISP
+    |
+    | (WAN port)
+  USG 3P
+    | (LAN1 port)
+    |
+5-port 1GB Switch
+    |           |           |           |
+  UniFi AP    Mac       Lenovo M900   Pi 4
+ (PoE port) (ethernet)  (Fedora/     (Pi-hole +
+                         UniFi)       WireGuard)
+
+Windows Laptop → WiFi (no ethernet needed)
+Pi 3 A+        → WiFi (repurposed, no ethernet needed)
+```
+
+**Switch port assignments:**
+| Port | Device |
+|---|---|
+| 1 | USG 3P (LAN1) |
+| 2 | UniFi AP Long Range (PoE or via PoE injector) |
+| 3 | Mac |
+| 4 | Lenovo ThinkCentre M900 Tiny (Fedora server) |
+| 5 | Pi 4 (Pi-hole + WireGuard) |
+
+> **Note:** All 5 switch ports are used in the final setup. If additional wired devices are needed, a larger switch will be required.
+
+### Interim Setup (while waiting for Pi 4 and Lenovo)
+
+```
+Modem/ISP
+    |
+    | (WAN port)
+  USG 3P
+    | (LAN1 port)
+    |
+5-port 1GB Switch
+    |           |
+  UniFi AP    Mac
+ (PoE port) (ethernet)
+
+Windows Laptop → WiFi
+Pi 3 A+        → WiFi
+```
+
+> **Note:** Cloud Key is retired and not included. UniFi AP retains its last known configuration and broadcasts WiFi normally without the Cloud Key.
+
+---
+
 ## Network Architecture
 
 ### Two VLANs
