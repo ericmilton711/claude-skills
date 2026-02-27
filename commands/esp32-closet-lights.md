@@ -7,9 +7,11 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 ## Project Overview
 
 - **Controller:** ESP32 DevKit V1 (or compatible)
-- **LED Type:** 12V RGB LED Strip (non-addressable, common anode)
+- **LED Type:** 12V LED Strip (single color, white)
 - **Trigger:** PIR Motion Sensor
-- **Features:** Basic on/off operation, automatic timeout
+- **Firmware:** ESPHome
+- **Integration:** Home Assistant (native, auto-discovered)
+- **Features:** Motion-triggered on/off, automatic timeout, WiFi, HA control
 
 ---
 
@@ -19,20 +21,18 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 
 | Function          | GPIO Pin | Notes                          |
 |-------------------|----------|--------------------------------|
-| Red Channel PWM   | GPIO 25  | To 2N3904 base via 1k resistor |
-| Green Channel PWM | GPIO 26  | To 2N3904 base via 1k resistor |
-| Blue Channel PWM  | GPIO 27  | To 2N3904 base via 1k resistor |
+| LED Channel PWM   | GPIO 25  | To 2N3904 base via 1k resistor |
 | PIR Sensor        | GPIO 32  | Input, internal pulldown       |
 | Status LED        | GPIO 2   | Onboard LED (optional debug)   |
 
 ### Power Connections
 
-| Connection        | Details                              |
-|-------------------|--------------------------------------|
-| ESP32 VIN         | 5V from buck converter               |
-| ESP32 GND         | Common ground                        |
-| LED Strip V+      | 12V power supply positive            |
-| LED Strip R/G/B   | To 2N3904 collectors                 |
+| Connection          | Details                              |
+|---------------------|--------------------------------------|
+| ESP32 VIN           | 5V from buck converter               |
+| ESP32 GND           | Common ground                        |
+| LED Strip V+        | 12V power supply positive            |
+| LED Strip control   | To 2N3904 collector                  |
 
 ---
 
@@ -42,36 +42,32 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
                     12V PSU
                    +      -
                    |      |
-                   |      +----+----+----+-----> Common GND
-                   |           |    |    |
-              +----+           |    |    |
-              |                |    |    |
-         [12V RGB Strip]       |    |    |
-          R    G    B   V+     |    |    |
-          |    |    |    |     |    |    |
-          |    |    |    +-----+    |    |
-          |    |    |               |    |
-       [C] 2N3904 2N3904 2N3904     |    |
-       [E]   |       |       |      |    |
-          +--+-------+-------+------+    |
-          |                              |
-          +---> GND                      |
-                                         |
-    [B] GPIO25  GPIO26  GPIO27           |
-        (via 1k resistors)               |
-          |       |       |              |
-          +-------+-------+              |
-                  |                      |
-            [ESP32 DevKit]               |
-              VIN   GND                  |
-               |     |                   |
-               |     +-------------------+
-               |
-          [Buck Converter]
-           IN+  IN-  OUT+  OUT-
-            |    |    5V   GND
-            |    |
-           12V  GND (from PSU)
+                   |      +---------> Common GND
+                   |           |
+              +----+           |
+              |                |
+         [12V LED Strip]       |
+          ctrl   V+            |
+          |       |            |
+          |       +------------+
+          |
+       [C] 2N3904
+       [E]   |
+          +--+-------------------> GND
+          |
+    [B] GPIO25
+        (via 1k resistor)
+          |
+    [ESP32 DevKit]
+      VIN   GND
+       |     |
+       |     +--------------------> GND
+       |
+  [Buck Converter]
+   IN+  IN-  OUT+  OUT-
+    |    |    5V   GND
+    |    |
+   12V  GND (from PSU)
 
 
     PIR SENSOR (HC-SR501)
@@ -87,111 +83,139 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 ### 2N3904 Wiring Detail
 
 ```
-  GPIO --[1k resistor]-- BASE
-                        2N3904 (flat side facing you)
-                        E  B  C
-                        |     |
-                       GND    LED Strip color wire (R, G, or B)
+  GPIO25 --[1k resistor]-- BASE
+                          2N3904 (flat side facing you)
+                          E  B  C
+                          |     |
+                         GND    LED Strip control wire
 ```
 
 ---
 
 ## Parts List
 
-| Component                  | Quantity | Notes                           |
-|----------------------------|----------|---------------------------------|
-| ESP32 DevKit V1            | 1        | Or ESP32-WROOM-32               |
-| 12V RGB LED Strip          | 1        | Short strip only (see note)     |
-| 2N3904 NPN Transistor      | 3        | One per color channel           |
-| 1k Ohm Resistors           | 3        | Base resistors for transistors  |
-| HC-SR501 PIR Sensor        | 1        | Adjustable sensitivity/delay    |
-| 12V Power Supply           | 1        | Size for LED strip amperage     |
-| LM2596 Buck Converter      | 1        | 12V to 5V for ESP32             |
-| Prototype PCB / Perfboard  | 1        | For clean assembly              |
-| JST Connectors             | As needed| For modular wiring              |
-| Heat Shrink Tubing         | As needed| Wire protection                 |
+| Component                   | Quantity | Notes                           |
+|-----------------------------|----------|---------------------------------|
+| ESP32 DevKit V1             | 1        | Or ESP32-WROOM-32               |
+| 12V LED Strip (white)       | 1        | Short strip only (see note)     |
+| 2N3904 NPN Transistor       | 1        | For LED control channel         |
+| 1k Ohm Resistor             | 1        | Base resistor for transistor    |
+| HC-SR501 PIR Sensor         | 1        | Adjustable sensitivity/delay    |
+| 12V Power Supply            | 1        | Size for LED strip amperage     |
+| LM2596 Buck Converter       | 1        | 12V to 5V for ESP32             |
+| Prototype PCB / Perfboard   | 1        | For clean assembly              |
+| JST Connectors              | As needed| For modular wiring              |
+| Heat Shrink Tubing          | As needed| Wire protection                 |
 
-**Note:** 2N3904 transistors are limited to 200mA per channel. This works for short LED strips (~10-15 segments). For longer strips, upgrade to IRLB8721 or IRLZ44N MOSFETs.
+**Note:** 2N3904 transistors are limited to 200mA. This works for short LED strips (~10-15 segments). For longer strips, upgrade to IRLB8721 or IRLZ44N MOSFETs.
 
 ---
 
-## Basic Arduino Code
+## ESPHome Configuration
 
-```cpp
-// ESP32 Closet LED Controller
-// Trigger: PIR Motion Sensor
+### First-Time Setup
 
-#define PIN_RED    25
-#define PIN_GREEN  26
-#define PIN_BLUE   27
-#define PIN_PIR    32
-#define PIN_STATUS 2
+1. Install ESPHome: `pip install esphome`
+2. Create `secrets.yaml` in your ESPHome config folder:
 
-// PWM Configuration
-#define PWM_FREQ   5000
-#define PWM_RES    8
-
-// Timing
-#define LIGHT_TIMEOUT_MS  60000  // 60 seconds auto-off
-
-unsigned long lastTriggerTime = 0;
-bool lightsOn = false;
-
-void setup() {
-  Serial.begin(115200);
-
-  // Configure PWM channels
-  ledcSetup(0, PWM_FREQ, PWM_RES);  // Red
-  ledcSetup(1, PWM_FREQ, PWM_RES);  // Green
-  ledcSetup(2, PWM_FREQ, PWM_RES);  // Blue
-
-  ledcAttachPin(PIN_RED, 0);
-  ledcAttachPin(PIN_GREEN, 1);
-  ledcAttachPin(PIN_BLUE, 2);
-
-  // Configure inputs
-  pinMode(PIN_PIR, INPUT);
-  pinMode(PIN_STATUS, OUTPUT);
-
-  // Start with lights off
-  setColor(0, 0, 0);
-
-  Serial.println("Closet LED Controller Ready");
-}
-
-void loop() {
-  bool motionDetected = digitalRead(PIN_PIR) == HIGH;
-
-  // Trigger lights on motion
-  if (motionDetected) {
-    if (!lightsOn) {
-      lightsOn = true;
-      setColor(255, 255, 255);  // White light
-      digitalWrite(PIN_STATUS, HIGH);
-      Serial.println("Lights ON");
-    }
-    lastTriggerTime = millis();
-  }
-
-  // Auto-off after timeout
-  if (lightsOn) {
-    if (millis() - lastTriggerTime > LIGHT_TIMEOUT_MS) {
-      lightsOn = false;
-      setColor(0, 0, 0);
-      digitalWrite(PIN_STATUS, LOW);
-      Serial.println("Lights OFF (timeout)");
-    }
-  }
-
-  delay(100);  // Small debounce
-}
-
-void setColor(uint8_t r, uint8_t g, uint8_t b) {
-  ledcWrite(0, r);
-  ledcWrite(1, g);
-  ledcWrite(2, b);
-}
+```yaml
+wifi_ssid: "YourNetworkName"
+wifi_password: "YourWiFiPassword"
+api_encryption_key: "generate-at-esphome.io/encrypting"
+ota_password: "choose-a-password"
+fallback_password: "fallback-password"
 ```
+
+3. Flash via USB the first time: `esphome run closet-lights.yaml`
+4. All future updates are OTA over WiFi
+
+---
+
+### ESPHome YAML (`closet-lights.yaml`)
+
+```yaml
+esphome:
+  name: closet-lights
+  friendly_name: Closet Lights
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+logger:
+
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Closet Lights Fallback"
+    password: !secret fallback_password
+
+captive_portal:
+
+# LED strip output (PWM via LEDC)
+output:
+  - platform: ledc
+    pin: GPIO25
+    id: led_output
+
+# Expose as a dimmable light in Home Assistant
+light:
+  - platform: monochromatic
+    name: "Closet Light"
+    output: led_output
+    id: closet_light
+    restore_mode: ALWAYS_OFF
+
+# PIR motion sensor
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO32
+      mode:
+        input: true
+        pulldown: true
+    name: "Closet PIR"
+    id: closet_pir
+    device_class: motion
+    on_press:
+      - light.turn_on: closet_light
+      - script.stop: auto_off
+    on_release:
+      - script.execute: auto_off
+
+# Auto-off timer — restarts if motion stops then resumes
+script:
+  - id: auto_off
+    then:
+      - delay: 60s
+      - light.turn_off: closet_light
+
+# Onboard status LED
+status_led:
+  pin:
+    number: GPIO2
+    inverted: true
+```
+
+---
+
+### How It Works
+
+1. Motion detected → PIR goes HIGH → light turns on, auto-off timer cancelled
+2. Motion stops → PIR goes LOW → 60 second countdown starts
+3. If motion detected again before 60s → timer resets, light stays on
+4. After 60s with no motion → light turns off
+5. Home Assistant can also turn light on/off and adjust brightness manually at any time
 
 ---
 
@@ -199,7 +223,7 @@ void setColor(uint8_t r, uint8_t g, uint8_t b) {
 
 ### PIR Sensor (HC-SR501)
 - **Sensitivity:** Adjust via potentiometer (clockwise = more sensitive)
-- **Time Delay:** Set to minimum (jumper to "L" or lowest pot setting)
+- **Time Delay:** Set to minimum (jumper to "L" or lowest pot setting) — ESPHome handles the timeout
 - **Trigger Mode:** Use "H" (repeatable trigger) - keeps retriggering while motion continues
 
 ---
@@ -207,7 +231,7 @@ void setColor(uint8_t r, uint8_t g, uint8_t b) {
 ## Mounting Tips
 
 1. Mount PIR sensor at ~6ft height, angled toward closet entry
-2. Keep ESP32 and transistors in ventilated enclosure
+2. Keep ESP32 and transistor in ventilated enclosure
 3. Use appropriate wire gauge for LED strip current (18-20 AWG typ)
 4. Ensure 12V PSU is rated for total LED strip draw + margin
 
@@ -215,14 +239,15 @@ void setColor(uint8_t r, uint8_t g, uint8_t b) {
 
 ## Troubleshooting
 
-| Issue                    | Check                                       |
-|--------------------------|---------------------------------------------|
-| No lights                | 12V PSU, transistor connections, GPIO output|
-| Flickering               | PWM frequency, loose connections            |
-| One color missing        | Individual transistor, LED strip channel    |
-| PIR not triggering       | Sensitivity pot, power to sensor (5V)       |
-| Transistor getting hot   | Strip drawing too much current (>200mA)     |
-| ESP32 not booting        | Buck converter output (5V), connections     |
+| Issue                        | Check                                             |
+|------------------------------|---------------------------------------------------|
+| No lights                    | 12V PSU, transistor connections, GPIO output      |
+| Flickering                   | PWM frequency, loose connections                  |
+| PIR not triggering           | Sensitivity pot, power to sensor (5V)             |
+| Transistor getting hot       | Strip drawing too much current (>200mA)           |
+| ESP32 not booting            | Buck converter output (5V), connections           |
+| Not showing in Home Assistant| Check API encryption key, HA ESPHome integration  |
+| OTA not working              | ESP32 must be on same WiFi network as HA          |
 
 ---
 
@@ -231,24 +256,19 @@ void setColor(uint8_t r, uint8_t g, uint8_t b) {
 ### Testing the LED Strip
 
 1. Set power supply to **12V**
-2. Connect **black wire** (V+) to **positive (+)** terminal
-3. Touch color wires to **ground (-)** to test each channel:
-
-| Touch to GND | Result       |
-|--------------|--------------|
-| Red wire     | Red lights   |
-| Green wire   | Green lights |
-| Blue wire    | Blue lights  |
-| All three    | White light  |
+2. Connect **V+ wire** to **positive (+)** terminal
+3. Touch control wire to **ground (-)** to test:
 
 ```
 Power Supply Trainer
 +12V        GND
  |           |
- |           +--- touch R, G, or B wires here to test
+ |           +--- touch control wire here to test
  |
- +--- Black wire (V+)
+ +--- V+ wire
 ```
+
+If the strip lights up, it's working correctly.
 
 ---
 
@@ -341,3 +361,4 @@ Looking at sensor with dome facing you:
 | Right (Tx)      | Longer (~5 min)   | Shorter (~3 sec)  |
 
 **For testing:** Turn both pots **counter-clockwise** for shorter delay and less sensitivity.
+**For final install:** Set time delay pot to minimum — ESPHome controls the 60s timeout instead.
