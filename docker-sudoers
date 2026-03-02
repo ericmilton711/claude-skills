@@ -1,0 +1,16 @@
+# Passwordless sudo for Docker commands
+# This file should be placed in /etc/sudoers.d/docker
+#
+# Install with:
+# sudo visudo -c -f docker-sudoers && sudo cp docker-sudoers /etc/sudoers.d/docker
+
+# Allow user 'mac' to run Docker systemctl commands without password
+mac ALL=(ALL) NOPASSWD: /usr/bin/systemctl start docker
+mac ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop docker
+mac ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart docker
+mac ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable docker
+mac ALL=(ALL) NOPASSWD: /usr/bin/systemctl disable docker
+mac ALL=(ALL) NOPASSWD: /usr/bin/systemctl status docker
+
+# Allow Docker daemon commands
+mac ALL=(ALL) NOPASSWD: /usr/bin/dockerd

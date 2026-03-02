@@ -109,6 +109,34 @@ sudo grub2-install --root-directory=/mnt/newdrive /dev/sdb
 - Logic board removal tool helpful but not required
 - Guide: Search "iFixit Mac Mini [year] Hard Drive Replacement"
 
+### Acer Aspire 5 A515-46
+
+**Storage Slots:**
+| Slot | Form Factor | Interface | Notes |
+|------|-------------|-----------|-------|
+| M.2 | 2280 | NVMe PCIe Gen 3 | Primary slot |
+| 2.5" | 7mm | SATA III | Secondary slot, tray & cable included |
+
+**Tools needed:** Phillips #00 screwdriver, plastic pry tool
+
+**Disassembly:**
+1. Remove 11 Phillips screws (6.7mm) from bottom panel
+2. Pry around perimeter to release clips
+3. Disconnect battery before working on internals
+
+**M.2 NVMe installation:**
+- Slot located near battery (horizontal)
+- Insert drive at ~30° angle
+- Press down flat, secure with single screw
+
+**2.5" SATA location:**
+- Connector is below the wireless card
+- Mounting tray and cable included with laptop
+
+**Boot menu:** F12 during startup
+
+**iFixit guide:** https://www.ifixit.com/Guide/Acer+Aspire+a515-46+SSD+Replacement/159952
+
 ### Laptops (General)
 
 - Most use 2.5" SATA or M.2 drives

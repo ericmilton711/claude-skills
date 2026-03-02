@@ -1,0 +1,25 @@
+{
+	"windowstate": {
+		"isFullScreen": false,
+		"isMaximized": false,
+		"width": 1446,
+		"height": 755,
+		"x": 376,
+		"y": 98,
+		"frame": true,
+		"screenLayout": "0:0:1920:1080",
+		"backgroundColor": "rgb(31, 39, 42)"
+	},
+	"workspaces": [
+		{
+			"x": 376,
+			"y": 98,
+			"width": 1446,
+			"height": 755,
+			"isMaximized": false,
+			"isFullScreen": false,
+			"file": "/home/mac/.claude/skills/galaxy-watch-dock/galaxy_watch_dock",
+			"time": 1771289244089
+		}
+	]
+}
