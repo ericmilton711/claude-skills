@@ -93,10 +93,37 @@ If `plc_watch.ps1` shows driver activity when opening CLICK software:
 
 ---
 
+## Fix 3: CLICK Can't Connect Even Though Windows Sees Device (Prolific PL2303 Chip)
+
+**Symptom:** Windows recognizes the PLC (Device Manager shows it), but CLICK software cannot connect.
+
+**Root cause:** The CLICK PLUS USB interface uses a **Prolific PL2303** chip (VID_067B&PID_2303), NOT FTDI. Prolific driver v3.9.x intentionally blocks counterfeit/clone chips — status shows as "Unknown" in Device Manager.
+
+**Diagnosis:**
+```powershell
+# Run as script (bash shell mangles $_ inline)
+Get-PnpDevice | Where-Object { $_.FriendlyName -like '*CLICK*' -or $_.FriendlyName -like '*FTDI*' } | Select-Object FriendlyName, Status
+# Look for Status: Unknown = Prolific blocking the chip
+```
+
+**Fix: Install PL2303 Legacy Updater**
+1. Download: https://github.com/johnstevenson/pl2303-legacy/releases/latest
+   - File: `PL2303LegacyUpdaterSetup-1.1.0.exe`
+2. Run installer — choose **"Run Program"** to test first
+3. In the app, select **"Legacy PL2303 HXA/XA"** (v3.3.11.152, 2010)
+4. Click Next — driver is applied immediately
+5. Check what COM port the device is now on (may change, e.g. COM10 → COM11)
+6. Update CLICK software communication settings to match the new COM port
+
+**Note:** The installer must be run as admin. Claude cannot click through it via input injection due to UAC/UIPI isolation — user must click through the installer wizard manually.
+
+---
+
 ## Key Findings on This Machine (Eric's PC)
-- Device: `CLICK PLUS`, Driver v1.0.0.0, dated 2013-01-01
+- Device: `CLICK PLUS` — uses **Prolific PL2303** chip (VID_067B&PID_2303), not FTDI
 - Install path: `C:\Program Files (x86)\AutomationDirect\`
 - Two versions installed: Ver3.70 and Ver3.90
 - Bundled driver files: `CLICK USB Driver\PLUS.inf` and `CLICK C2-Int USB Driver\C2Int.inf`
 - Windows Update fix applied: `ExcludeWUDriversInQualityUpdate = 1`
 - Helper scripts saved to: `C:\Users\ericm\plc_check.ps1`, `plc_diagnose.ps1`, `plc_watch.ps1`, `fix_plc_driver.ps1`
+- PL2303 Legacy Updater installed — legacy driver v3.3.11.152 applied, PLC now on **COM11**
