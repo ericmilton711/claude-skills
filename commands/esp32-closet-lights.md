@@ -7,7 +7,7 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 ## Project Overview
 
 - **Controller:** ESP32 DevKit V1 (or compatible)
-- **LED Type:** 12V LED Strip (single color, white)
+- **LED Type:** 12V Addressable LED Strip (DI data, labeled +24VDC but runs on 12V)
 - **Trigger:** PIR Motion Sensor
 - **Firmware:** ESPHome
 - **Integration:** Home Assistant (native, auto-discovered)
@@ -21,7 +21,7 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 
 | Function          | GPIO Pin | Notes                          |
 |-------------------|----------|--------------------------------|
-| LED Channel PWM   | GPIO 25  | To 2N3904 base via 1k resistor |
+| LED Strip DI      | GPIO 25  | Via 330Ω series resistor       |
 | PIR Sensor        | GPIO 32  | Input, internal pulldown       |
 | Status LED        | GPIO 2   | Onboard LED (optional debug)   |
 
@@ -32,62 +32,43 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 | ESP32 VIN           | 5V from buck converter               |
 | ESP32 GND           | Common ground                        |
 | LED Strip V+        | 12V power supply positive            |
-| LED Strip control   | To 2N3904 collector                  |
+| LED Strip GND       | Common ground                        |
+| LED Strip DI        | GPIO25 via 330Ω resistor             |
 
 ---
 
 ## Wiring Diagram (ASCII)
 
 ```
-                    12V PSU
-                   +      -
-                   |      |
-                   |      +---------> Common GND
-                   |           |
-              +----+           |
-              |                |
-         [12V LED Strip]       |
-          ctrl   V+            |
-          |       |            |
-          |       +------------+
-          |
-       [C] 2N3904
-       [E]   |
-          +--+-------------------> GND
-          |
-    [B] GPIO25
-        (via 1k resistor)
-          |
-    [ESP32 DevKit]
-      VIN   GND
-       |     |
-       |     +--------------------> GND
-       |
-  [Buck Converter]
-   IN+  IN-  OUT+  OUT-
-    |    |    5V   GND
-    |    |
-   12V  GND (from PSU)
-
-
-    PIR SENSOR (HC-SR501)
-    +-----------+
-    | VCC OUT GND|
-    +--+---+---+-+
-       |   |   |
-      5V  GPIO32  GND
-           |
-           +-------> ESP32
-```
-
-### 2N3904 Wiring Detail
-
-```
-  GPIO25 --[1k resistor]-- BASE
-                          2N3904 (flat side facing you)
-                          E  B  C
-                          |     |
-                         GND    LED Strip control wire
+12V PSU
++12V ─────────────────────────────────────────────┐
+ GND ─────────────────────────────── GND RAIL ─────┤
+                                                    │
+                   ┌──── BUCK CONVERTER ────┐       │
++12V ──────────────┤ IN+             OUT+ ──┼──── ESP32 VIN (5V)
+GND RAIL ──────────┤ IN-             OUT- ──┼──── GND RAIL
+                   └────────────────────────┘      │
+                                                    │
+                   ┌──── ESP32 ────┐                │
+    5V (buck) ─────┤ VIN      GND ─┼────────────────┤
+       GPIO25 ─────┤               │                │
+       GPIO32 ─────┤               │                │
+                   └───────────────┘                │
+                                                    │
+GPIO25 ──[330Ω]──────────────── LED Strip DI        │
+                                                    │
+LED STRIP                                           │
+  +24VDC (V+) ──────────────────────────── +12V     │
+  DI ──────────────── GPIO25 via 330Ω               │
+  GND ──────────────────────────────────────────────┤
+                                                    │
+PIR HC-SR501                                        │
+  VCC ──────────────────────────────────── 5V       │
+  OUT ──────────────────────────────────── GPIO32   │
+  GND ──────────────────────────────────────────────┤
+                                                    │
+════════════════════ COMMON GROUND ═════════════════┘
+                     (PSU negative)
 ```
 
 ---
@@ -97,17 +78,14 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 | Component                   | Quantity | Notes                           |
 |-----------------------------|----------|---------------------------------|
 | ESP32 DevKit V1             | 1        | Or ESP32-WROOM-32               |
-| 12V LED Strip (white)       | 1        | Short strip only (see note)     |
-| 2N3904 NPN Transistor       | 1        | For LED control channel         |
-| 1k Ohm Resistor             | 1        | Base resistor for transistor    |
+| 12V Addressable LED Strip   | 1        | DI data pin, labeled +24VDC     |
+| 330 Ohm Resistor            | 1        | Series resistor on DI line      |
 | HC-SR501 PIR Sensor         | 1        | Adjustable sensitivity/delay    |
 | 12V Power Supply            | 1        | Size for LED strip amperage     |
 | LM2596 Buck Converter       | 1        | 12V to 5V for ESP32             |
 | Prototype PCB / Perfboard   | 1        | For clean assembly              |
 | JST Connectors              | As needed| For modular wiring              |
 | Heat Shrink Tubing          | As needed| Wire protection                 |
-
-**Note:** 2N3904 transistors are limited to 200mA. This works for short LED strips (~10-15 segments). For longer strips, upgrade to IRLB8721 or IRLZ44N MOSFETs.
 
 ---
 
@@ -241,10 +219,9 @@ status_led:
 
 | Issue                        | Check                                             |
 |------------------------------|---------------------------------------------------|
-| No lights                    | 12V PSU, transistor connections, GPIO output      |
-| Flickering                   | PWM frequency, loose connections                  |
+| No lights                    | 12V PSU, DI connection, 330Ω resistor, GPIO25     |
+| Flickering / corrupt colors  | Bad DI connection, missing/wrong resistor         |
 | PIR not triggering           | Sensitivity pot, power to sensor (5V)             |
-| Transistor getting hot       | Strip drawing too much current (>200mA)           |
 | ESP32 not booting            | Buck converter output (5V), connections           |
 | Not showing in Home Assistant| Check API encryption key, HA ESPHome integration  |
 | OTA not working              | ESP32 must be on same WiFi network as HA          |
