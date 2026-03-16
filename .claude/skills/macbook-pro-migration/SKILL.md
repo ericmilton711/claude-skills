@@ -73,5 +73,22 @@ These were applied on the source machine and should be reapplied on fresh instal
 2. Disable GNOME Software autostart
 3. Disable unnecessary services: `abrt*`, `ModemManager`, `iscsi*`, `livesys*`, `qemu-guest-agent`, `mcelog`
 
-## Recommendation
-Fresh install + migrate is cleaner and avoids driver mismatch issues from cloning between different hardware. Takes ~1-2 hours.
+## Decision: Wipe macOS, Fresh Fedora Install
+
+**Plan:** Wipe macOS entirely and install Fedora 43. Do NOT keep macOS dual-boot.
+
+### Step-by-Step Order
+1. **Before delivery** — Prep on current machine:
+   - Create Fedora 43 live USB
+   - Export package list: `dnf repoquery --installed > packages.txt`
+   - Optionally tar up home directory to external drive
+2. **Boot MacBook from USB** — Wipe SSD completely, install Fedora 43
+3. **Get networking working** — USB ethernet adapter first, then install Broadcom Wi-Fi drivers
+4. **Run the migration** — rsync home dir, reinstall packages from list
+5. **Install Claude Code** — only after the system is fully configured
+6. **Apply system optimizations** — disable animations, unnecessary services, etc.
+
+### Why This Order
+- Claude Code needs a working OS first — nothing useful it can do during imaging
+- Migration steps are simple copy/paste commands, follow from the skill or phone
+- Fresh install avoids all driver mismatch issues from cloning
