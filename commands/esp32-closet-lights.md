@@ -21,8 +21,8 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 
 | Function          | GPIO Pin | Notes                          |
 |-------------------|----------|--------------------------------|
-| LED Strip DI      | GPIO 25  | Via 330Ω series resistor       |
-| PIR Sensor        | GPIO 32  | Input, internal pulldown       |
+| LED Strip DI      | GPIO 4   | Via 330Ω series resistor       |
+| PIR Sensor        | GPIO 14  | Input, internal pulldown       |
 | Status LED        | GPIO 2   | Onboard LED (optional debug)   |
 
 ### ESP32-S3-N16R8 Variant Notes
@@ -31,14 +31,14 @@ The S3-N16R8 (16MB octal flash, 8MB octal PSRAM) works for this project but requ
 
 - **GPIO 27-37 are occupied internally** by octal flash and PSRAM — do not use
 - **GPIO 32 conflicts** with flash — use GPIO 14 for PIR instead
-- **GPIO 25 is fine** for LED strip DI
+- **GPIO 25 is NOT available** on S3-WROOM-1 — use GPIO 4 for LED strip DI instead
 - Change board definition in ESPHome config (see below)
 
 **S3-N16R8 Pin Assignments:**
 
 | Function     | GPIO | Notes                          |
 |--------------|------|--------------------------------|
-| LED Strip DI | 25   | Same as standard ESP32         |
+| LED Strip DI | 4    | GPIO 25 not available on S3    |
 | PIR Sensor   | 14   | Changed from 32 (flash conflict)|
 | Status LED   | 2    | Verify onboard LED on your board|
 
@@ -58,7 +58,7 @@ esp32:
 | ESP32 GND           | Common ground                        |
 | LED Strip V+        | 12V power supply positive            |
 | LED Strip GND       | Common ground                        |
-| LED Strip DI        | GPIO25 via 330Ω resistor             |
+| LED Strip DI        | GPIO4 via 330Ω resistor              |
 
 ---
 
@@ -80,7 +80,7 @@ GND RAIL ──────────┤ IN-             OUT- ──┼──�
        GPIO32 ─────┤               │                │
                    └───────────────┘                │
                                                     │
-GPIO25 ──[330Ω]──────────────── LED Strip DI        │
+GPIO4  ──[330Ω]──────────────── LED Strip DI        │
                                                     │
 LED STRIP                                           │
   +24VDC (V+) ──────────────────────────── +12V     │
@@ -188,7 +188,7 @@ captive_portal:
 # LED strip output (PWM via LEDC)
 output:
   - platform: ledc
-    pin: GPIO25
+    pin: GPIO4
     id: led_output
 
 # Expose as a dimmable light in Home Assistant
