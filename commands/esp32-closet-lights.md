@@ -4,6 +4,16 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 
 ---
 
+## Current Status / Where We Left Off
+
+- ESP32-S3 is flashed with ESPHome firmware and connects to DIEMILTONHAUS WiFi (IP: 192.168.12.135)
+- ESPHome config is in `~/claude-skills/esphome/closet-lights.yaml`
+- **Stopped at:** PIR was only getting 2.2V instead of 5V — was underpowered and not triggering
+- **Next step:** Fix power supply — buck converter must be set to exactly 5V **before** connecting ESP32. PIR VCC needs a solid 5V. Do NOT adjust buck converter pot while everything is connected.
+- **Warning:** Buck converter was accidentally set to 7.8V — always verify output voltage with multimeter before connecting components
+
+---
+
 ## Project Overview
 
 - **Controller:** ESP32 DevKit V1 (or compatible)
