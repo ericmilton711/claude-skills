@@ -25,6 +25,31 @@ Reference documentation for the ESP32-based closet LED lighting system with PIR 
 | PIR Sensor        | GPIO 32  | Input, internal pulldown       |
 | Status LED        | GPIO 2   | Onboard LED (optional debug)   |
 
+### ESP32-S3-N16R8 Variant Notes
+
+The S3-N16R8 (16MB octal flash, 8MB octal PSRAM) works for this project but requires pin changes:
+
+- **GPIO 27-37 are occupied internally** by octal flash and PSRAM — do not use
+- **GPIO 32 conflicts** with flash — use GPIO 14 for PIR instead
+- **GPIO 25 is fine** for LED strip DI
+- Change board definition in ESPHome config (see below)
+
+**S3-N16R8 Pin Assignments:**
+
+| Function     | GPIO | Notes                          |
+|--------------|------|--------------------------------|
+| LED Strip DI | 25   | Same as standard ESP32         |
+| PIR Sensor   | 14   | Changed from 32 (flash conflict)|
+| Status LED   | 2    | Verify onboard LED on your board|
+
+**ESPHome board definition for S3:**
+```yaml
+esp32:
+  board: esp32-s3-devkitc-1
+  framework:
+    type: arduino
+```
+
 ### Power Connections
 
 | Connection          | Details                              |
