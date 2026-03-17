@@ -84,8 +84,28 @@ PIR HC-SR501                                        │
 | 12V Power Supply            | 1        | Size for LED strip amperage     |
 | LM2596 Buck Converter       | 1        | 12V to 5V for ESP32             |
 | Prototype PCB / Perfboard   | 1        | For clean assembly              |
-| JST Connectors              | As needed| For modular wiring              |
+| Shielded CAT6 Cable         | As needed| 8 conductors — runs to PIR, LED strip, and ESP32 box; bundle pairs for power |
+| Terminal Blocks             | As needed| For modular/detachable connections at each end of CAT6 runs |
 | Heat Shrink Tubing          | As needed| Wire protection                 |
+
+---
+
+## CAT6 Wiring Notes
+
+Shielded CAT6 is an excellent substitute for JST connectors. Each cable has 8 conductors (4 pairs) — more than enough for all signal and power runs.
+
+### Conductor Allocation
+
+| Run                    | Conductors Needed | Notes                                      |
+|------------------------|-------------------|--------------------------------------------|
+| PIR sensor             | 3                 | VCC, GND, OUT                              |
+| LED strip DI line      | 2                 | Data + GND reference                       |
+| Power (12V or 5V)      | Bundle pairs      | Use 2-4 conductors in parallel for current |
+
+### Tips
+- **Shielding** helps keep the DI data line clean from interference — connect shield to GND at one end
+- **Modularity:** Use terminal blocks at each end of CAT6 runs instead of JST connectors — same result, no special connectors needed
+- **Power:** CAT6 conductors are 23-24 AWG — fine for signal lines; bundle 2-4 conductors in parallel for any power runs to handle current safely
 
 ---
 
