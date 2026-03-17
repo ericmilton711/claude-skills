@@ -108,7 +108,8 @@ PIR HC-SR501                                        │
 | HC-SR501 PIR Sensor         | 1        | Adjustable sensitivity/delay    |
 | 12V Power Supply            | 1        | Size for LED strip amperage     |
 | LM2596 Buck Converter       | 1        | 12V to 5V for ESP32             |
-| Prototype PCB / Perfboard   | 1        | For clean assembly              |
+| Breadboard                  | 1        | For initial testing/prototyping |
+| Prototype PCB / Perfboard   | 1        | For final permanent assembly    |
 | Shielded CAT6 Cable         | As needed| 8 conductors — runs to PIR, LED strip, and ESP32 box; bundle pairs for power |
 | Heat Shrink Tubing          | As needed| Wire protection                 |
 
