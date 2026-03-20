@@ -1,7 +1,7 @@
 # Home Assistant on Lenovo ThinkCentre M900 Tiny
 
-**Last Updated:** 2026-03-19
-**Status:** Docker installed, ready to install Home Assistant
+**Last Updated:** 2026-03-20
+**Status:** Home Assistant running via Docker
 
 ---
 
@@ -18,9 +18,10 @@ Replaces the Pi 3 A+ which has insufficient RAM (512MB) for Home Assistant.
 **Lenovo ThinkCentre M900 Tiny**
 - CPU: Intel i5-6500T
 - RAM: 8GB
-- Storage: 240GB Kingston SSDNOW 300 SATA SSD
+- Storage: 240GB Kingston SSDNOW 300 SATA SSD (model: SV300S37AZ240G)
 - Power: ~10-15W idle (suitable for 24/7 use)
 - OS: Fedora Workstation (fresh install, Windows wiped)
+- Hostname: localhost-live (default, never changed)
 
 ---
 
@@ -28,9 +29,19 @@ Replaces the Pi 3 A+ which has insufficient RAM (512MB) for Home Assistant.
 
 - IP: 192.168.12.128
 - Username: milton
-- Password: Milton645866
+- Password: 645866
 - Connected via ethernet
 - SSH enabled
+
+---
+
+## SSH from Windows
+
+- Password SSH from Windows doesn't work (sshpass doesn't pass password correctly)
+- Use SSH key auth instead: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.128`
+- Eric's ed25519 public key is in `/home/milton/.ssh/authorized_keys`
+- sudo password: `645866`
+- Pass sudo password over SSH: `echo 645866 | sudo -S <command>`
 
 ---
 
@@ -43,6 +54,9 @@ Replaces the Pi 3 A+ which has insufficient RAM (512MB) for Home Assistant.
 5. ✅ Logged into Claude Code with API key
 6. ✅ Installed Docker (moby-engine from Fedora repos — NOT docker-ce)
 7. ✅ Enabled Docker: `sudo systemctl enable --now docker`
+8. ✅ Added milton to docker group: `sudo usermod -aG docker milton`
+9. ✅ Verified Docker works: `docker run hello-world`
+10. ✅ Installed Home Assistant via Docker (running on port 8123)
 
 ---
 
@@ -65,25 +79,13 @@ sudo systemctl enable --now docker
 sudo usermod -aG docker milton
 ```
 
-Log out and back in after adding user to docker group, then verify:
-```bash
-docker run hello-world
-```
-
 ---
 
-## Next Steps
+## Home Assistant
 
-8. Add milton to docker group and verify Docker works
-9. Install Home Assistant via Docker
-10. Set static IP
-11. Install ESPHome add-on in HA
-12. Flash ESP32 closet lights via ESPHome
+Access at: http://192.168.12.128:8123
 
----
-
-## Installing Home Assistant via Docker
-
+Docker run command:
 ```bash
 docker run -d \
   --name homeassistant \
@@ -95,16 +97,14 @@ docker run -d \
   ghcr.io/home-assistant/home-assistant:stable
 ```
 
-Access at: http://192.168.12.128:8123
-
 ---
 
-## SSH Notes
+## Next Steps
 
-- SSH works from ThinkCentre terminal to itself
-- Claude Code on Windows cannot SSH in interactively (no /dev/tty)
-- SSH key copied via `ssh-copy-id` but interactive password SSH from Windows still blocked
-- Workaround: run commands directly from ThinkCentre terminal or ThinkCentre's Claude Code
+11. Set static IP
+12. Complete Home Assistant onboarding at http://192.168.12.128:8123
+13. Install ESPHome add-on in HA
+14. Flash ESP32 closet lights via ESPHome
 
 ---
 
