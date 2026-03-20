@@ -1,7 +1,7 @@
 # Home Assistant on Lenovo ThinkCentre M900 Tiny
 
 **Last Updated:** 2026-03-19
-**Status:** Fedora installed, Claude Code installed, ready for Docker + Home Assistant
+**Status:** Docker installed, ready to install Home Assistant
 
 ---
 
@@ -28,8 +28,9 @@ Replaces the Pi 3 A+ which has insufficient RAM (512MB) for Home Assistant.
 
 - IP: 192.168.12.128
 - Username: milton
+- Password: Milton645866
 - Connected via ethernet
-- SSH enabled: `sudo systemctl enable --now sshd`
+- SSH enabled
 
 ---
 
@@ -40,37 +41,48 @@ Replaces the Pi 3 A+ which has insufficient RAM (512MB) for Home Assistant.
 3. ✅ Enabled SSH: `sudo systemctl enable --now sshd`
 4. ✅ Installed Claude Code: `curl -fsSL https://claude.ai/install.sh | sh`
 5. ✅ Logged into Claude Code with API key
+6. ✅ Installed Docker (moby-engine from Fedora repos — NOT docker-ce)
+7. ✅ Enabled Docker: `sudo systemctl enable --now docker`
 
 ---
 
-## Next Steps
+## Docker Install Notes
 
-6. Install Docker
-7. Install Home Assistant via Docker
-8. Set static IP
-9. Install ESPHome add-on in HA
-10. Flash ESP32 closet lights via ESPHome
-
----
-
-## Installing Docker (next step)
+**Important:** Do NOT use the docker-ce repo on Fedora 43 — it conflicts with Fedora's packages.
+Use Fedora's built-in moby-engine instead:
 
 ```bash
-sudo dnf install -y dnf-plugins-core
-sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+# Remove docker-ce repo if added
+sudo rm /etc/yum.repos.d/docker-ce.repo
+
+# Install from Fedora repos
+sudo dnf install -y moby-engine docker-compose
+
+# Enable (service is called docker, not moby-engine)
 sudo systemctl enable --now docker
+
+# Add user to docker group
 sudo usermod -aG docker milton
 ```
 
-Then log out and back in, and verify with:
+Log out and back in after adding user to docker group, then verify:
 ```bash
 docker run hello-world
 ```
 
 ---
 
-## Installing Home Assistant via Docker (after Docker)
+## Next Steps
+
+8. Add milton to docker group and verify Docker works
+9. Install Home Assistant via Docker
+10. Set static IP
+11. Install ESPHome add-on in HA
+12. Flash ESP32 closet lights via ESPHome
+
+---
+
+## Installing Home Assistant via Docker
 
 ```bash
 docker run -d \
@@ -84,6 +96,15 @@ docker run -d \
 ```
 
 Access at: http://192.168.12.128:8123
+
+---
+
+## SSH Notes
+
+- SSH works from ThinkCentre terminal to itself
+- Claude Code on Windows cannot SSH in interactively (no /dev/tty)
+- SSH key copied via `ssh-copy-id` but interactive password SSH from Windows still blocked
+- Workaround: run commands directly from ThinkCentre terminal or ThinkCentre's Claude Code
 
 ---
 
