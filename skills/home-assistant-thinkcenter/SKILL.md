@@ -1,18 +1,19 @@
 # Home Assistant on Lenovo ThinkCentre M900 Tiny
 
 **Last Updated:** 2026-03-20
-**Status:** Home Assistant, Pi-hole, and WireGuard all running via Docker
+**Status:** Home Assistant, Pi-hole, WireGuard, and UniFi controller all running via Docker
 
 ---
 
 ## Purpose
 
-Central home server running:
+Central home server running all network services:
 - **Home Assistant** — smart home automation (ESP32 closet lights, etc.)
 - **Pi-hole** — DNS-based parental controls / ad blocking
 - **WireGuard** — VPN tunnel to Lambert network (192.168.0.x)
+- **UniFi Network Application** — manages USG 3P + UniFi AP
 
-Replaces the Pi 3 A+ which had insufficient RAM (512MB).
+Replaces the Pi 3 A+ and Cloud Key.
 
 ---
 
@@ -30,10 +31,10 @@ Replaces the Pi 3 A+ which had insufficient RAM (512MB).
 
 ## Network
 
-- IP: 192.168.12.128
+- IP: 192.168.1.107 (USG network) — was 192.168.12.128 on T-Mobile
 - Username: milton
 - Password: 645866
-- Connected via ethernet
+- Connected via ethernet to switch
 - SSH enabled
 
 ---
@@ -41,28 +42,25 @@ Replaces the Pi 3 A+ which had insufficient RAM (512MB).
 ## SSH from Windows
 
 - Password SSH from Windows doesn't work (sshpass doesn't pass password correctly)
-- Use SSH key auth instead: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.128`
+- Use SSH key auth instead: `ssh -i ~/.ssh/id_ed25519 milton@192.168.1.107`
 - Eric's ed25519 public key is in `/home/milton/.ssh/authorized_keys`
 - sudo password: `645866`
 - Pass sudo password over SSH: `echo 645866 | sudo -S <command>`
+- **Must be on USG network (192.168.1.x) to SSH in** — plug laptop into switch if needed
 
 ---
 
 ## Setup Completed
 
-1. ✅ Booted Fedora from USB (F12 at startup for boot menu, select UEFI USB)
-2. ✅ Installed Fedora Workstation — selected "Use entire disk", no encryption
-3. ✅ Enabled SSH: `sudo systemctl enable --now sshd`
-4. ✅ Installed Claude Code: `curl -fsSL https://claude.ai/install.sh | sh`
-5. ✅ Logged into Claude Code with API key
-6. ✅ Installed Docker (moby-engine from Fedora repos — NOT docker-ce)
-7. ✅ Enabled Docker: `sudo systemctl enable --now docker`
-8. ✅ Added milton to docker group: `sudo usermod -aG docker milton`
-9. ✅ Verified Docker works: `docker run hello-world`
-10. ✅ Installed Home Assistant via Docker (running on port 8123)
-11. ✅ Installed Pi-hole via Docker (running on port 80/443/53)
-12. ✅ Applied parental controls whitelist to Pi-hole
-13. ✅ Installed WireGuard via Docker (Lambert tunnel active)
+1. ✅ Fedora installed, SSH enabled
+2. ✅ Claude Code installed
+3. ✅ Docker installed (moby-engine — NOT docker-ce)
+4. ✅ milton added to docker group
+5. ✅ Home Assistant installed via Docker
+6. ✅ Pi-hole installed via Docker with parental controls whitelist
+7. ✅ WireGuard installed via Docker (Lambert tunnel active)
+8. ✅ UniFi Network Application installed via Docker
+9. ✅ Signed into UniFi with ericmilton711@gmail.com
 
 ---
 
@@ -82,12 +80,17 @@ sudo usermod -aG docker milton
 -v /path/on/host:/path/in/container:z
 ```
 
+**DNS note:** ThinkCentre's own DNS must be set to 1.1.1.1 (not Pi-hole) or Docker can't pull images:
+```bash
+echo 645866 | sudo -S resolvectl dns eno1 1.1.1.1 8.8.8.8
+```
+
 ---
 
 ## Running Containers
 
 ### Home Assistant
-- Access: http://192.168.12.128:8123
+- Access: http://192.168.1.107:8123
 ```bash
 docker run -d \
   --name homeassistant \
@@ -100,8 +103,8 @@ docker run -d \
 ```
 
 ### Pi-hole
-- Admin: http://192.168.12.128/admin (password: 645866)
-- DNS: 192.168.12.128:53
+- Admin: http://192.168.1.107/admin (password: 645866)
+- DNS: 192.168.1.107:53
 ```bash
 docker run -d \
   --name pihole \
@@ -127,6 +130,19 @@ docker run -d \
   -e TZ=America/Chicago \
   --network=host \
   lscr.io/linuxserver/wireguard:latest
+```
+
+### UniFi Network Application
+- Access: https://192.168.1.107:8443 (accept SSL warning)
+- Login: ericmilton711@gmail.com / PASSword!?1711
+```bash
+docker run -d \
+  --name unifi \
+  --restart=unless-stopped \
+  --network=host \
+  -v /home/milton/unifi:/unifi:z \
+  -e TZ=America/Chicago \
+  jacobalberty/unifi:latest
 ```
 
 ---
@@ -175,11 +191,12 @@ PersistentKeepalive = 25
 
 ## Next Steps
 
-14. Complete Home Assistant onboarding at http://192.168.12.128:8123
-15. Point router DNS to 192.168.12.128 (Pi-hole)
-16. Set static IP on ThinkCentre
-17. Install ESPHome add-on in HA
-18. Flash ESP32 closet lights via ESPHome
+- Adopt UniFi AP in controller (AP not showing up yet — needs controller IP set on AP)
+- Point USG DHCP DNS to 192.168.1.107 (Pi-hole)
+- Set static IP on ThinkCentre
+- Complete Home Assistant onboarding
+- Install ESPHome add-on in HA
+- Flash ESP32 closet lights via ESPHome
 
 ---
 
