@@ -1,7 +1,7 @@
 # MILTONHAUS Network Rebuild Plan
 
-**Last Updated:** 2026-02-25
-**Status:** Planning — Pi 4 arriving, Lenovo ThinkCentre M900 Tiny offer pending ($85)
+**Last Updated:** 2026-03-20
+**Status:** Phase 1 complete. Network currently broken — MILTONHAUS2 (old SSID) broadcasting, very slow internet, UniFi controller IP unknown. Need to diagnose.
 
 ---
 
@@ -14,26 +14,54 @@
 
 ---
 
+## Target SSIDs (not yet fully configured)
+
+| SSID | Users | Restrictions |
+|---|---|---|
+| **DIEMILTONHAUS** | Adults, guests | None (rename from MILTONHAUS_ADMIN) |
+| **MILTONHAUS** | Kids' school laptops only | Pi-hole whitelist |
+
+- **MILTONHAUS2** = old/legacy SSID still broadcasting — delete once UniFi access restored
+- **DIEMILTONFAM** = T-Mobile home gateway (separate ISP, 192.168.12.x) — leave alone, not part of UniFi setup
+
+---
+
 ## Hardware
 
 | Device | Role | Status |
 |---|---|---|
 | **USG 3P** | Router + VLAN enforcement + firewall | Active — 192.168.1.1 |
-| **Pi 4** (ethernet) | Pi-hole (kids DNS) + WireGuard VPN gateway | Arriving soon |
-| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — UniFi controller | Offer pending ($85, eBay item 226876134049) |
-| **Cloud Key** | Retired (replaced by Lenovo) | Retire after migration |
+| **Pi 4** (ethernet) | Pi-hole (kids DNS) + WireGuard VPN gateway | Status unknown |
+| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — UniFi controller | UP AND RUNNING (Phase 1 complete) |
+| **Cloud Key** | Retired — do NOT plug back in | Retired |
 | **Pi 3 A+** | Repurposed for other projects | Freed up |
-| **Windows PC** | Client + management (SSH to Lambert) | 192.168.1.9 |
+| **Windows PC** | Client + management | WiFi only — 192.168.12.220 on DIEMILTONFAM |
 | **Mac** | Client only | 192.168.1.7 |
 
-**Lenovo ThinkCentre M900 Tiny specs:** Intel i5-6500T, 8GB RAM, 256GB SSD, Windows 11
-**Why chosen:** ~10-15W idle (very low power for 24/7 use), x86, runs Fedora Server, plenty for UniFi controller
+**Lenovo ThinkCentre M900 Tiny specs:** Intel i5-6500T, 8GB RAM, 256GB SSD, Fedora Server
+**UniFi controller IP:** Unknown — needs to be found (try 192.168.1.2–192.168.1.5 at port 8443)
+
+---
+
+## Current Network Issues (as of 2026-03-20)
+
+- MILTONHAUS network has very slow internet — cause unknown
+- UniFi controller shows **offline** in unifi.ui.com — likely because MILTONHAUS internet is broken
+- Old SSID **MILTONHAUS2** is broadcasting instead of planned MILTONHAUS/DIEMILTONHAUS
+- Phone connects to MILTONHAUS2 but drops back to DIEMILTONFAM (no internet on MILTONHAUS2)
+- ThinkCentre's UniFi controller IP is unknown — couldn't reach it during troubleshooting
+- Windows PC ethernet shows **disconnected** — not causing the network issue
+
+**Next session plan:**
+1. Find ThinkCentre's IP (connect phone to MILTONHAUS2, force stay connected, try 192.168.1.2–1.5:8443)
+2. Access UniFi controller locally
+3. Rename MILTONHAUS_ADMIN → DIEMILTONHAUS
+4. Delete MILTONHAUS2
+5. Diagnose slow internet (check USG WAN status, check for loops)
 
 ---
 
 ## Physical Wiring Diagram
-
-### Final Setup (once all hardware arrives)
 
 ```
 Modem/ISP
@@ -48,8 +76,8 @@ Modem/ISP
  (PoE port) (ethernet)  (Fedora/     (Pi-hole +
                          UniFi)       WireGuard)
 
-Windows Laptop → WiFi (no ethernet needed)
-Pi 3 A+        → WiFi (repurposed, no ethernet needed)
+Windows PC → WiFi only (do NOT plug into switch unless needed)
+Pi 3 A+    → WiFi (repurposed)
 ```
 
 **Switch port assignments:**
@@ -61,27 +89,7 @@ Pi 3 A+        → WiFi (repurposed, no ethernet needed)
 | 4 | Lenovo ThinkCentre M900 Tiny (Fedora server) |
 | 5 | Pi 4 (Pi-hole + WireGuard) |
 
-> **Note:** All 5 switch ports are used in the final setup. If additional wired devices are needed, a larger switch will be required.
-
-### Interim Setup (while waiting for Pi 4 and Lenovo)
-
-```
-Modem/ISP
-    |
-    | (WAN port)
-  USG 3P
-    | (LAN1 port)
-    |
-5-port 1GB Switch
-    |           |
-  UniFi AP    Mac
- (PoE port) (ethernet)
-
-Windows Laptop → WiFi
-Pi 3 A+        → WiFi
-```
-
-> **Note:** Cloud Key is retired and not included. UniFi AP retains its last known configuration and broadcasts WiFi normally without the Cloud Key.
+> **Note:** All 5 switch ports are used. Do not plug Windows PC into switch without disconnecting another device first.
 
 ---
 
@@ -91,7 +99,7 @@ Pi 3 A+        → WiFi
 
 | Network | SSID | Users | DNS | Internet |
 |---|---|---|---|---|
-| **VLAN 1** | MILTONHAUS_ADMIN | Eric, Spouse | Unrestricted | Full |
+| **VLAN 1** | DIEMILTONHAUS | Eric, Spouse | Unrestricted | Full |
 | **VLAN 10** | MILTONHAUS | Kids | Pi 4 Pi-hole (whitelist) | Restricted |
 
 ### IP Scheme
@@ -100,7 +108,7 @@ Pi 3 A+        → WiFi
 |---|---|---|
 | USG 3P | 192.168.1.1 | 1 (Management) |
 | Pi 4 | 192.168.1.x (static) | 1 (serves kids VLAN) |
-| Lenovo M900 Tiny | 192.168.1.x (static) | 1 (Management) |
+| Lenovo M900 Tiny | 192.168.1.x (static — unknown, find via scan) | 1 (Management) |
 | Kids devices | 192.168.10.x | 10 (Kids) |
 | Adult devices | 192.168.1.x | 1 (Admin) |
 
@@ -120,25 +128,7 @@ Kids' devices route `192.168.0.x` traffic through Pi 4 → WireGuard tunnel → 
 
 ## Setup Order
 
-### Phase 1 — Lenovo ThinkCentre M900 Tiny (Fedora Server + UniFi Controller)
-
-1. Install Fedora Server on Lenovo ThinkCentre M900 Tiny
-2. Install UniFi controller software
-3. Back up current config from Cloud Key
-4. Restore backup to new controller
-5. Adopt USG to new controller
-6. Verify everything works
-7. Retire Cloud Key
-
-**UniFi Controller install on Fedora:**
-```bash
-# Add MongoDB repo (UniFi dependency)
-# Install UniFi via script or manual package
-# Enable and start unifi service
-# Access at https://192.168.1.x:8443
-```
-
----
+### Phase 1 — Lenovo ThinkCentre M900 Tiny (Fedora Server + UniFi Controller) — COMPLETE
 
 ### Phase 2 — Pi 4 Setup (Pi-hole + WireGuard)
 
@@ -233,7 +223,9 @@ In UniFi controller:
 
 2. **Create WiFi Networks**
    - `MILTONHAUS` → assigned to Kids VLAN 10
-   - `MILTONHAUS_ADMIN` → assigned to VLAN 1 (no restrictions)
+   - `DIEMILTONHAUS` → assigned to VLAN 1 (no restrictions)
+   - Delete `MILTONHAUS2` (old legacy SSID)
+   - Delete `MILTONHAUS_ADMIN` if it exists
 
 3. **Assign kids' devices** to MILTONHAUS SSID
 
@@ -279,7 +271,7 @@ Action: ACCEPT
 |---|---|---|
 | USG 3P | SSH | `mlWKaph@192.168.1.1` / `QmJ7bDN6Ed2` |
 | UniFi Controller | Web | `ericmilton711@gmail.com` / `PASSword!?1711` |
-| Cloud Key | SSH | `root@192.168.1.6` / `PASSword!?1711` |
+| Cloud Key | SSH (retired — do not use) | `root@192.168.1.6` / `PASSword!?1711` |
 | Lambert Router | SSH | `mac@192.168.0.1` / `645866` |
 | Windows PC | WireGuard | Lambert tunnel — 192.168.2.2/32 |
 
