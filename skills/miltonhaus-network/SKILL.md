@@ -31,7 +31,7 @@
 | Device | Role | Status |
 |---|---|---|
 | **USG 3P** | Router + VLAN enforcement + firewall | Active — 192.168.1.1 |
-| **Pi 4** (ethernet) | Pi-hole (kids DNS) + WireGuard VPN gateway | Status unknown |
+| **Pi 4** (ethernet) | Pi-hole (kids DNS) + WireGuard VPN gateway | NOT acquired — plan TBD |
 | **Lenovo ThinkCentre M900 Tiny** | Fedora Server — UniFi controller | UP AND RUNNING (Phase 1 complete) |
 | **Cloud Key** | Retired — do NOT plug back in | Retired |
 | **Pi 3 A+** | Repurposed for other projects | Freed up |
@@ -71,10 +71,9 @@ Modem/ISP
     | (LAN1 port)
     |
 5-port 1GB Switch
-    |           |           |           |
-  UniFi AP    Mac       Lenovo M900   Pi 4
- (PoE port) (ethernet)  (Fedora/     (Pi-hole +
-                         UniFi)       WireGuard)
+    |           |           |
+  UniFi AP    Mac       Lenovo M900
+ (PoE port) (ethernet)  (Fedora/UniFi)
 
 Windows PC → WiFi only (do NOT plug into switch unless needed)
 Pi 3 A+    → WiFi (repurposed)
@@ -87,9 +86,7 @@ Pi 3 A+    → WiFi (repurposed)
 | 2 | UniFi AP Long Range (PoE or via PoE injector) |
 | 3 | Mac |
 | 4 | Lenovo ThinkCentre M900 Tiny (Fedora server) |
-| 5 | Pi 4 (Pi-hole + WireGuard) |
-
-> **Note:** All 5 switch ports are used. Do not plug Windows PC into switch without disconnecting another device first.
+| 5 | Open |
 
 ---
 
