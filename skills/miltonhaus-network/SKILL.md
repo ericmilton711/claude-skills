@@ -1,7 +1,7 @@
 # MILTONHAUS Network Rebuild Plan
 
-**Last Updated:** 2026-03-20
-**Status:** Phase 1 complete. Network currently broken — MILTONHAUS2 (old SSID) broadcasting, very slow internet, UniFi controller IP unknown. Need to diagnose.
+**Last Updated:** 2026-03-21
+**Status:** Phase 2 in progress. ThinkCentre running all services in Docker. Pi-hole fixed. AP needs factory reset + adoption.
 
 ---
 
@@ -14,15 +14,16 @@
 
 ---
 
-## Target SSIDs (not yet fully configured)
+## Current Network State (as of 2026-03-21)
 
-| SSID | Users | Restrictions |
-|---|---|---|
-| **DIEMILTONHAUS** | Adults, guests | None (rename from MILTONHAUS_ADMIN) |
-| **MILTONHAUS** | Kids' school laptops only | Pi-hole whitelist |
+- **DIEMILTONHAUS** = T-Mobile home gateway WiFi (192.168.12.x) — Eric uses this, it works fine
+- **No UniFi SSIDs broadcasting** — AP not yet adopted, no MILTONHAUS or DIEMILTONHAUS from UniFi
+- **UniFi AP** needs factory reset + adoption (currently at 192.168.1.8 after cable was moved to correct switch port)
+- **Pi-hole** fixed and healthy on ThinkCentre
+- **Internet via USG is healthy** — ~35ms ping, no packet loss
 
-- **MILTONHAUS2** = old/legacy SSID still broadcasting — delete once UniFi access restored
-- **DIEMILTONFAM** = T-Mobile home gateway (separate ISP, 192.168.12.x) — leave alone, not part of UniFi setup
+### Why You Only See DIEMILTONHAUS
+DIEMILTONHAUS is the T-Mobile gateway's WiFi name. The UniFi AP has not been adopted yet so it broadcasts nothing. Once the AP is adopted and configured, it will broadcast MILTONHAUS (kids) and DIEMILTONHAUS (adults) from the UniFi system on the 192.168.1.x network.
 
 ---
 
@@ -31,33 +32,90 @@
 | Device | Role | Status |
 |---|---|---|
 | **USG 3P** | Router + VLAN enforcement + firewall | Active — 192.168.1.1 |
-| **Pi 4** (ethernet) | Pi-hole (kids DNS) + WireGuard VPN gateway | NOT acquired — plan TBD |
-| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — UniFi controller | UP AND RUNNING (Phase 1 complete) |
+| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — runs ALL services in Docker | UP — 192.168.1.107 |
+| **UniFi AP Long Range** | WiFi access point | Connected to switch port 2 via PoE injector — IP 192.168.1.8 — needs adoption |
 | **Cloud Key** | Retired — do NOT plug back in | Retired |
 | **Pi 3 A+** | Repurposed for other projects | Freed up |
-| **Windows PC** | Client + management | WiFi only — 192.168.12.220 on DIEMILTONFAM |
-| **Mac** | Client only | 192.168.1.7 |
+| **Pi 4** | Not acquired — services moved to ThinkCentre | N/A |
+| **Windows PC** | Client + management | Ethernet: 192.168.1.108 (switch port 5) + WiFi: 192.168.12.220 (T-Mobile) |
+| **Mac** | Client | 192.168.1.x (via switch port 3) |
 
-**Lenovo ThinkCentre M900 Tiny specs:** Intel i5-6500T, 8GB RAM, 256GB SSD, Fedora Server
-**UniFi controller IP:** Unknown — needs to be found (try 192.168.1.2–192.168.1.5 at port 8443)
+**Lenovo ThinkCentre M900 Tiny specs:** Intel i5-6500T, 8GB RAM, 256GB SSD, Fedora Workstation
+**SSH:** `ssh milton@192.168.1.107` / password: `645866`
 
 ---
 
-## Current Network Issues (as of 2026-03-20)
+## Docker Services on ThinkCentre (all running)
 
-- MILTONHAUS network has very slow internet — cause unknown
-- UniFi controller shows **offline** in unifi.ui.com — likely because MILTONHAUS internet is broken
-- Old SSID **MILTONHAUS2** is broadcasting instead of planned MILTONHAUS/DIEMILTONHAUS
-- Phone connects to MILTONHAUS2 but drops back to DIEMILTONFAM (no internet on MILTONHAUS2)
-- ThinkCentre's UniFi controller IP is unknown — couldn't reach it during troubleshooting
-- Windows PC ethernet shows **disconnected** — not causing the network issue
+| Container | Image | Status | Notes |
+|---|---|---|---|
+| `unifi` | `jacobalberty/unifi:latest` | Healthy | Web: https://192.168.1.107:8443 |
+| `pihole` | `pihole/pihole:latest` | Healthy | DNS: 192.168.1.107:53 |
+| `wireguard` | `lscr.io/linuxserver/wireguard:latest` | Running | WireGuard VPN |
+| `homeassistant` | `ghcr.io/home-assistant/home-assistant:stable` | Running | Home Assistant |
 
-**Next session plan:**
-1. Find ThinkCentre's IP (connect phone to MILTONHAUS2, force stay connected, try 192.168.1.2–1.5:8443)
-2. Access UniFi controller locally
-3. Rename MILTONHAUS_ADMIN → DIEMILTONHAUS
-4. Delete MILTONHAUS2
-5. Diagnose slow internet (check USG WAN status, check for loops)
+**Volume mounts:**
+- Pi-hole: `/home/milton/pihole/etc-pihole` and `/home/milton/pihole/etc-dnsmasq.d`
+- WireGuard: `/home/milton/wireguard`
+- Home Assistant: `/home/milton/homeassistant`
+- UniFi: `/home/milton/unifi`
+
+---
+
+## Fixes Applied This Session (2026-03-21)
+
+### Pi-hole Fix — systemd-resolved conflict
+Pi-hole v6 with `--network host` kept failing to bind port 53 with "Address in use" because systemd-resolved's stub listener competed during startup.
+
+**Fix:** Disable systemd-resolved stub listener:
+```bash
+# On ThinkCentre (run as root)
+echo "[Resolve]" >> /etc/systemd/resolved.conf
+echo "DNSStubListener=no" >> /etc/systemd/resolved.conf
+systemctl restart systemd-resolved
+docker restart pihole
+```
+After this, Pi-hole binds port 53 successfully and is healthy.
+
+### Firewall — Port 53 opened
+```bash
+sudo firewall-cmd --add-service=dns --permanent
+sudo firewall-cmd --reload
+```
+
+### DNS — unifi hostname for AP adoption
+Added dnsmasq config so "unifi" resolves to the controller:
+```bash
+echo "address=/unifi/192.168.1.107" > /home/milton/pihole/etc-dnsmasq.d/unifi.conf
+docker restart pihole
+```
+
+### AP Physical Cable — moved to correct network
+The AP's PoE injector LAN port was connected to the T-Mobile gateway (192.168.12.x) instead of the main switch. Moved to switch port 2. AP now gets 192.168.1.x from USG.
+
+---
+
+## UniFi AP Adoption — INCOMPLETE (next session)
+
+**Current state:** AP is at 192.168.1.8, factory reset attempted but may not have completed.
+
+**Problem:** SSH into AP fails — Fedora's crypto policy blocks the AP's old 1024-bit RSA key and SHA-1.
+
+**Next steps:**
+1. Hold AP reset button for 10 seconds (AP is now on correct network — 192.168.1.x)
+2. Wait for LED to go white (pulsing = ready for adoption)
+3. SSH in using LEGACY crypto policy:
+```bash
+# On ThinkCentre as root:
+update-crypto-policies --set LEGACY
+sshpass -p ubnt ssh -o StrictHostKeyChecking=no -o HostKeyAlgorithms=+ssh-rsa ubnt@192.168.1.8 "set-inform http://192.168.1.107:8080/inform"
+update-crypto-policies --set DEFAULT
+```
+4. In browser, go to https://192.168.1.107:8443 and adopt the AP
+5. Create SSIDs: MILTONHAUS (kids) and DIEMILTONHAUS (adults, from UniFi)
+6. Delete any legacy SSIDs (MILTONHAUS2, MILTONHAUS_ADMIN)
+
+**Note:** After adoption, the T-Mobile gateway SSID "DIEMILTONHAUS" should be RENAMED so it doesn't conflict with the UniFi SSID. Either rename the T-Mobile WiFi or use a different name for the UniFi adult network.
 
 ---
 
@@ -66,48 +124,53 @@
 ```
 Modem/ISP
     |
-    | (WAN port)
-  USG 3P
+    | (WAN port) → USG WAN IP on T-Mobile side: 192.168.12.238
+  USG 3P (192.168.1.1)
     | (LAN1 port)
     |
-5-port 1GB Switch
-    |           |           |
-  UniFi AP    Mac       Lenovo M900
- (PoE port) (ethernet)  (Fedora/UniFi)
+5-port 1GB Switch (non-PoE)
+    |              |              |           |
+  PoE Injector   Mac          Lenovo M900   Windows PC
+  LAN port    (ethernet)     (Fedora/Docker)  (switch port 5)
+    |
+  PoE Injector PoE port
+    |
+  UniFi AP LR (192.168.1.8)
 
-Windows PC → WiFi only (do NOT plug into switch unless needed)
-Pi 3 A+    → WiFi (repurposed)
+T-Mobile Gateway (192.168.12.1) → separate network, do not modify
+ThinkCentre also has WiFi on T-Mobile side (192.168.12.136) — leave as fallback
 ```
 
 **Switch port assignments:**
 | Port | Device |
 |---|---|
 | 1 | USG 3P (LAN1) |
-| 2 | UniFi AP Long Range (PoE or via PoE injector) |
+| 2 | PoE Injector → UniFi AP Long Range |
 | 3 | Mac |
-| 4 | Lenovo ThinkCentre M900 Tiny (Fedora server) |
-| 5 | Open |
+| 4 | Lenovo ThinkCentre M900 Tiny |
+| 5 | Windows PC (connect for management) |
 
 ---
 
 ## Network Architecture
 
-### Two VLANs
+### Two VLANs (planned — not yet configured in UniFi)
 
 | Network | SSID | Users | DNS | Internet |
 |---|---|---|---|---|
-| **VLAN 1** | DIEMILTONHAUS | Eric, Spouse | Unrestricted | Full |
-| **VLAN 10** | MILTONHAUS | Kids | Pi 4 Pi-hole (whitelist) | Restricted |
+| **VLAN 1** | DIEMILTONHAUS (UniFi) | Eric, Spouse | Unrestricted | Full |
+| **VLAN 10** | MILTONHAUS | Kids | Pi-hole on ThinkCentre (whitelist) | Restricted |
 
 ### IP Scheme
 
-| Device | IP | VLAN |
+| Device | IP | Notes |
 |---|---|---|
-| USG 3P | 192.168.1.1 | 1 (Management) |
-| Pi 4 | 192.168.1.x (static) | 1 (serves kids VLAN) |
-| Lenovo M900 Tiny | 192.168.1.x (static — unknown, find via scan) | 1 (Management) |
-| Kids devices | 192.168.10.x | 10 (Kids) |
-| Adult devices | 192.168.1.x | 1 (Admin) |
+| USG 3P | 192.168.1.1 | Router/gateway |
+| ThinkCentre M900 Tiny | 192.168.1.107 | All services |
+| UniFi AP | 192.168.1.8 (DHCP) | Set static reservation once adopted |
+| Windows PC | 192.168.1.108 (DHCP) | When plugged into switch |
+| Kids devices | 192.168.10.x | After VLAN 10 configured |
+| Adult devices | 192.168.1.x | VLAN 1 |
 
 ### VPN / Lambert Network
 
@@ -115,150 +178,27 @@ Pi 3 A+    → WiFi (repurposed)
 - **VPN Server Public Key:** `uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=`
 - **Lambert network:** `192.168.0.x`
 - **Target:** `192.168.0.100:5006` (homeschool platform)
-- **Pi 4 WireGuard IP:** `192.168.2.4/32`
-- **Pi 4 Public Key:** `Od833amshNe6+MXKa9rm5VyiOoN08BnpPImH2T6W7Ww=`
-- **Pi 4 Private Key:** `4Ll8kfPH48svJToniFdxqorU3Hcz/lpK1AcWE0JtTEE=`
-
-Kids' devices route `192.168.0.x` traffic through Pi 4 → WireGuard tunnel → Lambert
+- **WireGuard on ThinkCentre IP:** `192.168.2.4/32`
+- **WireGuard Public Key:** `Od833amshNe6+MXKa9rm5VyiOoN08BnpPImH2T6W7Ww=`
+- **WireGuard Private Key:** `4Ll8kfPH48svJToniFdxqorU3Hcz/lpK1AcWE0JtTEE=`
 
 ---
 
-## Setup Order
+## Remaining Work
 
-### Phase 1 — Lenovo ThinkCentre M900 Tiny (Fedora Server + UniFi Controller) — COMPLETE
+### Next Session
+1. Factory reset AP (hold button 10s while on correct network)
+2. Adopt AP in UniFi controller
+3. Create MILTONHAUS and DIEMILTONHAUS SSIDs in UniFi
+4. Configure VLAN 10 (Kids) in UniFi
+5. Set Pi-hole DNS for VLAN 10 via USG DHCP
+6. Add firewall rules in USG (Phase 4)
+7. Assign kids' devices to MILTONHAUS SSID
+8. Test parental controls
 
-### Phase 2 — Pi 4 Setup (Pi-hole + WireGuard)
-
-#### Pi-hole Installation
-```bash
-curl -sSL https://install.pi-hole.net | bash
-```
-- Interface: eth0 (wired — critical for reliability)
-- Upstream DNS: 1.1.1.1, 8.8.8.8
-- Static IP: assign in router DHCP reservation
-
-**Whitelist Mode — Block Everything Except Approved Sites:**
-```bash
-# Block all domains
-sudo pihole-FTL sqlite3 /etc/pihole/gravity.db \
-  "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) \
-  VALUES ('.*', 3, 1, 'Block all domains');"
-sudo pihole reloaddns
-```
-
-**Approved Whitelist (Kids):**
-```bash
-# Add whitelisted domain (repeat for each)
-sudo pihole-FTL sqlite3 /etc/pihole/gravity.db \
-  "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) \
-  VALUES ('domain.com', 2, 1, 'Description');"
-sudo pihole reloaddns
-```
-
-| Domain | Reason |
-|---|---|
-| `homeschoolconnections.com` | Homeschool platform |
-| `caravel.software` | Homeschool assets |
-| `cloudfront.net` | CDN (homeschool) |
-| `amazonaws.com` | AWS (homeschool) |
-| `gstatic.com` | Google static assets |
-| `googleapis.com` | Google APIs |
-| `google.com` | Google (limited) |
-| `vimeo.com` | Educational videos |
-| `vimeocdn.com` | Vimeo CDN |
-
-**Note:** `192.168.0.100:5006` is a direct IP — bypasses DNS, always accessible.
-
-**Pi-hole Admin:** `http://192.168.1.x/admin`
-
-#### WireGuard on Pi 4
-```bash
-sudo apt install wireguard-tools
-
-# Config at /etc/wireguard/wg0.conf
-```
-
-```ini
-[Interface]
-PrivateKey = 4Ll8kfPH48svJToniFdxqorU3Hcz/lpK1AcWE0JtTEE=
-Address = 192.168.2.4/32
-PostUp = iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
-PostDown = iptables -t nat -D POSTROUTING -o wg0 -j MASQUERADE
-
-[Peer]
-PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
-AllowedIPs = 192.168.0.0/24, 192.168.2.0/24
-Endpoint = 174.54.51.209:51820
-PersistentKeepalive = 25
-```
-
-```bash
-sudo systemctl enable wg-quick@wg0
-sudo systemctl start wg-quick@wg0
-```
-
-**Add Pi 4 peer to Lambert VPN server** (do from Windows PC while VPN is connected):
-```bash
-ssh mac@192.168.0.1  # password: 645866
-# Add to WireGuard server config:
-# [Peer]
-# PublicKey = Od833amshNe6+MXKa9rm5VyiOoN08BnpPImH2T6W7Ww=
-# AllowedIPs = 192.168.2.4/32
-```
-
----
-
-### Phase 3 — UniFi VLAN Configuration
-
-In UniFi controller:
-
-1. **Create Kids VLAN (VLAN 10)**
-   - Network name: Kids
-   - Subnet: 192.168.10.0/24
-   - DHCP: enabled
-   - DHCP DNS: Pi 4 IP (static)
-
-2. **Create WiFi Networks**
-   - `MILTONHAUS` → assigned to Kids VLAN 10
-   - `DIEMILTONHAUS` → assigned to VLAN 1 (no restrictions)
-   - Delete `MILTONHAUS2` (old legacy SSID)
-   - Delete `MILTONHAUS_ADMIN` if it exists
-
-3. **Assign kids' devices** to MILTONHAUS SSID
-
----
-
-### Phase 4 — USG Firewall Rules (DNS Enforcement)
-
-These rules make parental controls **unbypassable** — even if a kid changes DNS on their device:
-
-**Rule 1: Intercept all DNS from Kids VLAN → force to Pi-hole**
-```
-Source: 192.168.10.0/24
-Destination Port: 53
-Action: DNAT → Pi 4 IP:53
-```
-
-**Rule 2: Block DNS-over-TLS from Kids VLAN**
-```
-Source: 192.168.10.0/24
-Destination Port: 853
-Action: DROP
-```
-
-**Rule 3: Block inter-VLAN traffic (kids can't reach admin network)**
-```
-Source: 192.168.10.0/24
-Destination: 192.168.1.0/24
-Action: DROP
-```
-
-**Rule 4: Allow Kids VLAN → Pi 4 (DNS + VPN gateway)**
-```
-Source: 192.168.10.0/24
-Destination: Pi 4 IP
-Action: ACCEPT
-```
+### Future
+- Install Fedora on used MacBook Pro (eBay) for music/MIDI + Home Assistant
+- Set up DHCP reservations for all static devices
 
 ---
 
@@ -266,52 +206,55 @@ Action: ACCEPT
 
 | Device | Access | Credentials |
 |---|---|---|
-| USG 3P | SSH | `mlWKaph@192.168.1.1` / `QmJ7bDN6Ed2` |
-| UniFi Controller | Web | `ericmilton711@gmail.com` / `PASSword!?1711` |
+| USG 3P | SSH | `mlWKaph@192.168.1.1` / `QmJ7bDN6Ed2` (NOTE: SSH login currently failing — may need reset) |
+| USG 3P | Web UI | http://192.168.1.1 |
+| UniFi Controller | Web | `ericmilton711@gmail.com` / `PASSword!?1711` — https://192.168.1.107:8443 |
+| ThinkCentre | SSH | `milton@192.168.1.107` / `645866` |
 | Cloud Key | SSH (retired — do not use) | `root@192.168.1.6` / `PASSword!?1711` |
 | Lambert Router | SSH | `mac@192.168.0.1` / `645866` |
 | Windows PC | WireGuard | Lambert tunnel — 192.168.2.2/32 |
+| UniFi AP | SSH (after adoption) | `ubnt` / `ubnt` (default after factory reset) |
 
 ---
 
-## Pi-hole Management Quick Commands
+## Pi-hole Management (on ThinkCentre via Docker)
 
 ```bash
+# SSH to ThinkCentre first
+ssh milton@192.168.1.107
+
 # Check status
-pihole status
+docker exec pihole pihole status
 
 # Add to whitelist
-sudo pihole-FTL sqlite3 /etc/pihole/gravity.db \
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \
   "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) \
   VALUES ('newsite.com', 2, 1, 'Reason');"
-sudo pihole reloaddns
+docker exec pihole pihole reloaddns
 
 # Remove from whitelist
-sudo pihole-FTL sqlite3 /etc/pihole/gravity.db \
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \
   "DELETE FROM domainlist WHERE domain = 'newsite.com';"
-sudo pihole reloaddns
+docker exec pihole pihole reloaddns
 
-# Temporarily disable parental controls (adults)
-sudo pihole-FTL sqlite3 /etc/pihole/gravity.db \
-  "DELETE FROM domainlist WHERE domain = '.*' AND type = 3;"
-sudo pihole reloaddns
-
-# Re-enable parental controls
-sudo pihole-FTL sqlite3 /etc/pihole/gravity.db \
+# Block all (kids parental controls)
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \
   "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) \
   VALUES ('.*', 3, 1, 'Block all domains');"
-sudo pihole reloaddns
+docker exec pihole pihole reloaddns
+
+# Disable block-all
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \
+  "DELETE FROM domainlist WHERE domain = '.*' AND type = 3;"
+docker exec pihole pihole reloaddns
 
 # Check WireGuard VPN status
-sudo wg show
+docker exec wireguard wg show
 ```
 
 ---
 
 ## Related Skills
 
-- `.claude/skills/project-management/lambert-network-access.md`
-- `.claude/skills/project-management/wireguard-usg-installation-2026-01-06.md`
-- `.claude/skills/project-management/pihole-parental-controls.md`
-- `.claude/skills/project-management/raspberry-pi-wireguard-pihole-setup.md`
+- `.claude/skills/home-assistant-thinkcenter/SKILL.md`
 - `.claude/skills/home-assistant-container-pi/SKILL.md`
