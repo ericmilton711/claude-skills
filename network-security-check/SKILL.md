@@ -63,3 +63,32 @@ Option B — Configure the router (`192.168.12.1`) to use `192.168.12.163` as up
 
 - PowerShell `Where-Object` with bash heredoc requires `powershell -File -` syntax, not inline `-Command` with `Where-Object { $_.Property }` — the `$_` gets mangled by bash extglob.
 - Eric's network: MILTONHAUS WiFi, Pi-hole on Mac Mini at `192.168.12.163`, router at `192.168.12.1`.
+
+---
+
+## MILTONHAUS Parental Controls Strategy
+
+**Goal:** Kids' devices locked to approved sites only via Pi-hole. Eric and Rosemary bypass restrictions using ExpressVPN on their devices.
+
+**Kids' devices** — no ExpressVPN. DNS through Pi-hole. Only whitelisted sites work.
+
+**Parent devices** (Eric's Windows laptop, Fedora MacBook Pro, Rosemary's MacBook Pro) — ExpressVPN installed:
+
+| State | Pi-hole filtering | Milton Homepage (WireGuard) |
+|---|---|---|
+| ExpressVPN OFF | Yes — same restrictions as kids | Available |
+| ExpressVPN ON | Bypassed — all sites accessible | Unavailable (VPN conflict) |
+
+When ExpressVPN is on, it captures all routing and bypasses Pi-hole DNS entirely. WireGuard split tunnel to Lambert network breaks as a side effect.
+
+**Pi-hole setup options:**
+
+- **Router-level (recommended):** Set router (`192.168.12.1`) upstream DNS to Pi-hole (`192.168.12.163`). All devices filtered by default. Kids can't bypass without router access.
+- **Device-level:** Manually set DNS to `192.168.12.163` on kids' devices only. Fragile — kids could manually change DNS to bypass.
+
+**Key devices:**
+- Pi-hole: Mac Mini at `192.168.12.163`
+- Router: `192.168.12.1`
+- Eric's laptop: `192.168.12.220`
+- Rosemary's MacBook Pro: `192.168.12.109`
+- Fedora MacBook Pro: `192.168.12.189`
