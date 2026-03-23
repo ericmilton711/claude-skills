@@ -77,9 +77,11 @@ Option B — Configure the router (`192.168.12.1`) to use `192.168.12.163` as up
 | State | Pi-hole filtering | Milton Homepage (WireGuard) |
 |---|---|---|
 | ExpressVPN OFF | Yes — same restrictions as kids | Available |
-| ExpressVPN ON | Bypassed — all sites accessible | Unavailable (VPN conflict) |
+| ExpressVPN ON | Bypassed — all sites accessible | **Still available** (see note below) |
 
-When ExpressVPN is on, it captures all routing and bypasses Pi-hole DNS entirely. WireGuard split tunnel to Lambert network breaks as a side effect.
+**Important:** ExpressVPN and WireGuard actually coexist simultaneously. Because WireGuard is split-tunnel and claims specific routes (`192.168.2.0/24`, `192.168.0.0/24`), Windows longest-prefix matching sends Lambert-bound traffic through WireGuard and everything else through ExpressVPN. They do not conflict. Milton Homepage remains accessible with ExpressVPN on.
+
+The only effect of ExpressVPN is bypassing Pi-hole DNS for general internet traffic (ExpressVPN uses its own DNS `100.64.100.1`).
 
 **Pi-hole setup options:**
 
