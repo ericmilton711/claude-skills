@@ -1,177 +1,252 @@
-# Pi-hole Setup Documentation
+# Pi-hole Setup & Configuration
 
-## Overview
-This document describes how to configure devices on the MILTONHAUS2 network to use Pi-hole for network-wide ad blocking.
+**Last Updated:** 2026-03-23
 
-**Pi-hole Location:** Mac at IP address `192.168.1.7`
-**Network:** MILTONHAUS2 (192.168.1.x subnet)
-**Router Gateway:** 192.168.1.1
+## Pi-hole Instances
 
----
+### 1. Mac (Fedora) — Primary
+- **Hostname:** fedora
+- **IP Address:** 192.168.12.163
+- **Interface:** enp2s0f0
+- **Admin URL:** http://192.168.12.163/admin
+- **Admin Password:** None (removed)
+- **Pi-hole Version:** v6.3 (Core), v6.4 (Web), v6.4.1 (FTL)
+- **Upstream DNS:** 1.1.1.1, 1.0.0.1
+- **Blocklist:** 79,814 domains
+- **Config File:** /etc/pihole/pihole.toml
+- **Database:** /etc/pihole/gravity.db
+- **Service:** pihole-FTL (systemd)
+- **SSH:** `ssh mac@192.168.12.163` (password: 645866)
 
-## Option 1: Configure Individual Devices
-
-Use this method to configure Pi-hole DNS on specific laptops/devices.
-
-### Windows PC Configuration
-
-1. **Open PowerShell as Administrator:**
-   - Press Windows key
-   - Type "PowerShell"
-   - Right-click "Windows PowerShell"
-   - Select "Run as administrator"
-   - Click "Yes" on UAC prompt
-
-2. **Set DNS to Pi-hole:**
-   ```powershell
-   Set-DnsClientServerAddress -InterfaceAlias 'Wi-Fi 4' -ServerAddresses 192.168.1.7
-   ```
-
-   > **Note:** Replace 'Wi-Fi 4' with your network adapter name if different.
-   > To find your adapter name, run: `Get-NetAdapter`
-
-3. **Verify DNS Configuration:**
-   ```powershell
-   Get-DnsClientServerAddress -InterfaceAlias 'Wi-Fi 4' -AddressFamily IPv4
-   ```
-   Should show `192.168.1.7` as the DNS server.
-
-4. **Test DNS Resolution:**
-   ```cmd
-   nslookup google.com
-   ```
-   Should show `Server: pi.hole` and `Address: 192.168.1.7`
-
-### Alternative: Manual GUI Configuration (Windows)
-
-1. Press `Windows + R`, type `ncpa.cpl`, press Enter
-2. Right-click your network adapter (e.g., "Wi-Fi 4") → Properties
-3. Double-click "Internet Protocol Version 4 (TCP/IPv4)"
-4. Select "Use the following DNS server addresses"
-5. Enter `192.168.1.7` as Preferred DNS server
-6. Click OK to save
-
-### macOS Configuration
-
-1. Open System Settings → Network
-2. Select your connection (Wi-Fi or Ethernet)
-3. Click "Details"
-4. Go to DNS tab
-5. Click "+" and add `192.168.1.7`
-6. Remove any other DNS servers
-7. Click OK
-
-### iOS/Android Configuration
-
-1. Go to Wi-Fi settings
-2. Tap on MILTONHAUS2 network
-3. Configure DNS manually
-4. Set DNS to `192.168.1.7`
-5. Save settings
+### 2. Raspberry Pi 3 A+ (MILTONRP3) — Secondary
+- **Hostname:** MILTONRP3
+- **IP Address:** 192.168.1.104
+- **Interface:** wlan0
+- **Admin URL:** http://192.168.1.104/admin
+- **Pi-hole Version:** v6.3 (Core), v6.4 (Web), v6.4.1 (FTL)
+- **Upstream DNS:** 1.1.1.1, 8.8.8.8
+- **Blocklist:** 75,488 domains (StevenBlack/hosts)
+- **SSH:** `ssh miltonrp3@192.168.1.104` (password: raspberry123)
 
 ---
 
-## Option 2: Router-Wide Configuration (RECOMMENDED)
+## Parental Controls (Block-All Mode)
 
-**This is the easiest option for multiple devices!**
+Pi-hole is configured to block ALL domains by default, with specific sites whitelisted.
 
-Configure your router once, and ALL devices on the network automatically use Pi-hole.
+### How It Works
+1. Regex rule `.*` (type 3) blocks ALL domain queries
+2. Whitelisted domains (type 0 and type 2) are allowed through
+3. Direct IP access bypasses DNS entirely
 
-### Steps:
+### Whitelisted Domains
 
-1. Access your router admin interface:
-   - Open browser to `http://192.168.1.1`
-   - Login with router credentials
+| Domain | Type | Purpose |
+|--------|------|---------|
+| api.anthropic.com | Exact (0) | Claude API |
+| anthropic.com | Exact (0) | Anthropic website |
+| claude.ai | Exact (0) | Claude web |
+| homeschoolconnections.com | Exact (0) | Homeschool Connections |
+| caravel.homeschoolconnections.com | Exact (0) | Caravel platform |
+| cloudfront.net | Exact (0) | CloudFront CDN |
+| homeschoolconnections.zoom.us | Exact (0) | HSC Zoom classes |
+| `(\|^)homeschoolconnections\.com$` | Regex whitelist (2) | HSC wildcard |
+| `(\|^)cloudfront\.net$` | Regex whitelist (2) | CloudFront wildcard |
+| `(\|^)amazonaws\.com$` | Regex whitelist (2) | AWS |
+| `(\|^)gstatic\.com$` | Regex whitelist (2) | Google static |
+| `(\|^)googleapis\.com$` | Regex whitelist (2) | Google APIs |
+| `(\|^)google\.com$` | Regex whitelist (2) | Google |
+| `(\|^)vimeo\.com$` | Regex whitelist (2) | Vimeo video |
+| `(\|^)vimeocdn\.com$` | Regex whitelist (2) | Vimeo CDN |
+| `(\|^)caravel\.software$` | Regex whitelist (2) | Caravel software |
+| `(\|^)www\.lifeprint\.com$` | Regex whitelist (2) | Lifeprint (ASL) |
+| `(\|^)www\.duolingo\.com$` | Regex whitelist (2) | Duolingo |
+| `(\|^)claude\.ai$` | Regex whitelist (2) | Claude AI |
 
-2. Find DNS settings (location varies by router):
-   - Usually under: LAN Settings, DHCP Settings, or DNS Settings
-   - Look for "Primary DNS" or "DNS Server"
+### Blocked Domains (Explicit Blacklist)
 
-3. Set DNS to Pi-hole:
-   - Primary DNS: `192.168.1.7`
-   - Secondary DNS: Leave blank or use `1.1.1.1` as fallback
-
-4. Save and reboot router if required
-
-5. **Reconnect devices** or wait for DHCP lease renewal
-
-### Benefits:
-- No need to configure each device individually
-- New devices automatically get ad blocking
-- Works on smart TVs, IoT devices, gaming consoles, etc.
+| Domain | Type | Purpose |
+|--------|------|---------|
+| `.*` | Regex blacklist (3) | Block ALL domains |
+| `(^|\.)youtube\.com$` | Regex blacklist (3) | Block YouTube |
+| `(^|\.)youtubei\.googleapis\.com$` | Regex blacklist (3) | Block YouTube API |
+| `(^|\.)youtube-nocookie\.com$` | Regex blacklist (3) | Block YouTube embeds |
+| `(^|\.)googlevideo\.com$` | Regex blacklist (3) | Block YouTube video CDN |
+| `(^|\.)ytimg\.com$` | Regex blacklist (3) | Block YouTube images |
+| `(^|\.)ggpht\.com$` | Regex blacklist (3) | Block YouTube thumbnails |
+| googlevideo.com | Exact blacklist (1) | YouTube video CDN |
+| googleadservices.com | Exact blacklist (1) | Google ad services |
+| s.youtube.com | Exact blacklist (1) | YouTube |
+| video-stats.l.google.com | Exact blacklist (1) | YouTube stats |
+| youtube.com, www.youtube.com, m.youtube.com | Exact blacklist (1) | YouTube |
+| youtu.be | Exact blacklist (1) | YouTube short links |
+| i.ytimg.com, yt3.ggpht.com | Exact blacklist (1) | YouTube images |
+| youtube-ui.l.google.com | Exact blacklist (1) | YouTube UI |
+| youtubei.googleapis.com | Exact blacklist (1) | YouTube API |
 
 ---
 
-## Accessing Pi-hole Admin Interface
+## Management Commands
 
-**Web Interface:** http://192.168.1.7/admin
-**Or use:** http://pi.hole/admin (if DNS is configured)
+### Service Control
+```bash
+# Start Pi-hole
+sudo systemctl start pihole-FTL
 
-### What You Can See:
-- Total queries blocked
-- Blocklist statistics
-- Query log (see which devices are making DNS requests)
-- Whitelist/blacklist management
-- DNS settings and configuration
+# Stop Pi-hole
+sudo systemctl stop pihole-FTL
+
+# Enable on boot
+sudo systemctl enable pihole-FTL
+
+# Check status
+pihole status
+```
+
+### Password Management
+```bash
+# Remove password (no login required)
+sudo pihole setpassword
+
+# Set a password
+sudo pihole setpassword mypassword
+```
+
+### Domain Management
+```bash
+# View all rules
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "SELECT domain, type, enabled, comment FROM domainlist;"
+
+# Add whitelisted domain (exact)
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('example.com', 0, 1, 'Description');"
+sudo pihole reloaddns
+
+# Add whitelisted domain (regex - allows all subdomains)
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('(\.|^)example\.com$', 2, 1, 'Example wildcard');"
+sudo pihole reloaddns
+
+# Remove a domain
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM domainlist WHERE domain = 'example.com';"
+sudo pihole reloaddns
+
+# Disable parental controls (allow all)
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM domainlist WHERE domain = '.*' AND type = 3;"
+sudo pihole reloaddns
+
+# Re-enable parental controls (block all)
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('.*', 3, 1, 'Block all domains');"
+sudo pihole reloaddns
+```
+
+### Domain Type Reference
+
+| Type | Meaning |
+|------|---------|
+| 0 | Whitelist (exact) |
+| 1 | Blacklist (exact) |
+| 2 | Whitelist (regex) |
+| 3 | Blacklist (regex) |
 
 ---
 
-## Verification & Testing
+## Configuring Devices to Use Pi-hole
 
-### Check if Pi-hole is Working:
+### Option 1: Router-Wide (Recommended)
+1. Access router admin at http://192.168.12.1
+2. Set Primary DNS to `192.168.12.163`
+3. Save and reboot — all devices automatically use Pi-hole
 
-1. **Check DNS server:**
-   ```cmd
-   nslookup google.com
-   ```
-   Should show `Server: pi.hole` at `192.168.1.7`
+### Option 2: Per-Device
 
-2. **Visit Pi-hole admin:**
-   - Go to http://192.168.1.7/admin
-   - Check if queries are being logged
-   - Look for your device IP in query log
+**Windows (PowerShell as Admin):**
+```powershell
+# Find your adapter name
+Get-NetAdapter
 
-3. **Test ad blocking:**
-   - Visit a website with ads
-   - Check Pi-hole query log for blocked domains
-   - Ads should be blocked/missing
+# Set DNS
+Set-DnsClientServerAddress -InterfaceAlias 'Wi-Fi' -ServerAddresses 192.168.12.163
 
-### Troubleshooting:
+# Verify
+Get-DnsClientServerAddress -InterfaceAlias 'Wi-Fi' -AddressFamily IPv4
+```
 
-**DNS not resolving:**
-- Verify Pi-hole Mac is powered on and connected
-- Ping `192.168.1.7` to check connectivity
-- Check DNS settings are correct
+**macOS:**
+1. System Settings → Network → Wi-Fi → Details → DNS
+2. Add `192.168.12.163`, remove others
 
-**Ads still showing:**
-- Clear browser cache
-- Some ads use first-party domains (harder to block)
-- Check Pi-hole blocklists are enabled
+**iOS/Android:**
+1. Wi-Fi settings → tap network → DNS → Manual
+2. Set to `192.168.12.163`
 
-**Slow internet:**
-- Check Pi-hole is responding (ping 192.168.1.7)
-- May need to set secondary DNS as fallback
+**Linux:**
+```bash
+# Using nmcli
+nmcli con mod "CONNECTION_NAME" ipv4.dns "192.168.12.163"
+nmcli con up "CONNECTION_NAME"
+```
+
+### To Bypass Pi-hole on a Device
+Change the device's DNS to `8.8.8.8` or `1.1.1.1`.
+
+---
+
+## Testing & Verification
+
+```bash
+# Check if Pi-hole is running
+pihole status
+
+# Test blocked domain (should return 0.0.0.0)
+dig +short youtube.com @192.168.12.163
+
+# Test whitelisted domain (should return real IP)
+dig +short api.anthropic.com @192.168.12.163
+
+# Test from any device
+nslookup google.com 192.168.12.163
+```
+
+---
+
+## Troubleshooting
+
+### DNS service not running
+```bash
+sudo systemctl enable --now pihole-FTL
+pihole status
+```
+
+### Claude stopped working
+```bash
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('api.anthropic.com', 0, 1, 'Claude API');"
+sudo pihole reloaddns
+```
+
+### Need temporary access to a site
+```bash
+# Allow
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('needed-site.com', 0, 1, 'Temporary');"
+sudo pihole reloaddns
+
+# Remove when done
+sudo pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM domainlist WHERE domain = 'needed-site.com';"
+sudo pihole reloaddns
+```
 
 ---
 
 ## Network Information
 
-| Device | IP Address | Notes |
-|--------|------------|-------|
-| Router/Gateway | 192.168.1.1 | Network gateway |
-| Pi-hole (Mac) | 192.168.1.7 | DNS server |
-| Windows PC | 192.168.1.9 | Example client |
+| Device | IP Address | Role |
+|--------|------------|------|
+| Router/Gateway | 192.168.12.1 | Network gateway |
+| Mac (Fedora) | 192.168.12.163 | Pi-hole DNS (primary) |
+| Raspberry Pi | 192.168.1.104 | Pi-hole DNS (secondary, separate network) |
 
-**Network:** 192.168.1.0/24 (255.255.255.0)
-**SSID:** MILTONHAUS2
+**Network:** MILTONHAUS2
+**ISP:** T-Mobile Home Internet
 
 ---
 
-## Summary
-
-- **Pi-hole installed on:** Mac (192.168.1.7)
-- **For individual devices:** Configure DNS to 192.168.1.7
-- **For whole network:** Configure router DNS to 192.168.1.7 (recommended)
-- **Admin interface:** http://192.168.1.7/admin
-
-**Setup completed:** January 3, 2026
+**Setup originally completed:** January 3, 2026
+**Last verified:** March 23, 2026
