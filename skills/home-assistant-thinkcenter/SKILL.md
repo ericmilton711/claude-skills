@@ -192,12 +192,37 @@ PersistentKeepalive = 25
 
 ---
 
+## SSD Failure & Replacement (2026-03-23)
+
+**Status: Server powered OFF. Waiting for new SSD.**
+
+- Kingston SV300S37A240G (240GB) is critically failing — SMART shows `SSD_Life_Left FAILING_NOW value: 001 threshold: 010`
+- Overall health: FAILED. Drive failure expected within 24 hours.
+- Server powered off to prevent data loss
+- **Backup created:** `/run/media/milton/2829-C190/miltonhaus_backup_20260323.tar.gz` (584MB) — full `/home/milton/` on flash drive
+- **Replacement ordered:** Samsung 870 EVO SATA III SSD 1TB 2.5" — confirmed compatible (same 2.5" SATA III 7mm form factor)
+
+### After SSD Arrives — Reinstall Steps
+
+1. Install Samsung 870 EVO into ThinkCentre M900 Tiny
+2. Fresh Fedora Workstation install
+3. Restore backup from flash drive: `tar -xzf miltonhaus_backup_20260323.tar.gz -C /home/milton/`
+4. Install Docker (moby-engine — NOT docker-ce): `sudo dnf install -y moby-engine docker-compose`
+5. Re-run Home Assistant, Pi-hole, WireGuard containers (see "Running Containers" section)
+6. Configure GDM auto-login (see "Auto-Login" section)
+7. Fix DNS: `nmcli con mod 'Wired connection 1' ipv4.dns '1.1.1.1 8.8.8.8' ipv4.ignore-auto-dns yes`
+8. Complete Home Assistant onboarding at http://192.168.12.136:8123
+9. Set static IP (currently DHCP — may change after reinstall)
+
+---
+
 ## Next Steps
 
+- Receive Samsung 870 EVO — follow reinstall steps above
 - Complete Home Assistant onboarding (create account at http://192.168.12.136:8123)
 - Install ESPHome add-on in HA
 - Flash ESP32 closet lights via ESPHome
-- Set static IP on ThinkCentre (currently DHCP at 192.168.12.136)
+- Set static IP on ThinkCentre
 
 ---
 
