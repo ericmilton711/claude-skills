@@ -1,4 +1,4 @@
-# Home Assistant on Lenovo ThinkCentre M900 Tiny
+# Home Assistant on Lenovo ThinkCentre M700 Tiny
 
 **Last Updated:** 2026-03-23
 **Status:** Home Assistant, Pi-hole, and WireGuard running via Docker. UniFi removed.
@@ -16,7 +16,7 @@ Central home server running all network services:
 
 ## Hardware
 
-**Lenovo ThinkCentre M900 Tiny**
+**Lenovo ThinkCentre M700 Tiny**
 - CPU: Intel i5-6500T
 - RAM: 8GB
 - Storage: 240GB Kingston SSDNOW 300 SATA SSD (model: SV300S37AZ240G)
@@ -204,7 +204,7 @@ PersistentKeepalive = 25
 
 ### After SSD Arrives — Reinstall Steps
 
-1. Install Samsung 870 EVO into ThinkCentre M900 Tiny
+1. Install Samsung 870 EVO into ThinkCentre M700 Tiny
 2. Fresh Fedora Workstation install
 3. Restore backup from flash drive: `tar -xzf miltonhaus_backup_20260323.tar.gz -C /home/milton/`
 4. Install Docker (moby-engine — NOT docker-ce): `sudo dnf install -y moby-engine docker-compose`
