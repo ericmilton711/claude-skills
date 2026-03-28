@@ -83,7 +83,31 @@ ExecStart=-/sbin/agetty --autologin milton --noclear %I $TERM
 13. ✅ Pi-hole port 53 conflict fixed (systemd-resolved DNSStubListener=no)
 14. ✅ Firewall opened for port 53 (TCP + UDP)
 15. ✅ Pi-hole group management configured for Mac Mini (block all)
-16. ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123
+16. ✅ Auto-suspend/sleep disabled (server stays on permanently)
+17. ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123
+
+---
+
+## Power Management (Keep Server Always On)
+
+Sleep/suspend masked permanently — server will never auto-sleep or shut down:
+```bash
+sudo systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+```
+
+logind config (`/etc/systemd/logind.conf`):
+```ini
+[Login]
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+IdleAction=ignore
+IdleActionSec=0
+```
+
+Apply with:
+```bash
+sudo systemctl restart systemd-logind
+```
 
 ---
 
