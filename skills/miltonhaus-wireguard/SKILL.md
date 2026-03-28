@@ -67,7 +67,7 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 | Gianna's Asus (Fedora) | 192.168.12.226 | 192.168.2.2 | TODO | SSH install |
 | Patrick's Chromebook | 192.168.12.220 | 192.168.2.2 | TODO | Android WireGuard app + QR |
 | Ev's Chromebook | 100.115.92.195 | 192.168.2.2 | TODO | Android WireGuard app + QR |
-| kids1 | 192.168.12.249 | 192.168.2.2 | TODO | WireGuard app + QR |
+| kids1 | 192.168.12.249 | 192.168.2.2 | DONE | Service (C:\lambert.conf — uses direct IP 174.54.51.209) |
 | kids2 | 192.168.12.239 | 192.168.2.2 | TODO | WireGuard app + QR |
 | iPad (.141) | 192.168.12.141 | 192.168.2.2 | TODO | iOS WireGuard app + QR |
 

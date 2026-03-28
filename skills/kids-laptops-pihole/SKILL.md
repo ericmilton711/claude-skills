@@ -44,15 +44,28 @@ ssh themi@192.168.12.249
 ### Allowed Sites
 - homeschoolconnections.com (+ caravel.software, cloudfront.net, amazonaws.com, vimeo.com, vimeocdn.com)
 - teachingtextbooks.com + **teachingtextbooksapp.com** (the app uses this domain, not teachingtextbooks.com)
+- duolingo.com
+- Milton Home Page: http://192.168.0.100:5006 (via WireGuard — direct IP, bypasses Pi-hole)
 
 ### Blocked
 - Google, YouTube, social media, and all other domains
+
+### WireGuard Setup
+- Config: `C:\lambert.conf` (uses direct IP `174.54.51.209:51820` — NOT hostname, hostname won't resolve through Pi-hole)
+- Service: `WireGuardTunnel$lambert` — auto-starts on boot
+- Install via SSH:
+  ```powershell
+  # Write config to C:\lambert.conf first, then:
+  Start-Process "C:\Program Files\WireGuard\wireguard.exe" -ArgumentList "/installtunnelservice C:\lambert.conf" -Verb RunAs -Wait
+  ```
 
 ### Important Notes
 - **teachingtextbooksapp.com** is the actual domain the Teaching Textbooks app uses — teachingtextbooks.com alone is not enough
 - **Google is blocked** — removed from whitelist intentionally
 - **IPv6 must be disabled** — YouTube and others bypass Pi-hole via IPv6 if enabled
 - Windows shows "No internet, secured" on WiFi — this is normal, Pi-hole blocks Microsoft's connectivity check (msftconnecttest.com). Allowed sites still work fine.
+- **WireGuard config must use direct IP** (`174.54.51.209`) not hostname (`edenredux.servegame.com`) — Pi-hole blocks the hostname lookup
+- To install apps through Pi-hole: temporarily whitelist download domains, install, then remove from whitelist
 
 ### Windows Setup Steps (if rebuilding)
 1. Set DNS via PowerShell Admin:
