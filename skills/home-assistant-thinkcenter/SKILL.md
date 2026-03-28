@@ -1,7 +1,7 @@
 # Home Assistant on Lenovo ThinkCentre M700 Tiny
 
 **Last Updated:** 2026-03-28
-**Status:** SSD replaced (Samsung 870 EVO 1TB). Fresh Fedora install. Home Assistant, Pi-hole, and WireGuard running via Docker. Static IP pending.
+**Status:** SSD replaced (Samsung 870 EVO 1TB). Fresh Fedora install. Home Assistant, Pi-hole, and WireGuard running via Docker. Static IP: 192.168.12.136.
 
 ---
 
@@ -28,7 +28,7 @@ Central home server running all network services:
 
 ## Network
 
-- IP: 192.168.12.128 (DHCP — static IP pending)
+- IP: 192.168.12.136 (static)
 - Username: milton
 - Password: 645866
 - Connected via ethernet to switch
@@ -39,7 +39,7 @@ Central home server running all network services:
 ## SSH Access
 
 ```bash
-ssh milton@192.168.12.128
+ssh milton@192.168.12.136
 # password: 645866
 # sudo: echo 645866 | sudo -S <command>
 ```
@@ -79,8 +79,8 @@ ExecStart=-/sbin/agetty --autologin milton --noclear %I $TERM
 9. ✅ WireGuard running via Docker (config restored)
 10. ✅ GDM auto-login configured (no password on boot)
 11. ✅ DNS set to 1.1.1.1 / 8.8.8.8 (static, ignores DHCP)
-12. ⬜ Set static IP
-13. ⬜ Complete Home Assistant onboarding at http://192.168.12.128:8123
+12. ✅ Static IP set to 192.168.12.136
+13. ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123
 
 ---
 
@@ -110,7 +110,7 @@ echo 645866 | sudo -S resolvectl dns eno1 1.1.1.1 8.8.8.8
 ## Running Containers
 
 ### Home Assistant
-- Access: http://192.168.12.128:8123 (DHCP — update after static IP set)
+- Access: http://192.168.12.136:8123
 - Also accessible via WireGuard: http://192.168.0.103:8123
 ```bash
 docker run -d \
@@ -124,8 +124,8 @@ docker run -d \
 ```
 
 ### Pi-hole
-- Admin: http://192.168.12.128/admin (DHCP — update after static IP set) (password: 645866)
-- DNS: 192.168.12.128:53
+- Admin: http://192.168.12.136/admin (password: 645866)
+- DNS: 192.168.12.136:53
 ```bash
 docker run -d \
   --name pihole \
@@ -209,8 +209,8 @@ PersistentKeepalive = 25
 
 ## Next Steps
 
-- ⬜ Set static IP on ThinkCentre
-- ⬜ Complete Home Assistant onboarding at http://192.168.12.128:8123
+- ✅ Set static IP to 192.168.12.136
+- ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123
 - ⬜ Install ESPHome add-on in HA
 - ⬜ Flash ESP32 closet lights via ESPHome
 
