@@ -1,7 +1,7 @@
 # Home Assistant on Lenovo ThinkCentre M700 Tiny
 
 **Last Updated:** 2026-03-28
-**Status:** SSD replaced (Samsung 870 EVO 1TB). Fresh Fedora install. Home Assistant, Pi-hole, and WireGuard running via Docker. Static IP: 192.168.12.136.
+**Status:** SSD replaced (Samsung 870 EVO 1TB). Fresh Fedora install. Home Assistant, Pi-hole, and WireGuard running via Docker. Static IP: 192.168.12.136. Pi-hole group management active for Mac Mini.
 
 ---
 
@@ -80,7 +80,10 @@ ExecStart=-/sbin/agetty --autologin milton --noclear %I $TERM
 10. ✅ GDM auto-login configured (no password on boot)
 11. ✅ DNS set to 1.1.1.1 / 8.8.8.8 (static, ignores DHCP)
 12. ✅ Static IP set to 192.168.12.136
-13. ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123
+13. ✅ Pi-hole port 53 conflict fixed (systemd-resolved DNSStubListener=no)
+14. ✅ Firewall opened for port 53 (TCP + UDP)
+15. ✅ Pi-hole group management configured for Mac Mini (block all)
+16. ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123
 
 ---
 
@@ -155,9 +158,32 @@ docker run -d \
 
 ---
 
-## Pi-hole Whitelist (Parental Controls)
+## Pi-hole Setup Notes
 
-Block all domains except whitelist:
+### Port 53 Conflict Fix (IMPORTANT)
+On fresh Fedora installs, `systemd-resolved` occupies port 53 and Pi-hole can't bind to it.
+Fix by disabling the stub listener:
+
+```bash
+sudo bash -c "cat > /etc/systemd/resolved.conf << EOF
+[Resolve]
+DNS=1.1.1.1 8.8.8.8
+FallbackDNS=
+DNSStubListener=no
+EOF"
+sudo systemctl restart systemd-resolved
+docker restart pihole
+```
+
+Also open port 53 in the firewall:
+```bash
+sudo firewall-cmd --permanent --add-port=53/tcp
+sudo firewall-cmd --permanent --add-port=53/udp
+sudo firewall-cmd --reload
+```
+
+### Default Group — Whitelist (applies to all clients not in a specific group)
+
 ```bash
 docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "
 INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('.*', 3, 1, 'Block all domains');
@@ -173,6 +199,24 @@ INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('vimeo
 INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('api.anthropic.com', 0, 1, 'Claude API');
 INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('anthropic.com', 0, 1, 'Anthropic');
 INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('claude.ai', 0, 1, 'Claude');
+"
+docker exec pihole pihole reloaddns
+```
+
+### Group Management (Per-Device Control)
+
+**Mac Mini (192.168.12.163)** — in group `mac-mini`, NOT in Default group.
+- Block-all rule (`.*`) assigned, no whitelist — everything is blocked except direct IPs.
+- Milton Home Page (`192.168.0.100:5006`) still reachable since it's a direct IP (bypasses DNS).
+
+To recreate mac-mini group from scratch:
+```bash
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "
+INSERT OR IGNORE INTO 'group' (id, enabled, name, description) VALUES (1, 1, 'mac-mini', 'Mac Mini - block all');
+INSERT OR IGNORE INTO client (ip, comment) VALUES ('192.168.12.163', 'Mac Mini');
+INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES ((SELECT id FROM client WHERE ip='192.168.12.163'), 1);
+INSERT OR IGNORE INTO domainlist_by_group (domainlist_id, group_id) VALUES ((SELECT id FROM domainlist WHERE domain='.*' AND type=3), 1);
+DELETE FROM client_by_group WHERE client_id=(SELECT id FROM client WHERE ip='192.168.12.163') AND group_id=0;
 "
 docker exec pihole pihole reloaddns
 ```
