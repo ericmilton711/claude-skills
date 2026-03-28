@@ -42,11 +42,17 @@ ssh themi@192.168.12.249
 ```
 
 ### Allowed Sites
-- homeschoolconnections.com (+ caravel.software, cloudfront.net, amazonaws.com, gstatic.com, googleapis.com, google.com, vimeo.com, vimeocdn.com)
-- teachingtextbooks.com
+- homeschoolconnections.com (+ caravel.software, cloudfront.net, amazonaws.com, vimeo.com, vimeocdn.com)
+- teachingtextbooks.com + **teachingtextbooksapp.com** (the app uses this domain, not teachingtextbooks.com)
 
 ### Blocked
-- YouTube, social media, and all other domains
+- Google, YouTube, social media, and all other domains
+
+### Important Notes
+- **teachingtextbooksapp.com** is the actual domain the Teaching Textbooks app uses — teachingtextbooks.com alone is not enough
+- **Google is blocked** — removed from whitelist intentionally
+- **IPv6 must be disabled** — YouTube and others bypass Pi-hole via IPv6 if enabled
+- Windows shows "No internet, secured" on WiFi — this is normal, Pi-hole blocks Microsoft's connectivity check (msftconnecttest.com). Allowed sites still work fine.
 
 ### Windows Setup Steps (if rebuilding)
 1. Set DNS via PowerShell Admin:
