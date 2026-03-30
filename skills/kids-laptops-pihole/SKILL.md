@@ -59,6 +59,9 @@ ssh themi@192.168.12.249
 - teachingtextbooks.com + **teachingtextbooksapp.com** (the app uses this domain, not teachingtextbooks.com)
 - duolingo.com
 - kiddle.co + www.kiddle.co (safe search engine)
+- **Zoom** (for Homeschool Connections videos): zoom.us, homeschoolconnections.zoom.us, st1.zoom.us, us02st1.zoom.us, explore.zoom.us, us02web.zoom.us, ssrweb.zoom.us, ssrweb-cf.zoom.us, us.telemetry.zoom.us
+- ssl.gstatic.com (required for Zoom web player)
+- cdn.cookielaw.org
 - Milton Home Page: http://192.168.0.100:5006 (via WireGuard — direct IP, bypasses Pi-hole)
 
 ### Blocked
