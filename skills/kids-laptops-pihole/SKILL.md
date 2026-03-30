@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
 **Last Updated:** 2026-03-30
-**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook 🔄 in progress. Gianna's Fedora laptop and Ev's Chromebook pending.
+**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ complete. Gianna's Fedora laptop and Ev's Chromebook pending.
 
 ---
 
@@ -23,7 +23,7 @@ The block-all regex (`.*`) is assigned to each group — only whitelisted domain
 | 1 | mac-mini | Mac Mini | 192.168.12.163 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 |
 | 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 |
-| 4 | patricks-chromebook | Patrick's Chromebook | 192.168.12.220 |
+| 4 | patricks-chromebook | Patrick's Chromebook | 192.168.12.221 |
 
 ---
 
@@ -47,6 +47,7 @@ ssh themi@192.168.12.249
 - homeschoolconnections.com (+ caravel.software, cloudfront.net, amazonaws.com, vimeo.com, vimeocdn.com)
 - teachingtextbooks.com + **teachingtextbooksapp.com** (the app uses this domain, not teachingtextbooks.com)
 - duolingo.com
+- kiddle.co (safe search engine)
 - Milton Home Page: http://192.168.0.100:5006 (via WireGuard — direct IP, bypasses Pi-hole)
 
 ### Blocked
@@ -121,7 +122,7 @@ ssh themi@192.168.12.239
 ```
 
 ### Allowed Sites
-- Same as Kids1 (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, supporting CDN domains)
+- Same as Kids1 (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, kiddle.co, supporting CDN domains)
 - **Gmail access** (Google Search and YouTube remain blocked):
   - `mail.google.com`
   - `accounts.google.com`
@@ -162,15 +163,16 @@ ssh themi@192.168.12.239
 
 ## Patrick's Chromebook
 
-**Status: 🔄 In Progress**
+**Status: ✅ Complete**
 
-- IP: 192.168.12.220
+- IP: 192.168.12.221 (note: was expected .220 but DHCP assigned .221)
 - Pi-hole group: `patricks-chromebook` (Group ID: 4)
 
 ### Allowed Sites (same as Kids1)
 - homeschoolconnections.com + caravel.software, cloudfront.net, amazonaws.com, vimeo.com, vimeocdn.com
 - teachingtextbooks.com + teachingtextbooksapp.com
 - duolingo.com
+- kiddle.co (safe search engine)
 
 ### Pi-hole Setup
 Pi-hole group 4 created and whitelist applied via:
@@ -203,9 +205,13 @@ docker exec pihole pihole reloaddns
 ### Setup Checklist
 - [x] Pi-hole group created (Group ID 4)
 - [x] Whitelist applied (same as Kids1)
-- [ ] Port 80 opened on ThinkCentre firewall
-- [ ] DNS set on Chromebook
-- [ ] Verified blocking works
+- [x] Port 80 opened on ThinkCentre firewall
+- [x] DNS set on Chromebook (Settings → Network → Wi-Fi → network name → Name servers → Custom → 192.168.12.136)
+- [x] Verified blocking works (google.com blocked, whitelisted sites work)
+
+### Important Notes
+- Chromebook got IP .221 not .220 — Pi-hole client registered as .221
+- Pi-hole v6 API used for all group/client management (http://192.168.12.136/api)
 
 ---
 
@@ -221,7 +227,7 @@ docker exec pihole pihole reloaddns
 
 **Status: ⬜ Pending**
 
-- Patrick's Chromebook: 192.168.12.220
+- Patrick's Chromebook: 192.168.12.221 ✅
 - Ev's Chromebook: Tailscale IP 100.115.92.195
 
 ---
