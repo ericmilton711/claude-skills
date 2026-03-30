@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
 **Last Updated:** 2026-03-30
-**Status:** Kids1 (Windows) locked down. Kids2 in progress. Fedora laptop and 2 Chromebooks pending.
+**Status:** Kids1 ✅ Kids2 ✅ complete. Gianna's Fedora laptop and 2 Chromebooks pending.
 
 ---
 
@@ -103,7 +103,7 @@ ssh themi@192.168.12.249
 
 ## Kids2 — Windows Laptop (Lenovo V15 G2 IJL)
 
-**Status: 🔧 In Progress**
+**Status: ✅ Complete**
 
 - IP: 192.168.12.239
 - Hardware: Identical to Kids1 (Lenovo V15 G2 IJL)
@@ -128,17 +128,33 @@ ssh themi@192.168.12.239
   - `googleusercontent.com`
   - `gstatic.com`
 
+### WireGuard Setup
+- Config: `C:\lambert.conf` (uses direct IP `174.54.51.209:51820` — NOT hostname)
+- Service: `WireGuardTunnel$lambert` — auto-starts on boot
+- Installed via MSI (scp'd from Linux) + tunnel service via SSH:
+  ```powershell
+  Start-Process "C:\Program Files\WireGuard\wireguard.exe" -ArgumentList "/installtunnelservice C:\lambert.conf" -Verb RunAs -Wait
+  ```
+
+### Firefox
+- Homepage: `http://192.168.0.100:5006` (Milton Home Page — requires WireGuard)
+- Bookmark: "Milton Home Page" added to Bookmarks Bar (set via places.sqlite edit over SSH)
+
 ### Setup Progress
 - [x] Converted Microsoft account to local account (themi / 1229)
-- [ ] SSH enabled
-- [ ] IPv6 disabled
-- [ ] DNS set to Pi-hole (192.168.12.136)
-- [ ] Pi-hole group created and whitelist applied
-- [ ] WireGuard installed (if needed)
+- [x] SSH enabled
+- [x] IPv6 disabled
+- [x] DNS set to Pi-hole (192.168.12.136)
+- [x] Pi-hole group created and whitelist applied
+- [x] WireGuard installed and running as service
+- [x] Firefox homepage + bookmark set
 
 ### Important Notes
 - Username on machine is `themi` — same as Kids1, fine since they are separate devices
 - Gmail whitelisted via subdomains only — `google.com` and `youtube.com` remain blocked
+- WireGuard MSI had to be downloaded on Linux and scp'd over — direct download on Windows failed due to TLS revocation check (Pi-hole blocks CRL servers)
+- Multi-line PowerShell commands don't execute over SSH — use single-line with commas for arrays (e.g. `Set-Content -Value 'line1','line2'`)
+- WireGuard silent install required a scheduled task workaround (msiexec fails in non-interactive SSH session)
 
 ---
 
