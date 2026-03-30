@@ -82,6 +82,10 @@ ExecStart=-/sbin/agetty --autologin milton --noclear %I $TERM
 12. ✅ Static IP set to 192.168.12.136
 13. ✅ Pi-hole port 53 conflict fixed (systemd-resolved DNSStubListener=no)
 14. ✅ Firewall opened for port 53 (TCP + UDP)
+    - Port 80 (HTTP/Pi-hole admin) is NOT open by default — add with:
+      ```bash
+      echo 645866 | sudo -S firewall-cmd --permanent --add-service=http && echo 645866 | sudo -S firewall-cmd --reload
+      ```
 15. ✅ Pi-hole group management configured for Mac Mini (block all)
 16. ✅ Auto-suspend/sleep disabled (server stays on permanently)
 17. ⬜ Complete Home Assistant onboarding at http://192.168.12.136:8123

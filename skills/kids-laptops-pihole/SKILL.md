@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
 **Last Updated:** 2026-03-30
-**Status:** Kids1 ✅ Kids2 ✅ complete. Gianna's Fedora laptop and 2 Chromebooks pending.
+**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook 🔄 in progress. Gianna's Fedora laptop and Ev's Chromebook pending.
 
 ---
 
@@ -22,6 +22,8 @@ The block-all regex (`.*`) is assigned to each group — only whitelisted domain
 | 0 | Default | All other devices | — |
 | 1 | mac-mini | Mac Mini | 192.168.12.163 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 |
+| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 |
+| 4 | patricks-chromebook | Patrick's Chromebook | 192.168.12.220 |
 
 ---
 
@@ -155,6 +157,55 @@ ssh themi@192.168.12.239
 - WireGuard MSI had to be downloaded on Linux and scp'd over — direct download on Windows failed due to TLS revocation check (Pi-hole blocks CRL servers)
 - Multi-line PowerShell commands don't execute over SSH — use single-line with commas for arrays (e.g. `Set-Content -Value 'line1','line2'`)
 - WireGuard silent install required a scheduled task workaround (msiexec fails in non-interactive SSH session)
+
+---
+
+## Patrick's Chromebook
+
+**Status: 🔄 In Progress**
+
+- IP: 192.168.12.220
+- Pi-hole group: `patricks-chromebook` (Group ID: 4)
+
+### Allowed Sites (same as Kids1)
+- homeschoolconnections.com + caravel.software, cloudfront.net, amazonaws.com, vimeo.com, vimeocdn.com
+- teachingtextbooks.com + teachingtextbooksapp.com
+- duolingo.com
+
+### Pi-hole Setup
+Pi-hole group 4 created and whitelist applied via:
+```bash
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "
+INSERT OR IGNORE INTO [group] (id, enabled, name, description) VALUES (4, 1, 'patricks-chromebook', 'Patrick Chromebook - same as kids1');
+INSERT OR IGNORE INTO client (ip, comment) VALUES ('192.168.12.220', 'Patrick Chromebook');
+INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES ((SELECT id FROM client WHERE ip='192.168.12.220'), 4);
+DELETE FROM client_by_group WHERE client_id=(SELECT id FROM client WHERE ip='192.168.12.220') AND group_id=0;
+...whitelist inserts...
+"
+docker exec pihole pihole reloaddns
+```
+
+### Chromebook DNS Setup
+1. Click clock (bottom-right) → Settings
+2. Network → Wi-Fi → click network name
+3. Scroll to **Name servers** → select **Custom**
+4. Enter `192.168.12.136`
+5. Set IPv6 name server to `192.168.12.136` as well
+
+### Important Notes
+- IPv6 cannot be disabled system-wide on ChromeOS — set Pi-hole as IPv6 DNS too
+- Pi-hole web admin (http://192.168.12.136/admin) requires port 80 open on ThinkCentre firewall:
+  ```bash
+  echo 645866 | sudo -S firewall-cmd --permanent --add-service=http
+  echo 645866 | sudo -S firewall-cmd --reload
+  ```
+
+### Setup Checklist
+- [x] Pi-hole group created (Group ID 4)
+- [x] Whitelist applied (same as Kids1)
+- [ ] Port 80 opened on ThinkCentre firewall
+- [ ] DNS set on Chromebook
+- [ ] Verified blocking works
 
 ---
 
