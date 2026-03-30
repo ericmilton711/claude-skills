@@ -17,13 +17,24 @@ The block-all regex (`.*`) is assigned to each group — only whitelisted domain
 
 ## Pi-hole Groups Summary
 
-| Group ID | Name | Device | IP |
-|----------|------|--------|----|
-| 0 | Default | All other devices | — |
-| 1 | mac-mini | Mac Mini | 192.168.12.163 |
-| 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 |
-| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 |
-| 4 | patricks-chromebook | Patrick's Chromebook | 192.168.12.221 |
+| Group ID | Name | Device | IP | Whitelist |
+|----------|------|--------|----|-----------|
+| 0 | Default | All other devices | — | none |
+| 1 | mac-mini | Mac Mini | 192.168.12.163 | same as kids1 |
+| 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
+| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail |
+| 4 | patricks-chromebook | Patrick's Chromebook | 192.168.12.221 | standard kids |
+
+---
+
+## Mac Mini — Fedora (192.168.12.163)
+
+**Status: ✅ Complete**
+
+- IP: 192.168.12.163
+- Pi-hole group: `mac-mini` (Group ID: 1)
+- Whitelist: same as Kids1 (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, kiddle.co, www.kiddle.co, CDN domains)
+- No Gmail, no Google Search, no YouTube
 
 ---
 
@@ -47,7 +58,7 @@ ssh themi@192.168.12.249
 - homeschoolconnections.com (+ caravel.software, cloudfront.net, amazonaws.com, vimeo.com, vimeocdn.com)
 - teachingtextbooks.com + **teachingtextbooksapp.com** (the app uses this domain, not teachingtextbooks.com)
 - duolingo.com
-- kiddle.co (safe search engine)
+- kiddle.co + www.kiddle.co (safe search engine)
 - Milton Home Page: http://192.168.0.100:5006 (via WireGuard — direct IP, bypasses Pi-hole)
 
 ### Blocked
