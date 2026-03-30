@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
-**Last Updated:** 2026-03-28
-**Status:** Kids1 (Windows) locked down. Kids2, Fedora laptop, and 2 Chromebooks pending.
+**Last Updated:** 2026-03-30
+**Status:** Kids1 (Windows) locked down. Kids2 in progress. Fedora laptop and 2 Chromebooks pending.
 
 ---
 
@@ -103,11 +103,42 @@ ssh themi@192.168.12.249
 
 ## Kids2 — Windows Laptop (Lenovo V15 G2 IJL)
 
-**Status: ⬜ Pending**
+**Status: 🔧 In Progress**
 
 - IP: 192.168.12.239
 - Hardware: Identical to Kids1 (Lenovo V15 G2 IJL)
 - RAM: 8GB (Kids1 has 16GB)
+- Username: themi
+- Password: 1229
+- Pi-hole group: `kids2` (Group ID: 3)
+
+### SSH Access
+```bash
+ssh themi@192.168.12.239
+# password: 1229
+```
+
+### Allowed Sites
+- Same as Kids1 (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, supporting CDN domains)
+- **Gmail access** (Google Search and YouTube remain blocked):
+  - `mail.google.com`
+  - `accounts.google.com`
+  - `gmail.com`
+  - `googleapis.com`
+  - `googleusercontent.com`
+  - `gstatic.com`
+
+### Setup Progress
+- [x] Converted Microsoft account to local account (themi / 1229)
+- [ ] SSH enabled
+- [ ] IPv6 disabled
+- [ ] DNS set to Pi-hole (192.168.12.136)
+- [ ] Pi-hole group created and whitelist applied
+- [ ] WireGuard installed (if needed)
+
+### Important Notes
+- Username on machine is `themi` — same as Kids1, fine since they are separate devices
+- Gmail whitelisted via subdomains only — `google.com` and `youtube.com` remain blocked
 
 ---
 
