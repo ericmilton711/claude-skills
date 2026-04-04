@@ -41,13 +41,19 @@ The A515-46 uses **Insyde H2O BIOS**. On this model:
 
 ---
 
-## Solution — Repair Shop
+## Solution — DIY BIOS Reflash (CH341A Programmer)
 
-Take the laptop to a local computer repair shop and ask them to:
-1. **Clear the BIOS supervisor password** (they use a CH341A programmer + SOIC8 clip to reflash the BIOS chip directly)
-2. **Reinstall Windows** while they have it open (saves a separate step)
+### What to Order
+- **CH341A USB programmer + SOIC8 clip kit** (~$10-15 on Amazon)
+- Search: "CH341A programmer SOIC8 clip kit"
+- Make sure the SOIC8 clip is included — some listings sell the programmer alone
 
-If you want to do the Windows install yourself after they clear the password, use the mini SD card with Windows Media Install.
+### How It Works
+The clip attaches directly to the BIOS chip on the motherboard (no soldering).
+The CH341A connects to a PC via USB and reflashes the chip, wiping the password.
+
+### Steps (once programmer arrives)
+- TBD — will walk through when hardware is in hand
 
 ---
 
