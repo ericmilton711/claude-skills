@@ -32,7 +32,7 @@ DIEMILTONHAUS is the T-Mobile gateway's WiFi name. The UniFi AP has not been ado
 | Device | Role | Status |
 |---|---|---|
 | **USG 3P** | Router + VLAN enforcement + firewall | Active — 192.168.1.1 |
-| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — runs ALL services in Docker | UP — 192.168.1.107 |
+| **Lenovo ThinkCentre M900 Tiny** | Fedora Server — runs ALL services in Docker | UP — 192.168.1.107 (WiFi fallback: 192.168.12.136) |
 | **UniFi AP Long Range** | WiFi access point | Connected to switch port 2 via PoE injector — IP 192.168.1.8 — needs adoption |
 | **Cloud Key** | Retired — do NOT plug back in | Retired |
 | **Pi 3 A+** | Repurposed for other projects | Freed up |
@@ -49,10 +49,9 @@ DIEMILTONHAUS is the T-Mobile gateway's WiFi name. The UniFi AP has not been ado
 
 | Container | Image | Status | Notes |
 |---|---|---|---|
-| `unifi` | `jacobalberty/unifi:latest` | Healthy | Web: https://192.168.1.107:8443 |
-| `pihole` | `pihole/pihole:latest` | Healthy | DNS: 192.168.1.107:53 |
-| `wireguard` | `lscr.io/linuxserver/wireguard:latest` | Running | WireGuard VPN |
-| `homeassistant` | `ghcr.io/home-assistant/home-assistant:stable` | Running | Home Assistant |
+| `pihole` | `pihole/pihole:latest` | Healthy | DNS: 192.168.12.136:53 (listening on all interfaces) |
+| `wireguard` | `lscr.io/linuxserver/wireguard:latest` | ⚠️ BROKEN | Running but tunnel dead — 0 bytes received from peer, 100% packet loss to Lambert. Uses its own keypair (public: Od833amshNe6+MXKa9rm5VyiOoN08BnpPImH2T6W7Ww=, tunnel IP 192.168.2.4) — NOT Lambert.conf. Needs to be fixed or replaced. |
+| `homeassistant` | `ghcr.io/home-assistant/home-assistant:stable` | Running | Home Assistant — port 8123 on host (accessible at 192.168.12.136:8123) |
 
 **Volume mounts:**
 - Pi-hole: `/home/milton/pihole/etc-pihole` and `/home/milton/pihole/etc-dnsmasq.d`

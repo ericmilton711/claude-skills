@@ -7,9 +7,11 @@ type: reference
 # MILTONHAUS WireGuard — Lambert Tunnel
 
 Connects every device to the Lambert Family network via WireGuard, giving access to:
-- **Milton Home Page:** http://192.168.0.165:5006
+- **Milton Home Page:** http://192.168.0.100:5006 (also observed as 192.168.0.165:5006 — use direct IP)
 - **Nextcloud:** http://192.168.0.165:11000
 - **Home Assistant:** http://192.168.0.103
+
+> **Why the home page only works on some devices:** It requires WireGuard to be active. Devices without WireGuard set up cannot reach 192.168.0.x at all and will time out.
 
 Access these by direct IP — do NOT use hostnames (Lambert's nginx uses name-based routing).
 
@@ -58,18 +60,19 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 
 | Device | IP | Tunnel IP | WireGuard Status | Method |
 |--------|----|-----------|-----------------|--------|
-| Eric's Windows PC | 192.168.12.219 | 192.168.2.2 | DONE | Service (Lambert.conf in Downloads) |
-| Fedora MacBook Pro | 192.168.12.189 | 192.168.2.2 | DONE | NetworkManager (GUI toggle) |
-| Mac Mini (Fedora/Pi-hole) | 192.168.12.163 | 192.168.2.2 | TODO | SSH install |
-| Rosemary's MacBook | 192.168.12.237 | 192.168.2.2 | TODO | macOS WireGuard app + QR |
-| Rosemary's iPhone | 192.168.12.215 | 192.168.2.2 | TODO | iOS WireGuard app + QR |
-| Eric's iPad | 192.168.12.121 | 192.168.2.2 | TODO | iOS WireGuard app + QR |
-| Gianna's Asus (Fedora) | 192.168.12.226 | 192.168.2.2 | TODO | SSH install |
-| Patrick's Chromebook | 192.168.12.220 | 192.168.2.2 | TODO | Android WireGuard app + QR |
-| Ev's Chromebook | 100.115.92.195 | 192.168.2.2 | TODO | Android WireGuard app + QR |
-| kids1 | 192.168.12.249 | 192.168.2.2 | DONE | Service (C:\lambert.conf — uses direct IP 174.54.51.209) |
-| kids2 | 192.168.12.239 | 192.168.2.2 | TODO | WireGuard app + QR |
-| iPad (.141) | 192.168.12.141 | 192.168.2.2 | TODO | iOS WireGuard app + QR |
+| Eric's Lenovo (Windows 11) | 192.168.12.219 | 192.168.2.2 | ✅ DONE | Service (Lambert.conf in C:\Users\ericm\Downloads\) |
+| Fedora MacBook Pro | 192.168.12.189 | 192.168.2.2 | ✅ DONE | NetworkManager (GUI toggle) |
+| ThinkCentre M900 Tiny | 192.168.1.107 / 192.168.12.136 | 192.168.2.4 | ⚠️ BROKEN | Docker container (wg0) — 0 bytes received, 100% packet loss to Lambert; uses its own keypair (NOT Lambert.conf). Needs fix. |
+| Mac Mini (Fedora/Pi-hole) | 192.168.12.163 | 192.168.2.2 | ❌ TODO | SSH install |
+| Rosemary's MacBook | 192.168.12.237 | 192.168.2.2 | ❌ TODO | macOS WireGuard app + QR |
+| Rosemary's iPhone | 192.168.12.215 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
+| Eric's iPad | 192.168.12.121 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
+| Gianna's Asus (Fedora) | 192.168.12.226 | 192.168.2.2 | ❌ TODO | SSH install |
+| Patrick's Chromebook | 192.168.12.221 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
+| Ev's Chromebook | 100.115.92.195 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
+| kids1 (Lenovo V15 G2 IJL) | 192.168.12.249 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — uses direct IP 174.54.51.209, not hostname) |
+| kids2 (Lenovo V15 G2 IJL) | 192.168.12.239 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — same as kids1) |
+| iPad (.141) | 192.168.12.141 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
 
 ---
 

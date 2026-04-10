@@ -31,7 +31,7 @@ type: reference
 | 192.168.12.194 | e8-84-a5-82-df-fc | — | Unknown | Unidentified — only responds to ICMP |
 | 192.168.12.215 | 3e-e7-96-3e-55-e9 (random) | iPhone.lan | iPhone | Rosemary's iPhone |
 | 192.168.12.219 | — | Eric.lan | Windows 11 PC | Eric's main PC |
-| 192.168.12.220 | b0-47-e9-e3-78-d0 | host.docker.internal | Chromebook (ChromeOS) | Patrick's Chromebook — running Docker (Linux on ChromeOS) |
+| 192.168.12.221 | b0-47-e9-e3-78-d0 | host.docker.internal | Chromebook (ChromeOS) | Patrick's Chromebook — running Docker (Linux on ChromeOS); DHCP assigned .221, Pi-hole registered at .221 |
 | 192.168.12.226 | 06-f0-9a-33-c5-6c (random) | — | Asus laptop (Fedora) | Gianna's laptop — SSH open |
 | 192.168.12.237 | b8-c7-5d-12-c0-4d | — | MacBook Pro (macOS) | Rosemary's MacBook Pro |
 | 192.168.12.238 | e0-63-da-c7-43-84 | ubnt.lan | Ubiquiti UniFi AP | Pending adoption into UniFi controller |
