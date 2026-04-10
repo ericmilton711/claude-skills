@@ -50,7 +50,7 @@ DIEMILTONHAUS is the T-Mobile gateway's WiFi name. The UniFi AP has not been ado
 | Container | Image | Status | Notes |
 |---|---|---|---|
 | `pihole` | `pihole/pihole:latest` | Healthy | DNS: 192.168.12.136:53 (listening on all interfaces) |
-| `wireguard` | `lscr.io/linuxserver/wireguard:latest` | ⚠️ BROKEN | Running but tunnel dead — 0 bytes received from peer, 100% packet loss to Lambert. Uses its own keypair (public: Od833amshNe6+MXKa9rm5VyiOoN08BnpPImH2T6W7Ww=, tunnel IP 192.168.2.4) — NOT Lambert.conf. Needs to be fixed or replaced. |
+| `wireguard` | `lscr.io/linuxserver/wireguard:latest` | ✅ Running | Lambert tunnel active — config at /home/milton/wireguard/wg0.conf; uses Lambert.conf keypair (192.168.2.2/32); can reach 192.168.0.x |
 | `homeassistant` | `ghcr.io/home-assistant/home-assistant:stable` | Running | Home Assistant — port 8123 on host (accessible at 192.168.12.136:8123) |
 
 **Volume mounts:**

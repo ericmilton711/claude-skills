@@ -62,7 +62,7 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 |--------|----|-----------|-----------------|--------|
 | Eric's Lenovo (Windows 11) | 192.168.12.219 | 192.168.2.2 | ✅ DONE | Service (Lambert.conf in C:\Users\ericm\Downloads\) |
 | Fedora MacBook Pro | 192.168.12.189 | 192.168.2.2 | ✅ DONE | NetworkManager (GUI toggle) |
-| ThinkCentre M900 Tiny | 192.168.1.107 / 192.168.12.136 | 192.168.2.4 | ⚠️ BROKEN | Docker container (wg0) — 0 bytes received, 100% packet loss to Lambert; uses its own keypair (NOT Lambert.conf). Needs fix. |
+| ThinkCentre M900 Tiny | 192.168.1.107 / 192.168.12.136 | 192.168.2.2 | ✅ DONE | Docker container (wg0) — config at /home/milton/wireguard/wg0.conf; uses Lambert.conf keypair |
 | Mac Mini (Fedora/Pi-hole) | 192.168.12.163 | 192.168.2.2 | ❌ TODO | SSH install |
 | Rosemary's MacBook | 192.168.12.237 | 192.168.2.2 | ❌ TODO | macOS WireGuard app + QR |
 | Rosemary's iPhone | 192.168.12.215 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
