@@ -71,10 +71,26 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 | Eric's iPad | 192.168.12.121 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
 | Gianna's Acer (Fedora) | 192.168.12.226 | 192.168.2.2 | ✅ DONE | wg-quick@lambert — config at /etc/wireguard/lambert.conf; enabled on boot; SSH: gianna@192.168.12.226 / wisdom22!! |
 | Patrick's Chromebook | 192.168.12.221 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
-| Ev's Chromebook | 100.115.92.195 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
+| Eva's Chromebook | 192.168.12.194 / 100.115.92.195 (Tailscale) | 192.168.2.2 | ✅ DONE | Android WireGuard app — tunnel working; shared key conflict causes slowness when Gianna's laptop is also active (see note below) |
 | kids1 (Lenovo V15 G2 IJL) | 192.168.12.249 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — uses direct IP 174.54.51.209, not hostname) |
 | kids2 (Lenovo V15 G2 IJL) | 192.168.12.239 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — same as kids1) |
 | iPad (.141) | 192.168.12.141 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
+
+---
+
+## Shared Key Conflict — Why Only One Device Works at a Time
+
+All devices use the **same private key** from Lambert.conf. The Lambert server treats all of them as a single peer and can only route traffic to one IP at a time — whichever device most recently sent a packet claiming to be that peer.
+
+With `PersistentKeepalive=25`, any active device sends a keepalive every 25 seconds, reasserting tunnel ownership and knocking everyone else off.
+
+**Symptoms:**
+- Milton Home Page loads slowly or times out when two or more devices have WireGuard active simultaneously
+- Gianna's `wg-quick@lambert` is enabled on boot with keepalive=25 — it will steal the tunnel from any other device within 25 seconds
+
+**Current workaround:** Only have one device's WireGuard active at a time. Gianna's laptop is the biggest offender since it auto-connects on boot.
+
+**Permanent fix (not yet done):** Generate a unique keypair for each device and register each as a separate peer on the Lambert server (`mac@192.168.0.1` / `645866`). This allows all devices to use the tunnel simultaneously.
 
 ---
 

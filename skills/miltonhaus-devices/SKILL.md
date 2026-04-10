@@ -28,7 +28,7 @@ type: reference
 | 192.168.12.166 | 60-6d-c7-84-e9-77 | BRW606DC784E977.lan | Brother device | Brother device #2 |
 | 192.168.12.177 | cc-b1-48-0d-2d-f4 | TMOBILE_MESH_AP_V2.lan | T-Mobile mesh AP | T-Mobile hardware |
 | 192.168.12.189 | 34-36-3b-c6-bc:70 | — | MacBook Pro (Fedora) | SSH: `ssh -i ~/.ssh/id_ed25519 ericmilton@192.168.12.189` |
-| 192.168.12.194 | e8-84-a5-82-df-fc | — | Unknown | Unidentified — only responds to ICMP |
+| 192.168.12.194 | e8-84-a5-82-df-fc | — | Chromebook (ChromeOS) | Eva's Chromebook — WireGuard installed (Android app); also on Tailscale at 100.115.92.195 |
 | 192.168.12.215 | 3e-e7-96-3e-55-e9 (random) | iPhone.lan | iPhone | Rosemary's iPhone |
 | 192.168.12.219 | — | Eric.lan | Windows 11 PC | Eric's main PC |
 | 192.168.12.221 | b0-47-e9-e3-78-d0 | host.docker.internal | Chromebook (ChromeOS) | Patrick's Chromebook — running Docker (Linux on ChromeOS); DHCP assigned .221, Pi-hole registered at .221 |
@@ -41,7 +41,7 @@ type: reference
 ### Tailscale Node
 | Tailscale IP | Device | Notes |
 |--------------|--------|-------|
-| 100.115.92.195 | Ev's Chromebook | On Tailscale — also has a 192.168.12.x address |
+| 100.115.92.195 | Eva's Chromebook | On Tailscale — regular IP is 192.168.12.194 |
 
 ---
 
