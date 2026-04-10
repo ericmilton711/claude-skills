@@ -64,12 +64,12 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 |--------|----|-----------|-----------------|--------|
 | Eric's Lenovo (Windows 11) | 192.168.12.219 | 192.168.2.2 | ✅ DONE | Service (Lambert.conf in C:\Users\ericm\Downloads\) — **Endpoint must be direct IP** 174.54.51.209:51820, NOT hostname. WireGuard updates can reset the config back to hostname — re-apply fix if tunnel stops after an update. |
 | Fedora MacBook Pro | 192.168.12.189 | 192.168.2.2 | ✅ DONE | NetworkManager — config at /etc/NetworkManager/system-connections/lambert.nmconnection; endpoint must be direct IP 174.54.51.209:51820 (fixed 2026-04-10) |
-| ThinkCentre M900 Tiny | 192.168.1.107 / 192.168.12.136 | 192.168.2.2 | ✅ DONE | Docker container (wg0) — config at /home/milton/wireguard/wg0.conf; uses Lambert.conf keypair |
+| ThinkCentre M900 Tiny | 192.168.1.107 / 192.168.12.136 | — | ❌ REMOVED | WireGuard removed — shared key caused it to steal tunnel from all client devices via 25s keepalive. ThinkCentre doesn't need Lambert access. |
 | Mac Mini (Fedora/Pi-hole) | 192.168.12.163 | 192.168.2.2 | ❌ TODO | SSH install |
 | Rosemary's MacBook | 192.168.12.237 | 192.168.2.2 | ❌ TODO | macOS WireGuard app + QR |
 | Rosemary's iPhone | 192.168.12.215 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
 | Eric's iPad | 192.168.12.121 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
-| Gianna's Asus (Fedora) | 192.168.12.226 | 192.168.2.2 | ❌ TODO | SSH install |
+| Gianna's Acer (Fedora) | 192.168.12.226 | 192.168.2.2 | ✅ DONE | wg-quick@lambert — config at /etc/wireguard/lambert.conf; enabled on boot; SSH: gianna@192.168.12.226 / wisdom22!! |
 | Patrick's Chromebook | 192.168.12.221 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
 | Ev's Chromebook | 100.115.92.195 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
 | kids1 (Lenovo V15 G2 IJL) | 192.168.12.249 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — uses direct IP 174.54.51.209, not hostname) |
