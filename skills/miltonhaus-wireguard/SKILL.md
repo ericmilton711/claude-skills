@@ -71,7 +71,7 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 | Eric's iPad | 192.168.12.121 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
 | Gianna's Acer (Fedora) | 192.168.12.226 | 192.168.2.2 | ✅ DONE | wg-quick@lambert — config at /etc/wireguard/lambert.conf; enabled on boot; SSH: gianna@192.168.12.226 / wisdom22!! |
 | Patrick's Chromebook | 192.168.12.221 | 192.168.2.2 | ❌ TODO | Android WireGuard app + QR |
-| Eva's Chromebook | 192.168.12.194 / 100.115.92.195 (Tailscale) | 192.168.2.2 | ✅ DONE | Android WireGuard app — tunnel working; shared key conflict causes slowness when Gianna's laptop is also active (see note below) |
+| Eva's Chromebook | 192.168.12.194 / 100.115.92.195 (Tailscale) | 192.168.2.2 | ✅ DONE | Android WireGuard app — DNS changed to 1.1.1.1 (was 192.168.1.104 which broke all browsing). WireGuard ON = Milton Home Page works, Homeschool Connections broken. WireGuard OFF = Homeschool Connections works, Milton Home Page broken. Toggle as needed until unique keys are set up. |
 | kids1 (Lenovo V15 G2 IJL) | 192.168.12.249 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — uses direct IP 174.54.51.209, not hostname) |
 | kids2 (Lenovo V15 G2 IJL) | 192.168.12.239 | 192.168.2.2 | ✅ DONE | Service (C:\lambert.conf — same as kids1) |
 | iPad (.141) | 192.168.12.141 | 192.168.2.2 | ❌ TODO | iOS WireGuard app + QR |
@@ -91,6 +91,8 @@ With `PersistentKeepalive=25`, any active device sends a keepalive every 25 seco
 **Current workaround:** Only have one device's WireGuard active at a time. Gianna's laptop is the biggest offender since it auto-connects on boot.
 
 **Permanent fix (not yet done):** Generate a unique keypair for each device and register each as a separate peer on the Lambert server (`mac@192.168.0.1` / `645866`). This allows all devices to use the tunnel simultaneously.
+
+**Lambert SSH is blocked from WireGuard tunnel:** Port 22 on 192.168.0.1 (and all Lambert LAN devices) is firewalled — only accessible from inside the Lambert LAN (192.168.0.x), not from the WireGuard subnet (192.168.2.x). To make this fix, someone at the Lambert house must either open SSH to the WireGuard subnet or do it locally.
 
 ---
 
