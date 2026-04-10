@@ -54,6 +54,8 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 
 > Note: AllowedIPs only covers the Lambert subnets — normal internet traffic goes direct, not through the tunnel. Both Milton Homepage AND regular browsing work simultaneously.
 
+> **CRITICAL — Endpoint must use direct IP:** Every device's WireGuard config must use `Endpoint = 174.54.51.209:51820` (direct IP), NOT `edenredux.servegame.com:51820` (hostname). The hostname fails to resolve on Pi-hole-managed devices and also fails on Fedora NetworkManager. This has caused tunnel failures on the Lenovo, MacBook Pro, and ThinkCentre. When setting up any new device, always use the direct IP.
+
 ---
 
 ## Device Status
@@ -61,7 +63,7 @@ PublicKey = uEh1J4jgbAcqp6XYM9dZMxyFrxezBUZbAwNtX539zhc=
 | Device | IP | Tunnel IP | WireGuard Status | Method |
 |--------|----|-----------|-----------------|--------|
 | Eric's Lenovo (Windows 11) | 192.168.12.219 | 192.168.2.2 | ✅ DONE | Service (Lambert.conf in C:\Users\ericm\Downloads\) — **Endpoint must be direct IP** 174.54.51.209:51820, NOT hostname. WireGuard updates can reset the config back to hostname — re-apply fix if tunnel stops after an update. |
-| Fedora MacBook Pro | 192.168.12.189 | 192.168.2.2 | ✅ DONE | NetworkManager (GUI toggle) |
+| Fedora MacBook Pro | 192.168.12.189 | 192.168.2.2 | ✅ DONE | NetworkManager — config at /etc/NetworkManager/system-connections/lambert.nmconnection; endpoint must be direct IP 174.54.51.209:51820 (fixed 2026-04-10) |
 | ThinkCentre M900 Tiny | 192.168.1.107 / 192.168.12.136 | 192.168.2.2 | ✅ DONE | Docker container (wg0) — config at /home/milton/wireguard/wg0.conf; uses Lambert.conf keypair |
 | Mac Mini (Fedora/Pi-hole) | 192.168.12.163 | 192.168.2.2 | ❌ TODO | SSH install |
 | Rosemary's MacBook | 192.168.12.237 | 192.168.2.2 | ❌ TODO | macOS WireGuard app + QR |
