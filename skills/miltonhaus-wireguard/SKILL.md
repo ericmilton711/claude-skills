@@ -96,6 +96,32 @@ With `PersistentKeepalive=25`, any active device sends a keepalive every 25 seco
 
 ---
 
+## Auto-Connect — Disable on All Devices
+
+**WireGuard should be OFF by default on all devices.** Due to the shared key conflict, having it auto-connect on boot causes tunnel theft and breaks normal browsing. Only toggle it ON when a device needs the Milton Home Page, then turn it OFF when done.
+
+### ChromeOS (Eva's Chromebook, Patrick's Chromebook)
+Settings → Network → VPN → Always-on VPN → set to **None**
+
+### Fedora — wg-quick (Gianna's Acer)
+```bash
+sudo systemctl disable wg-quick@lambert   # disable auto-start on boot
+sudo systemctl stop wg-quick@lambert      # stop now
+# To use manually:
+sudo systemctl start wg-quick@lambert     # start
+sudo systemctl stop wg-quick@lambert      # stop
+```
+
+### Fedora — NetworkManager (MacBook Pro)
+Already set to `autoconnect=false` in the nmconnection file — should not auto-connect.
+
+### Windows (kids1, kids2, Eric's Lenovo)
+1. Open `services.msc`
+2. Find **WireGuardTunnel$Lambert**
+3. Right-click → Properties → Startup type → **Manual**
+
+---
+
 ## Setup Methods
 
 ### Method 1 — QR Code (phones, tablets, Chromebooks, Macs)
