@@ -183,3 +183,29 @@ Flash to disk using elevated PowerShell script `raspi-flash.ps1`:
 - `RPi.GPIO` was pre-installed on Trixie Lite image — no `apt install` needed.
 - Do NOT call `GPIO.cleanup()` in leds-on/off — pin state must persist after script exits.
 - Timezone set to `America/New_York` — cron fires at correct local time.
+
+---
+
+## SSH Troubleshooting — Lessons Learned
+
+### ❌ NEVER connect the Pi to a phone hotspot
+A phone hotspot puts the Pi on a **different subnet** (e.g. `10.90.107.x`) than the home network (`192.168.12.x`). SSH from a PC on DIEMILTONHAUS will never reach a Pi on the phone hotspot. Always connect the Pi directly to **DIEMILTONHAUS** via `sudo nmtui`.
+
+### T-Mobile "Advanced Security" blocks device-to-device traffic
+The T-Mobile TMO-G5AR gateway has an **Advanced Security** feature enabled by default that blocks local LAN device-to-device traffic (including SSH, ping, ARP). 
+
+**Symptom**: Ping from PC returns `Reply from 192.168.12.219: Destination host unreachable` (reply comes from your *own* IP — ARP failed).
+
+**Fix**: Open the **T-Mobile T-Life app** (NOT the router web UI at 192.168.12.1 — the setting isn't exposed there). Disable Advanced Security. Wait for "Disabling in progress" to complete.
+
+### SSH diagnostic order
+1. On Pi: `sudo systemctl status ssh` → confirm active
+2. On Pi: `sudo ss -tlnp | grep 22` → confirm listening on `0.0.0.0:22`
+3. On Pi: `ip addr show wlan0` → confirm IP is `192.168.12.x` (NOT `10.x.x.x` = phone hotspot)
+4. On Pi: `ping 192.168.12.1` → confirm Pi can reach router
+5. From PC: `ping <pi-ip>` → if "Destination host unreachable from your own IP" it's Advanced Security / AP isolation
+6. From PC: `ssh -i ~/.ssh/id_ed25519 eric@<pi-ip>`
+
+### WiFi setup
+- `sudo nmtui` is the tool on Trixie Lite (no `raspi-config` or `wpa_supplicant.conf` editing needed)
+- Select "Activate a connection" → pick DIEMILTONHAUS → enter password
