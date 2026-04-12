@@ -171,10 +171,29 @@ Flash to disk using elevated PowerShell script `raspi-flash.ps1`:
 
 - **Hostname**: homestead
 - **User**: eric
-- **IP**: DHCP (check router — often 192.168.12.114 or .162)
+- **Password**: 645866
+- **IP**: 192.168.12.114 (DHCP, confirmed 2026-04-12)
 - **SSH key**: `~/.ssh/id_ed25519` (Eric's Windows PC)
-- **SSH**: `ssh -i ~/.ssh/id_ed25519 eric@<ip>`
+- **SSH (password)**: `sshpass -p '645866' ssh -o StrictHostKeyChecking=no eric@192.168.12.114`
+- **SSH (key)**: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114`
 - **Fans**: Two mini fans on pins 2/4 (5V) and 6/9 (GND) for cooling
+
+### Quick LED Test (confirmed working 2026-04-12)
+
+```bash
+# On, off, on for 10s, off — full test sequence
+sshpass -p '645866' ssh -o StrictHostKeyChecking=no eric@192.168.12.114 \
+  "python3 /home/eric/homestead.py leds-on && sleep 2 && \
+   python3 /home/eric/homestead.py leds-off && sleep 2 && \
+   python3 /home/eric/homestead.py leds-on && sleep 10 && \
+   python3 /home/eric/homestead.py leds-off"
+```
+
+Individual commands:
+- `python3 /home/eric/homestead.py leds-on`
+- `python3 /home/eric/homestead.py leds-off`
+- `python3 /home/eric/homestead.py irrigate 20`
+- `python3 /home/eric/homestead.py status`
 
 ## Notes
 
