@@ -32,6 +32,11 @@
 *.scad
 *.ino
 
+# But allow them inside skills
+!skills/**/*.stl
+!skills/**/*.scad
+!skills/**/*.ino
+
 # Temporary files
 *.tmp
 *.bak
