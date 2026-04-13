@@ -22,6 +22,7 @@ type: reference
 | 192.168.12.100 | 14-ac-60-70-69-99 | BRW14AC60706999.lan | Brother printer | Printer #1 |
 | 192.168.12.121 | — | — | iPad | Eric's iPad |
 | 192.168.12.141 | c2-28-63-78-4f-41 (random) | — | iPad | Kids/other iPad (private MAC) |
+| 192.168.12.114 | b8:27:eb:09:db:16 | homestead | Raspberry Pi 3 A+ | Homestead Pi — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
 | 192.168.12.162 | fc-3c-d7-62-b5-6c | wlan0.lan | Raspberry Pi | MILTONRP3 — secondary Pi-hole |
 | 192.168.12.163 | c8-2a-14-51-d5-4a | — | Mac Mini (Fedora) | Pi-hole server — SSH: `ssh mac@192.168.12.163` / pw: 645866 |
 | 192.168.12.165 | d0-03-4b-e8-0c-63 | Living-Room.lan | Apple TV | Living room — AirPlay ports 5000/7000 |
@@ -49,6 +50,8 @@ type: reference
 
 | Device | IP | Role |
 |--------|----|------|
+| ThinkCentre M700 | 192.168.12.136 | Home Assistant, Docker, device monitor — SSH: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136` |
+| Homestead Pi 3 A+ | 192.168.12.114 | Chicken lights + garden irrigation — SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
 | Mac Mini (Fedora) | 192.168.12.163 | Pi-hole DNS, future WireGuard server |
 | Patrick's Chromebook | 192.168.12.220 | Docker host — `host.docker.internal` |
 | Raspberry Pi | 192.168.12.162 | Secondary Pi-hole |
@@ -61,6 +64,17 @@ type: reference
 - **WireGuard** to be installed on every device so they can reach the Milton Home Page at `http://192.168.0.100:5006/`
 - Eric's Windows PC already has WireGuard running (Lambert tunnel → 192.168.0.x and 192.168.2.x)
 - Goal: replicate the Lambert WireGuard config on all other devices
+
+---
+
+## Known Issue: OpenSSH 10.0 on Fedora (ThinkCentre)
+
+The `ssh` binary on the ThinkCentre (Fedora, OpenSSH 10.0) cannot TCP-connect to LAN devices directly. Fix applied in `/home/milton/.ssh/config`:
+```
+Host 192.168.12.*
+    ProxyCommand nc %h %p
+```
+Without this, the ThinkCentre's device monitor script cannot SSH into the Pi or any other LAN device. Discovered 2026-04-13.
 
 ---
 

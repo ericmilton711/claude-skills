@@ -39,10 +39,21 @@ Central home server running all network services:
 ## SSH Access
 
 ```bash
-ssh milton@192.168.12.136
-# password: 645866
+# From Eric's Windows PC:
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136
 # sudo: echo 645866 | sudo -S <command>
 ```
+
+### OpenSSH 10.0 LAN Bug (FIXED 2026-04-13)
+
+The `ssh` binary on this Fedora server (OpenSSH 10.0) cannot TCP-connect to LAN devices directly — times out even though `ping` and `nc` work fine. Fix applied in `/home/milton/.ssh/config`:
+
+```
+Host 192.168.12.*
+    ProxyCommand nc %h %p
+```
+
+This allows the ThinkCentre to SSH into the Pi and all other LAN devices. Without this fix, the device monitor script fails.
 
 ---
 

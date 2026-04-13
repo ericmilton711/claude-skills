@@ -186,8 +186,10 @@ Flash to disk using elevated PowerShell script `raspi-flash.ps1`:
 - **Password**: 645866
 - **IP**: 192.168.12.114 (DHCP, confirmed 2026-04-12)
 - **SSH key**: `~/.ssh/id_ed25519` (Eric's Windows PC)
-- **SSH**: `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114`
+- **SSH from Eric's PC**: `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114`
+- **SSH from ThinkCentre**: `ssh -i /home/milton/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114` (requires nc proxy fix in ~/.ssh/config — see ThinkCentre skill)
 - **NEVER use sshpass** — use key auth only (see feedback_ssh_key_auth.md)
+- **Authorized keys on Pi**: Eric's Windows PC key + ThinkCentre's key (both in ~/.ssh/authorized_keys)
 - **Fans**: Two mini fans on pins 2/4 (5V) and 6/9 (GND) for cooling
 
 ### Quick LED Test (confirmed working 2026-04-12)
