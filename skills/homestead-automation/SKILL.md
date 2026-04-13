@@ -136,7 +136,19 @@ if __name__ == '__main__':
 
 # Irrigation: 20 min at 6AM
 0  6 * * * /usr/bin/python3 /home/eric/homestead.py irrigate 20
+
+# Nightly reboot at 2AM (prevent long-uptime crashes)
+0  2 * * * sudo /sbin/reboot
 ```
+
+## Boot Configuration (added 2026-04-13)
+
+- **Autologin enabled** on tty1 via systemd override:
+  `/etc/systemd/system/getty@tty1.service.d/override.conf`
+- Pi boots straight to `eric@homestead:~ $` — no login prompt
+- Cron starts at boot without login (systemd service, always enabled)
+- **Timezone**: America/New_York (EDT) — was incorrectly Europe/London, fixed 2026-04-13
+- Pi is fully autonomous — no keyboard, monitor, or WiFi needed for operation
 
 ---
 
@@ -174,15 +186,15 @@ Flash to disk using elevated PowerShell script `raspi-flash.ps1`:
 - **Password**: 645866
 - **IP**: 192.168.12.114 (DHCP, confirmed 2026-04-12)
 - **SSH key**: `~/.ssh/id_ed25519` (Eric's Windows PC)
-- **SSH (password)**: `sshpass -p '645866' ssh -o StrictHostKeyChecking=no eric@192.168.12.114`
-- **SSH (key)**: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114`
+- **SSH**: `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114`
+- **NEVER use sshpass** — use key auth only (see feedback_ssh_key_auth.md)
 - **Fans**: Two mini fans on pins 2/4 (5V) and 6/9 (GND) for cooling
 
 ### Quick LED Test (confirmed working 2026-04-12)
 
 ```bash
 # On, off, on for 10s, off — full test sequence
-sshpass -p '645866' ssh -o StrictHostKeyChecking=no eric@192.168.12.114 \
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114 \
   "python3 /home/eric/homestead.py leds-on && sleep 2 && \
    python3 /home/eric/homestead.py leds-off && sleep 2 && \
    python3 /home/eric/homestead.py leds-on && sleep 10 && \
