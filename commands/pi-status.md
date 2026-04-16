@@ -4,12 +4,12 @@ Use key auth: ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.1
 
 Run these commands (one SSH session at a time, use `timeout` on each):
 1. uptime
-2. python3 /home/eric/homestead.py status
+2. cat /home/eric/homestead.log
 3. free -h
 4. df -h /
 5. vcgencmd measure_temp
 
-Report the results in a clean summary: uptime, load, recent log activity, memory, disk, and temperature.
+Always show the FULL homestead.log output. Report the results in a clean summary: uptime, load, memory, disk, temperature, and the complete homestead log.
 
 Then run the UV/Blue LEDs blink test — GPIO 17, 0.5s ON, 0.75s OFF, for 1 minute:
 ```
