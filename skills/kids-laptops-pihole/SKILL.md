@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
-**Last Updated:** 2026-03-30
-**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ complete. Gianna's Fedora laptop and Ev's Chromebook pending.
+**Last Updated:** 2026-04-17
+**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ M900 (Kids Research) ✅ complete. Gianna's Fedora laptop and Ev's Chromebook pending.
 
 ---
 
@@ -15,6 +15,28 @@ The block-all regex (`.*`) is assigned to each group — only whitelisted domain
 
 ---
 
+## Critical: Firefox DoH Bypass Fix
+
+Firefox uses DNS-over-HTTPS (DoH) by default, which completely bypasses Pi-hole. The GUI setting ("DNS over HTTPS → Off") is unreliable — Firefox can re-enable it silently. The **only reliable fix** is an enterprise policy file:
+
+**On every Windows machine with Firefox**, create this file via SSH:
+```powershell
+New-Item -Path "C:\Program Files\Mozilla Firefox\distribution" -ItemType Directory -Force
+# Use [System.IO.File]::WriteAllText or base64-encoded PowerShell to preserve JSON quotes:
+$json = '{"policies":{"DNSOverHTTPS":{"Enabled":false,"Locked":true}}}'
+Set-Content -Path "C:\Program Files\Mozilla Firefox\distribution\policies.json" -Value $json -Force
+```
+
+This locks the DoH setting off (greyed out in Firefox settings). Survives Firefox updates and restarts.
+
+**Also critical: IPv6 must be disabled** on all network adapters. Windows gets IPv6 DNS from the router via SLAAC/DHCPv6, which bypasses Pi-hole entirely. Even with IPv4 DNS set to Pi-hole, the browser can resolve via IPv6 DNS.
+
+```powershell
+Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | ForEach-Object { Disable-NetAdapterBinding -Name $_.Name -ComponentId ms_tcpip6 -Confirm:$false }
+```
+
+---
+
 ## Pi-hole Groups Summary
 
 | Group ID | Name | Device | IP | Whitelist |
@@ -22,8 +44,8 @@ The block-all regex (`.*`) is assigned to each group — only whitelisted domain
 | 0 | Default | All other devices | — | none |
 | 1 | mac-mini | Mac Mini | 192.168.12.163 | same as kids1 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
-| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail |
-| 4 | patricks-chromebook | Patrick's Chromebook | 192.168.12.221 | standard kids |
+| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail + Britannica |
+| 4 | patricks-chromebook | Patrick's Chromebook + M900 | 192.168.12.221, .160 | standard kids + Britannica |
 
 ---
 
@@ -89,15 +111,21 @@ ssh themi@192.168.12.249
    ```powershell
    netsh interface ip set dns name="Wi-Fi" static 192.168.12.136
    ```
-2. Disable IPv6 (critical — YouTube bypasses Pi-hole via IPv6 otherwise):
+2. Disable IPv6 on ALL adapters (critical — YouTube bypasses Pi-hole via IPv6 otherwise):
    ```powershell
-   Disable-NetAdapterBinding -Name "Wi-Fi" -ComponentID ms_tcpip6
+   Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | ForEach-Object { Disable-NetAdapterBinding -Name $_.Name -ComponentId ms_tcpip6 -Confirm:$false }
    ```
-3. Flush DNS and restart:
+3. Lock Firefox DoH off (critical — Firefox bypasses Pi-hole via DNS-over-HTTPS otherwise):
+   ```powershell
+   New-Item -Path "C:\Program Files\Mozilla Firefox\distribution" -ItemType Directory -Force
+   $json = '{"policies":{"DNSOverHTTPS":{"Enabled":false,"Locked":true}}}'
+   Set-Content -Path "C:\Program Files\Mozilla Firefox\distribution\policies.json" -Value $json -Force
+   ```
+4. Flush DNS and restart:
    ```powershell
    ipconfig /flushdns
    ```
-4. Enable SSH:
+5. Enable SSH:
    ```powershell
    Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
    Start-Service sshd
@@ -118,7 +146,7 @@ ssh themi@192.168.12.249
 
 ---
 
-## Kids2 — Windows Laptop (Lenovo V15 G2 IJL)
+## Kids2 — Benedict's Windows Laptop (Lenovo V15 G2 IJL)
 
 **Status: ✅ Complete**
 
@@ -133,6 +161,7 @@ ssh themi@192.168.12.249
 ```bash
 ssh themi@192.168.12.239
 # password: 1229
+# (use pexpect from Eric's laptop — key auth not set up, sshpass banned)
 ```
 
 ### Allowed Sites
@@ -144,6 +173,9 @@ ssh themi@192.168.12.239
   - `googleapis.com`
   - `googleusercontent.com`
   - `gstatic.com`
+- **Britannica** (added 2026-04-17):
+  - `britannica.com`, `www.britannica.com`, `cdn.britannica.com`
+  - Supporting: `static.cloudflareinsights.com`, `fonts.googleapis.com`, `www.googleapis.com`, `www.googletagmanager.com`, `launchpad-wrapper.privacymanager.io`, `www.googletagservices.com`, `dev.visualwebsiteoptimizer.com`
 
 ### WireGuard Setup
 - Config: `C:\lambert.conf` (uses direct IP `174.54.51.209:51820` — NOT hostname)
@@ -165,6 +197,8 @@ ssh themi@192.168.12.239
 - [x] Pi-hole group created and whitelist applied
 - [x] WireGuard installed and running as service
 - [x] Firefox homepage + bookmark set
+- [x] Firefox DoH policy locked off (policies.json) — added 2026-04-17
+- [x] IPv6 disabled on all adapters (lambert, Ethernet, Bluetooth, LAN had it re-enabled) — fixed 2026-04-17
 
 ### Important Notes
 - Username on machine is `themi` — same as Kids1, fine since they are separate devices
@@ -172,6 +206,64 @@ ssh themi@192.168.12.239
 - WireGuard MSI had to be downloaded on Linux and scp'd over — direct download on Windows failed due to TLS revocation check (Pi-hole blocks CRL servers)
 - Multi-line PowerShell commands don't execute over SSH — use single-line with commas for arrays (e.g. `Set-Content -Value 'line1','line2'`)
 - WireGuard silent install required a scheduled task workaround (msiexec fails in non-interactive SSH session)
+- **Firefox DoH policy is critical** — without it, Firefox resolves DNS over HTTPS and bypasses Pi-hole entirely
+- **IPv6 can re-enable itself** after Windows updates or WireGuard changes — verify periodically
+
+---
+
+## M900 — Kids Research Computer (Lenovo ThinkCentre M900)
+
+**Status: ✅ Complete (2026-04-17)**
+
+- IP: 192.168.12.160
+- Username: user
+- Password: 645866
+- Pi-hole group: `patricks-chromebook` (Group ID: 4) — same restrictions as Patrick's Chromebook
+- SSH: enabled (OpenSSH Server installed manually)
+
+### SSH Access
+```bash
+# Key auth NOT set up — use pexpect:
+python3 -c "
+import pexpect, base64
+ps_cmd = '<your powershell command>'
+encoded = base64.b64encode(ps_cmd.encode('utf-16-le')).decode()
+child = pexpect.spawn(f'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 user@192.168.12.160 powershell -EncodedCommand {encoded}', timeout=30)
+child.expect('[Pp]assword')
+child.sendline('645866')
+child.expect(pexpect.EOF)
+print(child.before.decode())
+"
+```
+
+### Allowed Sites
+- Same as Patrick's Chromebook (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, kiddle.co, supporting CDN domains)
+- **Britannica**: britannica.com, www.britannica.com, cdn.britannica.com + supporting domains
+
+### Pi-hole SafeSearch Enforcement
+CNAME records added to force SafeSearch on Google and Bing for ALL Pi-hole users:
+- `www.google.com` → `forcesafesearch.google.com`
+- `google.com` → `forcesafesearch.google.com`
+- `www.bing.com` → `strict.bing.com`
+- `bing.com` → `strict.bing.com`
+
+Allow rules for `forcesafesearch.google.com` and `strict.bing.com` added to all groups.
+
+### Setup Checklist
+- [x] OpenSSH Server installed and started (Automatic startup)
+- [x] DNS set to Pi-hole (192.168.12.136) — manual IPv4, no alternate
+- [x] Windows DNS-over-HTTPS: Off
+- [x] IPv6 disabled on all adapters (Wi-Fi, Ethernet, Bluetooth)
+- [x] Firefox DoH policy locked off (policies.json)
+- [x] Pi-hole group 4 assigned
+- [x] DNS cache flushed
+- [x] Blocking verified (YouTube, Facebook, Reddit, Google all blocked)
+
+### Important Notes
+- Windows username is `user` (not themi) — default account on this machine
+- Key auth failed during setup — `administrators_authorized_keys` never got written correctly. Use pexpect with password instead.
+- **sshpass is banned** — use Python pexpect for password-based SSH
+- IPv6 was the hardest bypass to find — browser queries weren't appearing in Pi-hole at all because Windows was using IPv6 DNS from the router
 
 ---
 
