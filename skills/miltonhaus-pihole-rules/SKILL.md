@@ -26,7 +26,7 @@ Kids access Matt's services (Milton, Nextcloud) by direct IP over WireGuard — 
 
 ### Step 1 — Block Everything (Default Deny)
 
-In Pi-hole admin (http://192.168.12.163/admin):
+In Pi-hole admin (http://192.168.12.136/admin):
 - Go to **Domains → Deny**
 - Add regex deny: `.*`
 
@@ -112,7 +112,7 @@ Pi-hole supports different rules per device. Under **Clients → Groups**:
 
 In each device's WireGuard `.conf` file, the `DNS =` line should point to the Pi-hole:
 ```
-DNS = 192.168.12.163
+DNS = 192.168.12.136
 ```
 
 This ensures Pi-hole filters even when VPN is active.

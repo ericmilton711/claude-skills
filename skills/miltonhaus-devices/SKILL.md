@@ -24,7 +24,7 @@ type: reference
 | 192.168.12.141 | c2-28-63-78-4f-41 (random) | — | iPad | Kids/other iPad (private MAC) |
 | 192.168.12.114 | b8:27:eb:09:db:16 | homestead | Raspberry Pi 3 A+ | Homestead Pi — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
 | 192.168.12.162 | fc-3c-d7-62-b5-6c | wlan0.lan | Raspberry Pi | MILTONRP3 — secondary Pi-hole |
-| 192.168.12.163 | c8-2a-14-51-d5-4a | — | Mac Mini (Fedora) | Pi-hole server — SSH: `ssh mac@192.168.12.163` / pw: 645866 |
+| 192.168.12.163 | c8-2a-14-51-d5-4a | — | Mac Mini (Fedora) | Kids device — 3D printing files, schoolwork. SSH: `ssh mac@192.168.12.163` / pw: 645866 |
 | 192.168.12.165 | d0-03-4b-e8-0c-63 | Living-Room.lan | Apple TV | Living room — AirPlay ports 5000/7000 |
 | 192.168.12.166 | 60-6d-c7-84-e9-77 | BRW606DC784E977.lan | Brother device | Brother device #2 |
 | 192.168.12.177 | cc-b1-48-0d-2d-f4 | TMOBILE_MESH_AP_V2.lan | T-Mobile mesh AP | T-Mobile hardware |
@@ -50,9 +50,9 @@ type: reference
 
 | Device | IP | Role |
 |--------|----|------|
-| ThinkCentre M700 | 192.168.12.136 | Home Assistant, Docker, device monitor — SSH: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136` |
+| ThinkCentre M700 | 192.168.12.136 | Pi-hole DNS server, Home Assistant, Docker, device monitor — SSH: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136` |
 | Homestead Pi 3 A+ | 192.168.12.114 | Chicken lights + garden irrigation — SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
-| Mac Mini (Fedora) | 192.168.12.163 | Pi-hole DNS, future WireGuard server |
+| Mac Mini (Fedora) | 192.168.12.163 | Kids device — 3D printing, schoolwork |
 | Patrick's Chromebook | 192.168.12.220 | Docker host — `host.docker.internal` |
 | Raspberry Pi | 192.168.12.162 | Secondary Pi-hole |
 
@@ -60,7 +60,7 @@ type: reference
 
 ## Network Plan
 
-- **Pi-hole** on Mac Mini (.163) — DIEMILTONHAUS DNS routes through it
+- **Pi-hole** on ThinkCentre (.136) — DIEMILTONHAUS DNS routes through it
 - **WireGuard** to be installed on every device so they can reach the Milton Home Page at `http://192.168.0.100:5006/`
 - Eric's Windows PC already has WireGuard running (Lambert tunnel → 192.168.0.x and 192.168.2.x)
 - Goal: replicate the Lambert WireGuard config on all other devices
