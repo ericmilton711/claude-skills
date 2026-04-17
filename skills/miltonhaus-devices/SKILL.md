@@ -47,12 +47,21 @@ type: reference
 
 ---
 
-## Key Servers
+## The Server
+
+There is **only one server** on the MILTONHAUS network: the **ThinkCentre M700** at 192.168.12.136.
+
+When Eric says "the server," "ssh into the server," etc., he means the ThinkCentre. The Homestead Pi and Mac Mini are NOT servers.
 
 | Device | IP | Role |
 |--------|----|------|
-| ThinkCentre M700 | 192.168.12.136 | Pi-hole DNS server, Home Assistant, Docker, device monitor — SSH: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136` |
-| Homestead Pi 3 A+ | 192.168.12.114 | Chicken lights + garden irrigation — SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
+| **ThinkCentre M700 (THE SERVER)** | 192.168.12.136 | Pi-hole DNS, Home Assistant, Docker, device monitor — SSH via pexpect: `milton@192.168.12.136` / pw: `645866` |
+
+## Other Key Devices (NOT servers)
+
+| Device | IP | Role |
+|--------|----|------|
+| Homestead Pi 3 A+ | 192.168.12.114 | Automation controller — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
 | Mac Mini (Fedora) | 192.168.12.163 | Kids device — 3D printing, schoolwork |
 | Patrick's Chromebook | 192.168.12.220 | Docker host — `host.docker.internal` |
 | Raspberry Pi | 192.168.12.162 | Secondary Pi-hole |
