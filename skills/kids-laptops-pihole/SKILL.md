@@ -258,12 +258,25 @@ Allow rules for `forcesafesearch.google.com` and `strict.bing.com` added to all 
 - [x] Pi-hole group 4 assigned
 - [x] DNS cache flushed
 - [x] Blocking verified (YouTube, Facebook, Reddit, Google all blocked)
+- [x] Teaching Textbooks app installed (via Microsoft Store — temp whitelist, then removed)
+
+### Teaching Textbooks App Install
+The TT app downloads from the **Microsoft Store**, not from teachingtextbooks.com directly. To install:
+1. Temporarily disable Pi-hole blocking: `POST /api/dns/blocking {"blocking":false}`
+2. Download and install the app from the Microsoft Store
+3. Re-enable blocking: `POST /api/dns/blocking {"blocking":true}`
+4. **Flush DNS on the device** after re-enabling (critical — stale cache causes whitelisted sites to break):
+   ```powershell
+   ipconfig /flushdns; Clear-DnsClientCache
+   ```
+5. Also restart Pi-hole DNS: `POST /api/action/restartdns`
 
 ### Important Notes
 - Windows username is `user` (not themi) — default account on this machine
 - Key auth failed during setup — `administrators_authorized_keys` never got written correctly. Use pexpect with password instead.
 - **sshpass is banned** — use Python pexpect for password-based SSH
 - IPv6 was the hardest bypass to find — browser queries weren't appearing in Pi-hole at all because Windows was using IPv6 DNS from the router
+- **After pausing/unpausing Pi-hole**, always flush DNS on devices AND restart Pi-hole DNS — stale cache breaks whitelisted sites
 
 ---
 
