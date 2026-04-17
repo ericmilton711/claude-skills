@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
 **Last Updated:** 2026-04-17
-**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ M900 (Kids Research) ✅ complete. Gianna's Fedora laptop and Ev's Chromebook pending.
+**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ Tower of Gondor (Kids Research) ✅ complete. Gianna's Fedora laptop and Ev's Chromebook pending.
 
 ---
 
@@ -45,7 +45,7 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 1 | mac-mini | Mac Mini | 192.168.12.163 | same as kids1 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
 | 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail + Britannica |
-| 4 | patricks-chromebook | Patrick's Chromebook + M900 | 192.168.12.221, .160 | standard kids + Britannica |
+| 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
 
 ---
 
@@ -211,7 +211,7 @@ ssh themi@192.168.12.239
 
 ---
 
-## M900 — Kids Research Computer (Lenovo ThinkCentre M900)
+## Tower of Gondor — Kids Research Computer (Lenovo ThinkCentre Tower of Gondor)
 
 **Status: ✅ Complete (2026-04-17)**
 
