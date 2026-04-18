@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 750" font-family="monospace" font-size="13">
+  <style>
+    .title { font-size: 20px; font-weight: bold; fill: #1a1a1a; }
+    .subtitle { font-size: 12px; fill: #555; }
+    .box { stroke-width: 2; rx: 8; ry: 8; }
+    .wire-red { stroke: #d32f2f; stroke-width: 2.5; fill: none; }
+    .wire-black { stroke: #222; stroke-width: 2.5; fill: none; }
+    .wire-green { stroke: #2e7d32; stroke-width: 2.5; fill: none; }
+    .wire-blue { stroke: #1565c0; stroke-width: 2.5; fill: none; }
+    .wire-orange { stroke: #e65100; stroke-width: 2.5; fill: none; }
+    .wire-yellow { stroke: #f9a825; stroke-width: 2; fill: none; stroke-dasharray: 6,3; }
+    .label { font-size: 11px; fill: #333; }
+    .pin-label { font-size: 10px; fill: #fff; font-weight: bold; }
+    .component-label { font-size: 13px; font-weight: bold; fill: #fff; }
+    .component-detail { font-size: 10px; fill: #ddd; }
+    .legend { font-size: 11px; fill: #333; }
+  </style>
+
+  <!-- Background -->
+  <rect width="1100" height="750" fill="#f5f5f0" rx="12"/>
+
+  <!-- Title -->
+  <text x="550" y="35" text-anchor="middle" class="title">Homestead Automation — Wiring Diagram</text>
+  <text x="550" y="52" text-anchor="middle" class="subtitle">Raspberry Pi 3 A+ | Bug LEDs + Garden Solenoid | GPIO BCM Numbering</text>
+
+  <!-- ============ SOLAR PANEL ============ -->
+  <rect x="30" y="80" width="140" height="60" class="box" fill="#f9a825" stroke="#c17900"/>
+  <text x="100" y="105" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Solar Panel</text>
+  <text x="100" y="122" text-anchor="middle" font-size="10" fill="#555">ECO-WORTHY 25W</text>
+
+  <!-- Solar → Charge Controller -->
+  <line x1="170" y1="100" x2="220" y2="100" class="wire-red" marker-end="url(#arrowRed)"/>
+  <line x1="170" y1="120" x2="220" y2="120" class="wire-black"/>
+
+  <!-- ============ CHARGE CONTROLLER ============ -->
+  <rect x="220" y="75" width="170" height="70" class="box" fill="#5d4037" stroke="#3e2723"/>
+  <text x="305" y="100" text-anchor="middle" class="component-label">Charge Controller</text>
+  <text x="305" y="116" text-anchor="middle" class="component-detail">Renogy Wanderer 10A</text>
+  <text x="305" y="130" text-anchor="middle" class="component-detail">PWM — LiFePO4 mode</text>
+
+  <!-- Charge Controller → Battery -->
+  <line x1="390" y1="100" x2="460" y2="100" class="wire-red" marker-end="url(#arrowRed)"/>
+  <line x1="390" y1="120" x2="460" y2="120" class="wire-black"/>
+
+  <!-- ============ BATTERY ============ -->
+  <rect x="460" y="75" width="180" height="70" class="box" fill="#c62828" stroke="#8e0000"/>
+  <text x="550" y="100" text-anchor="middle" class="component-label">12V LiFePO4 Battery</text>
+  <text x="550" y="116" text-anchor="middle" class="component-detail">DR.PREPARE 20Ah (240Wh)</text>
+  <text x="550" y="130" text-anchor="middle" class="component-detail">Main 12V Bus</text>
+
+  <!-- 12V bus lines going down from battery -->
+  <!-- +12V bus (red) -->
+  <path d="M 550 145 L 550 190 L 900 190" class="wire-red"/>
+  <text x="720" y="185" class="label" fill="#d32f2f">+12V Bus</text>
+  <!-- GND bus (black) -->
+  <path d="M 570 145 L 570 210 L 900 210" class="wire-black"/>
+  <text x="720" y="225" class="label" fill="#222">GND Bus</text>
+
+  <!-- ============ BUCK #2: 12V→5V (Pi Power) ============ -->
+  <rect x="30" y="190" width="160" height="65" class="box" fill="#1565c0" stroke="#0d47a1"/>
+  <text x="110" y="215" text-anchor="middle" class="component-label">DROK Buck #2</text>
+  <text x="110" y="232" text-anchor="middle" class="component-detail">12V → 5V (Pi power)</text>
+  <text x="110" y="245" text-anchor="middle" class="component-detail">via micro-USB</text>
+
+  <!-- 12V bus tap to Buck #2 -->
+  <path d="M 550 190 L 550 175 L 30 175 L 30 190" class="wire-red"/>
+  <path d="M 570 210 L 570 260 L 190 260 L 190 240" class="wire-black"/>
+
+  <!-- Buck #2 → Pi (5V power) -->
+  <path d="M 110 255 L 110 310" class="wire-red"/>
+  <text x="95" y="290" class="label" fill="#d32f2f">5V</text>
+
+  <!-- ============ RASPBERRY PI ============ -->
+  <rect x="30" y="310" width="240" height="200" class="box" fill="#2e7d32" stroke="#1b5e20"/>
+  <text x="150" y="340" text-anchor="middle" class="component-label" font-size="15">Raspberry Pi 3 A+</text>
+  <text x="150" y="358" text-anchor="middle" class="component-detail">MILTONRP3 | Debian Trixie</text>
+
+  <!-- GPIO pin labels inside Pi -->
+  <rect x="50" y="375" width="200" height="25" rx="4" fill="#1b5e20"/>
+  <text x="150" y="392" text-anchor="middle" class="pin-label">Pin 11 / GPIO 17 → SSR #1 (LEDs)</text>
+
+  <rect x="50" y="408" width="200" height="25" rx="4" fill="#1b5e20"/>
+  <text x="150" y="425" text-anchor="middle" class="pin-label">Pin 13 / GPIO 27 → SSR #2 (Valve)</text>
+
+  <rect x="50" y="441" width="200" height="25" rx="4" fill="#1b5e20"/>
+  <text x="150" y="458" text-anchor="middle" class="pin-label">Pin 6/9/14 → GND (SSR −)</text>
+
+  <rect x="50" y="474" width="200" height="25" rx="4" fill="#1b5e20"/>
+  <text x="150" y="491" text-anchor="middle" class="pin-label">Pin 2/4 → 5V (Fans)</text>
+
+  <!-- ============ SSR #1 (LEDs) ============ -->
+  <rect x="380" y="310" width="160" height="80" class="box" fill="#6a1b9a" stroke="#4a148c"/>
+  <text x="460" y="338" text-anchor="middle" class="component-label">SSR #1</text>
+  <text x="460" y="355" text-anchor="middle" class="component-detail">SSR-41FDD (6A 60VDC)</text>
+  <text x="460" y="370" text-anchor="middle" class="component-detail">LED Circuit</text>
+
+  <!-- Pi GPIO 17 → SSR #1 input (+) -->
+  <path d="M 270 387 L 380 387 L 380 340" class="wire-green"/>
+  <text x="320" y="382" class="label" fill="#2e7d32">GPIO 17</text>
+  <circle cx="380" cy="340" r="4" fill="#2e7d32"/>
+
+  <!-- Pi GND → SSR #1 input (−) -->
+  <path d="M 270 455 L 340 455 L 340 360 L 380 360" class="wire-black"/>
+  <circle cx="380" cy="360" r="4" fill="#222"/>
+  <text x="345" y="400" class="label" fill="#222">GND</text>
+
+  <!-- 12V bus → SSR #1 output (+) -->
+  <path d="M 550 190 L 550 300 L 500 300 L 500 310" class="wire-red"/>
+  <text x="530" y="298" class="label" fill="#d32f2f">+12V</text>
+
+  <!-- SSR #1 output → Buck #1 -->
+  <path d="M 460 390 L 460 440" class="wire-orange"/>
+  <text x="470" y="420" class="label" fill="#e65100">switched</text>
+
+  <!-- ============ BUCK #1: 12V→3.2V (LEDs) ============ -->
+  <rect x="380" y="440" width="160" height="65" class="box" fill="#1565c0" stroke="#0d47a1"/>
+  <text x="460" y="465" text-anchor="middle" class="component-label">DROK Buck #1</text>
+  <text x="460" y="482" text-anchor="middle" class="component-detail">12V → 3.2V (LEDs)</text>
+  <text x="460" y="495" text-anchor="middle" class="component-detail">Output: 4A</text>
+
+  <!-- Buck #1 → LEDs -->
+  <path d="M 460 505 L 460 545" class="wire-orange"/>
+
+  <!-- ============ LEDs ============ -->
+  <rect x="350" y="545" width="220" height="95" class="box" fill="#311b92" stroke="#1a0063"/>
+  <text x="460" y="572" text-anchor="middle" class="component-label">Bug Attraction LEDs</text>
+  <text x="460" y="590" text-anchor="middle" class="component-detail">5× UV 365nm (3W) @ 450mA each</text>
+  <text x="460" y="605" text-anchor="middle" class="component-detail">5× Blue 460nm (1W) @ 350mA each</text>
+  <text x="460" y="622" text-anchor="middle" class="component-detail">All 10 in PARALLEL @ 3.2V</text>
+  <text x="460" y="636" text-anchor="middle" class="component-detail">Mounted in aluminum bar (heatsink)</text>
+
+  <!-- LED return to GND bus -->
+  <path d="M 570 590 L 620 590 L 620 210" class="wire-black"/>
+  <text x="625" y="400" class="label" fill="#222">GND</text>
+
+  <!-- ============ SSR #2 (Solenoid) ============ -->
+  <rect x="700" y="310" width="160" height="80" class="box" fill="#6a1b9a" stroke="#4a148c"/>
+  <text x="780" y="338" text-anchor="middle" class="component-label">SSR #2</text>
+  <text x="780" y="355" text-anchor="middle" class="component-detail">SSR-41FDD (6A 60VDC)</text>
+  <text x="780" y="370" text-anchor="middle" class="component-detail">Solenoid Circuit</text>
+
+  <!-- Pi GPIO 27 → SSR #2 input (+) -->
+  <path d="M 270 420 L 310 420 L 310 480 L 660 480 L 660 340 L 700 340" class="wire-blue"/>
+  <text x="630" y="338" class="label" fill="#1565c0">GPIO 27</text>
+  <circle cx="700" cy="340" r="4" fill="#1565c0"/>
+
+  <!-- Pi GND → SSR #2 input (−) -->
+  <path d="M 340 455 L 340 500 L 680 500 L 680 360 L 700 360" class="wire-black"/>
+  <circle cx="700" cy="360" r="4" fill="#222"/>
+
+  <!-- 12V bus → SSR #2 output -->
+  <path d="M 820 190 L 820 310" class="wire-red"/>
+  <text x="825" y="260" class="label" fill="#d32f2f">+12V</text>
+
+  <!-- SSR #2 output → Solenoid -->
+  <path d="M 780 390 L 780 440" class="wire-orange"/>
+  <text x="790" y="420" class="label" fill="#e65100">switched</text>
+
+  <!-- ============ SOLENOID ============ -->
+  <rect x="700" y="440" width="160" height="75" class="box" fill="#00695c" stroke="#004d40"/>
+  <text x="780" y="465" text-anchor="middle" class="component-label">Solenoid Valve</text>
+  <text x="780" y="482" text-anchor="middle" class="component-detail">U.S. Solid 1/4" NC</text>
+  <text x="780" y="496" text-anchor="middle" class="component-detail">12V @ 1A</text>
+
+  <!-- Solenoid return to GND bus -->
+  <path d="M 860 475 L 900 475 L 900 210" class="wire-black"/>
+  <text x="905" y="350" class="label" fill="#222">GND</text>
+
+  <!-- Water flow arrow from solenoid -->
+  <path d="M 780 515 L 780 555" stroke="#0288d1" stroke-width="3" fill="none" marker-end="url(#arrowWater)"/>
+  <rect x="720" y="555" width="120" height="40" rx="6" fill="#0288d1" stroke="#01579b" stroke-width="1.5"/>
+  <text x="780" y="575" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">Rain Barrel</text>
+  <text x="780" y="589" text-anchor="middle" font-size="9" fill="#ddd">→ Garden (18 rows)</text>
+
+  <!-- ============ FANS ============ -->
+  <rect x="30" y="545" width="140" height="55" class="box" fill="#546e7a" stroke="#37474f"/>
+  <text x="100" y="568" text-anchor="middle" class="component-label">2× Cooling Fans</text>
+  <text x="100" y="585" text-anchor="middle" class="component-detail">5V always-on</text>
+
+  <!-- Pi 5V → Fans -->
+  <path d="M 150 490 L 170 490 L 170 530 L 100 530 L 100 545" class="wire-red"/>
+  <text x="175" y="520" class="label" fill="#d32f2f">5V (Pin 2/4)</text>
+  <!-- Fan GND -->
+  <path d="M 100 600 L 100 620 L 30 620 L 30 455" class="wire-black"/>
+  <text x="40" y="615" class="label" fill="#222">GND (Pin 6/9)</text>
+
+  <!-- ============ LEGEND ============ -->
+  <rect x="30" y="665" width="1040" height="70" rx="8" fill="#e8e8e3" stroke="#bbb" stroke-width="1"/>
+  <text x="50" y="688" font-size="13" font-weight="bold" fill="#333">Legend:</text>
+
+  <line x1="110" y1="683" x2="145" y2="683" class="wire-red"/>
+  <text x="150" y="688" class="legend">+12V / +5V power</text>
+
+  <line x1="280" y1="683" x2="315" y2="683" class="wire-black"/>
+  <text x="320" y="688" class="legend">Ground (GND)</text>
+
+  <line x1="430" y1="683" x2="465" y2="683" class="wire-green"/>
+  <text x="470" y="688" class="legend">GPIO 17 (LEDs)</text>
+
+  <line x1="600" y1="683" x2="635" y2="683" class="wire-blue"/>
+  <text x="640" y="688" class="legend">GPIO 27 (Solenoid)</text>
+
+  <line x1="790" y1="683" x2="825" y2="683" class="wire-orange"/>
+  <text x="830" y="688" class="legend">Switched 12V output</text>
+
+  <text x="50" y="722" class="legend" font-style="italic">SSR input: Pi GPIO (+) and Pi GND (−) | SSR output: switches 12V from battery through load | Buck converters step down voltage</text>
+
+  <!-- Arrow markers -->
+  <defs>
+    <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#d32f2f"/>
+    </marker>
+    <marker id="arrowWater" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#0288d1"/>
+    </marker>
+  </defs>
+</svg>
