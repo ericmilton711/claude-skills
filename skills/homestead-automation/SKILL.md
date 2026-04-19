@@ -242,3 +242,11 @@ The T-Mobile TMO-G5AR gateway has an **Advanced Security** feature enabled by de
 ### WiFi setup
 - `sudo nmtui` is the tool on Trixie Lite (no `raspi-config` or `wpa_supplicant.conf` editing needed)
 - Select "Activate a connection" → pick DIEMILTONHAUS → enter password
+
+---
+
+## Spare Hardware
+
+| Item | Spec | Notes |
+|------|------|-------|
+| Battery | 24VDC, 1A rated | Ordered by mistake. Does NOT fit this 12V project. Ah capacity unknown — check label. Could be used for a future 24V project. |
