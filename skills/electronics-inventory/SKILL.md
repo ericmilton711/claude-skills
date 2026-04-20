@@ -85,6 +85,16 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | OLED displays ×5 | 0.96" SSD1306, 128×64, I2C, blue/yellow | spare | |
 
+## Passive Components & Semiconductors
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Resistors | Large assortment, various values | spare | |
+| Capacitors | Assorted values and types | spare | |
+| Potentiometers | Assorted | spare | |
+| Transistors | Assorted | spare | |
+| MOSFETs | Assorted | spare | |
+
 ## Other / Uncategorized
 
 | Item | Spec | Status | Project / Notes |
