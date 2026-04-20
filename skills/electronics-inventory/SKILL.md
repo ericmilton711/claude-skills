@@ -95,6 +95,12 @@ Central inventory of all electronic components Eric has in the house — install
 | Transistors | Assorted | spare | |
 | MOSFETs | Assorted | spare | |
 
+## Wiring & Connectors
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Jumper cables | Large assortment | spare | |
+
 ## Other / Uncategorized
 
 | Item | Spec | Status | Project / Notes |
