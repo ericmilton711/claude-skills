@@ -101,6 +101,30 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | Jumper cables | Large assortment | spare | |
 
+## Motors & Drivers
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Motor driver modules | Multiple, specs unknown | spare | |
+
+## Wireless / Communication
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Bluetooth module | | spare | |
+
+## RFID
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| RFID module + tags | | spare | |
+
+## Sensors
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Light sensors | Multiple | spare | |
+
 ## Other / Uncategorized
 
 | Item | Spec | Status | Project / Notes |
