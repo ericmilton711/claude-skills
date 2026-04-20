@@ -59,6 +59,7 @@ Central inventory of all electronic components Eric has in the house — install
 | Raspberry Pi 3 A+ | MILTONRP3, 64GB microSD | installed | Homestead automation |
 | ESP32 #1 | | installed | Closet LED lighting project |
 | ESP32-S3 | | spare | |
+| Arduino Nano ×2 | | spare | |
 
 ## Solenoids / Valves
 
