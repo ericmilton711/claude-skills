@@ -125,6 +125,12 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | Light sensors | Multiple | spare | |
 
+## Input Devices
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Cherry MX hall effect switches | Multiple, analog hall effect sensor type | spare | |
+
 ## Other / Uncategorized
 
 | Item | Spec | Status | Project / Notes |
