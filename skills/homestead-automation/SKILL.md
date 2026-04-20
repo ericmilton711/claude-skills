@@ -139,7 +139,16 @@ if __name__ == '__main__':
 
 # Nightly reboot at 2AM (prevent long-uptime crashes)
 0  2 * * * sudo /sbin/reboot
+
+# On boot: restore scheduled state (LEDs if 6-11PM, irrigation if 6AM hour)
+@reboot sleep 10 && /usr/bin/python3 /home/eric/boot_check.py
 ```
+
+### Boot State Recovery — `/home/eric/boot_check.py` (added 2026-04-19)
+
+Solves the problem where a reboot mid-schedule (e.g. power cycle at 8 PM) leaves LEDs off until the next 6 PM cron. On every boot, checks the current time and restores the correct GPIO state:
+- 6-11 PM: turns LEDs on
+- 6-7 AM: starts irrigation
 
 ## Boot Configuration (added 2026-04-13)
 
