@@ -57,7 +57,8 @@ Central inventory of all electronic components Eric has in the house — install
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
 | Raspberry Pi 3 A+ | MILTONRP3, 64GB microSD | installed | Homestead automation |
-| ESP32 | | installed | Closet LED lighting project |
+| ESP32 #1 | | installed | Closet LED lighting project |
+| ESP32 #2 | | spare | |
 
 ## Solenoids / Valves
 
@@ -77,6 +78,12 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | 3D printed PETG box | 180×140×80mm, hinge+magnet lid | installed | Homestead — barn wall mount |
 
+## Displays
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| OLED displays ×5 | 0.96" SSD1306, 128×64, I2C, blue/yellow | spare | |
+
 ## Other / Uncategorized
 
 | Item | Spec | Status | Project / Notes |
@@ -85,4 +92,4 @@ Central inventory of all electronic components Eric has in the house — install
 
 ---
 
-*Last updated: 2026-04-19*
+*Last updated: 2026-04-20*
