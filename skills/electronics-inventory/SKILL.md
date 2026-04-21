@@ -73,6 +73,12 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | Mini cooling fans ×2 | 5V | installed | Homestead — Pi enclosure cooling |
 
+## 3D Printing
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| 3D Printer | Can print custom enclosures, mounts, brackets, gears, etc. | available | |
+
 ## Enclosures
 
 | Item | Spec | Status | Project / Notes |
@@ -94,6 +100,7 @@ Central inventory of all electronic components Eric has in the house — install
 | Potentiometers | Assorted | spare | |
 | Transistors | Assorted | spare | |
 | MOSFETs | Assorted | spare | |
+| 555 timer ICs | Multiple | spare | |
 
 ## Wiring & Connectors
 
@@ -127,6 +134,7 @@ Central inventory of all electronic components Eric has in the house — install
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
 | Light sensors | Multiple | spare | |
+| Touch capacitor modules | Multiple | spare | |
 
 ## Input Devices
 
