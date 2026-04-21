@@ -1,0 +1,389 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1100" font-family="monospace" font-size="13">
+  <style>
+    .title { font-size: 22px; font-weight: bold; fill: #1a1a1a; }
+    .subtitle { font-size: 13px; fill: #555; }
+    .box { stroke-width: 2; rx: 10; ry: 10; }
+    .wire-red { stroke: #d32f2f; stroke-width: 2.5; fill: none; }
+    .wire-black { stroke: #222; stroke-width: 2.5; fill: none; }
+    .wire-green { stroke: #2e7d32; stroke-width: 2.5; fill: none; }
+    .wire-blue { stroke: #1565c0; stroke-width: 2.5; fill: none; }
+    .wire-orange { stroke: #e65100; stroke-width: 2.5; fill: none; }
+    .wire-purple { stroke: #7b1fa2; stroke-width: 2.5; fill: none; }
+    .wire-cyan { stroke: #00838f; stroke-width: 2.5; fill: none; }
+    .label { font-size: 11px; fill: #333; }
+    .component-label { font-size: 15px; font-weight: bold; fill: #fff; }
+    .component-detail { font-size: 11px; fill: #ddd; }
+    .pin-label { font-size: 11px; fill: #fff; font-weight: bold; }
+    .pin-num { font-size: 11px; font-weight: bold; }
+    .legend { font-size: 12px; fill: #333; }
+    .bus-label { font-size: 13px; font-weight: bold; }
+    .screw-label { font-size: 10px; font-weight: bold; }
+  </style>
+
+  <defs>
+    <marker id="aRed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#d32f2f"/>
+    </marker>
+    <marker id="aBlack" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#222"/>
+    </marker>
+    <marker id="aGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#2e7d32"/>
+    </marker>
+    <marker id="aBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#1565c0"/>
+    </marker>
+    <marker id="aOrange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#e65100"/>
+    </marker>
+    <marker id="aPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#7b1fa2"/>
+    </marker>
+    <marker id="aCyan" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L10,3.5 L0,7" fill="#00838f"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="1100" fill="#f5f5f0" rx="12"/>
+
+  <!-- Title -->
+  <text x="600" y="38" text-anchor="middle" class="title">555 Touch Switch — Wiring Diagram</text>
+  <text x="600" y="58" text-anchor="middle" class="subtitle">Arduino Nano | 555 Timer | TTP223 Touch | IRLZ44N MOSFET | OLED Display</text>
+
+  <!-- ======================================================
+       POWER INPUT — screw terminals, top left
+       ====================================================== -->
+
+  <!-- Battery pack (external) -->
+  <rect x="80" y="78" width="200" height="55" class="box" fill="#c62828" stroke="#8e0000"/>
+  <text x="180" y="102" text-anchor="middle" class="component-label">8× AA Battery Pack</text>
+  <text x="180" y="122" text-anchor="middle" class="component-detail">12VDC (1.5V × 8 series)</text>
+
+  <!-- Screw terminal block — POWER IN (on enclosure wall) -->
+  <rect x="330" y="75" width="160" height="62" rx="6" fill="#607d8b" stroke="#37474f" stroke-width="2"/>
+  <text x="410" y="94" text-anchor="middle" class="screw-label" fill="#fff">SCREW TERMINAL — PWR IN</text>
+  <text x="410" y="110" text-anchor="middle" class="screw-label" fill="#ffcdd2">mounted on enclosure wall</text>
+  <!-- Screw heads -->
+  <circle cx="370" cy="126" r="8" fill="#455a64" stroke="#263238" stroke-width="1.5"/>
+  <line x1="365" y1="126" x2="375" y2="126" stroke="#263238" stroke-width="1.5"/>
+  <text x="370" y="117" text-anchor="middle" class="screw-label" fill="#ff8a80">+</text>
+  <circle cx="450" cy="126" r="8" fill="#455a64" stroke="#263238" stroke-width="1.5"/>
+  <line x1="445" y1="126" x2="455" y2="126" stroke="#263238" stroke-width="1.5"/>
+  <text x="450" y="117" text-anchor="middle" class="screw-label" fill="#bbb">−</text>
+
+  <!-- Battery wires → screw terminal -->
+  <path d="M 280 97 L 330 97" class="wire-red" marker-end="url(#aRed)"/>
+  <path d="M 280 117 L 330 117" class="wire-black" marker-end="url(#aBlack)"/>
+  <text x="300" y="92" class="label" fill="#d32f2f">+12V</text>
+  <text x="300" y="130" class="label" fill="#222">GND</text>
+
+  <!-- ======================================================
+       LOAD OUTPUT — screw terminals, top right
+       ====================================================== -->
+
+  <!-- Screw terminal block — LOAD OUT (on enclosure wall) -->
+  <rect x="770" y="75" width="160" height="62" rx="6" fill="#607d8b" stroke="#37474f" stroke-width="2"/>
+  <text x="850" y="94" text-anchor="middle" class="screw-label" fill="#fff">SCREW TERMINAL — LOAD OUT</text>
+  <text x="850" y="110" text-anchor="middle" class="screw-label" fill="#ffcdd2">mounted on enclosure wall</text>
+  <!-- Screw heads -->
+  <circle cx="810" cy="126" r="8" fill="#455a64" stroke="#263238" stroke-width="1.5"/>
+  <line x1="805" y1="126" x2="815" y2="126" stroke="#263238" stroke-width="1.5"/>
+  <text x="810" y="117" text-anchor="middle" class="screw-label" fill="#ff8a80">+</text>
+  <circle cx="890" cy="126" r="8" fill="#455a64" stroke="#263238" stroke-width="1.5"/>
+  <line x1="885" y1="126" x2="895" y2="126" stroke="#263238" stroke-width="1.5"/>
+  <text x="890" y="117" text-anchor="middle" class="screw-label" fill="#bbb">−</text>
+
+  <!-- Load (external) -->
+  <rect x="970" y="78" width="170" height="55" class="box" fill="#37474f" stroke="#263238"/>
+  <text x="1055" y="100" text-anchor="middle" class="component-label">YOUR LOAD</text>
+  <text x="1055" y="120" text-anchor="middle" class="component-detail">LED strip, fan, lamp, etc.</text>
+
+  <!-- Screw terminal → load wires -->
+  <path d="M 930 97 L 970 97" class="wire-red" marker-end="url(#aRed)"/>
+  <path d="M 930 117 L 970 117" class="wire-black" marker-end="url(#aBlack)"/>
+
+  <!-- ======================================================
+       BUS BARS
+       ====================================================== -->
+
+  <!-- +12V bus -->
+  <line x1="60" y1="188" x2="1140" y2="188" stroke="#d32f2f" stroke-width="4"/>
+  <rect x="60" y="178" width="55" height="20" rx="4" fill="#d32f2f"/>
+  <text x="87" y="193" text-anchor="middle" class="bus-label" fill="#fff">+12V</text>
+
+  <!-- GND bus -->
+  <line x1="60" y1="212" x2="1140" y2="212" stroke="#222" stroke-width="4"/>
+  <rect x="60" y="202" width="50" height="20" rx="4" fill="#333"/>
+  <text x="85" y="207" text-anchor="middle" class="bus-label" fill="#fff">GND</text>
+
+  <!-- Power screw terminal → Bus bars -->
+  <path d="M 370 134 L 370 188" class="wire-red" marker-end="url(#aRed)"/>
+  <path d="M 450 134 L 450 212" class="wire-black" marker-end="url(#aBlack)"/>
+  <text x="352" y="165" class="label" fill="#d32f2f">+12V</text>
+  <text x="456" y="175" class="label" fill="#222">GND</text>
+
+  <!-- +12V bus → Load screw terminal (+) -->
+  <path d="M 810 188 L 810 134" class="wire-red" marker-end="url(#aRed)"/>
+  <text x="790" y="165" class="label" fill="#d32f2f">+12V</text>
+
+  <!-- MOSFET drain → Load screw terminal (−) routed up right side -->
+  <!-- This wire goes from MOSFET drain up to the load terminal (−) -->
+  <!-- Will draw this after MOSFET section, using right edge routing -->
+
+  <!-- ======================================================
+       ARDUINO NANO — center
+       ====================================================== -->
+
+  <rect x="420" y="270" width="360" height="210" class="box" fill="#00695c" stroke="#004d40"/>
+  <text x="600" y="300" text-anchor="middle" class="component-label" font-size="17">Arduino Nano</text>
+  <text x="600" y="320" text-anchor="middle" class="component-detail" font-size="12">Brain — touch logic, display, 555 control</text>
+
+  <!-- Nano pin labels — left side -->
+  <rect x="432" y="340" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="502" y="356" text-anchor="middle" class="pin-label">Vin ← 12V</text>
+
+  <rect x="432" y="368" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="502" y="384" text-anchor="middle" class="pin-label">5V → 5V bus (out)</text>
+
+  <rect x="432" y="396" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="502" y="412" text-anchor="middle" class="pin-label">D2 ← TTP223 SIG</text>
+
+  <rect x="432" y="424" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="502" y="440" text-anchor="middle" class="pin-label">D3 → 555 Trigger</text>
+
+  <!-- Nano pin labels — right side -->
+  <rect x="628" y="340" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="698" y="356" text-anchor="middle" class="pin-label">GND → GND bus</text>
+
+  <rect x="628" y="368" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="698" y="384" text-anchor="middle" class="pin-label">A4 → OLED SDA</text>
+
+  <rect x="628" y="396" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="698" y="412" text-anchor="middle" class="pin-label">A5 → OLED SCL</text>
+
+  <rect x="628" y="424" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="698" y="440" text-anchor="middle" class="pin-label">D4 ← 555 Output</text>
+
+  <rect x="628" y="452" width="140" height="22" rx="4" fill="#004d40"/>
+  <text x="698" y="468" text-anchor="middle" class="pin-label">D5 → 555 Reset</text>
+
+  <!-- +12V bus → Nano Vin -->
+  <path d="M 480 188 L 480 270" class="wire-red" marker-end="url(#aRed)"/>
+  <text x="488" y="235" class="label" fill="#d32f2f">+12V → Vin</text>
+
+  <!-- GND bus → Nano GND -->
+  <path d="M 720 212 L 720 270" class="wire-black" marker-end="url(#aBlack)"/>
+  <text x="728" y="248" class="label" fill="#222">GND</text>
+
+  <!-- ======================================================
+       5V bus — below Nano, feeds TTP223, OLED, 555
+       ====================================================== -->
+
+  <line x1="140" y1="520" x2="1060" y2="520" stroke="#e65100" stroke-width="3" stroke-dasharray="8,4"/>
+  <rect x="140" y="510" width="40" height="20" rx="4" fill="#e65100"/>
+  <text x="160" y="525" text-anchor="middle" class="bus-label" fill="#fff">5V</text>
+
+  <!-- Nano 5V → 5V bus -->
+  <path d="M 520 480 L 520 520" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="530" y="506" class="label" fill="#e65100">5V out</text>
+
+  <!-- ======================================================
+       TTP223 TOUCH PAD — left
+       ====================================================== -->
+
+  <rect x="80" y="580" width="200" height="120" class="box" fill="#1565c0" stroke="#0d47a1"/>
+  <text x="180" y="608" text-anchor="middle" class="component-label">TTP223</text>
+  <text x="180" y="628" text-anchor="middle" class="component-detail">Capacitive Touch Pad</text>
+
+  <rect x="92" y="645" width="176" height="40" rx="5" fill="#0d47a1"/>
+  <text x="180" y="662" text-anchor="middle" class="pin-label">VCC → 5V   GND → GND</text>
+  <text x="180" y="678" text-anchor="middle" class="pin-label">SIG → Nano D2</text>
+
+  <!-- 5V bus → TTP223 VCC -->
+  <path d="M 160 520 L 160 580" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="168" y="555" class="label" fill="#e65100">5V</text>
+
+  <!-- TTP223 GND → GND bus (left side) -->
+  <path d="M 80 670 L 65 670 L 65 212" class="wire-black" marker-end="url(#aBlack)"/>
+
+  <!-- TTP223 SIG → Nano D2 -->
+  <path d="M 280 655 L 370 655 L 370 407 L 420 407" class="wire-green" marker-end="url(#aGreen)"/>
+  <text x="310" y="648" class="label" fill="#2e7d32">SIG → D2</text>
+
+  <!-- ======================================================
+       555 TIMER — center bottom
+       ====================================================== -->
+
+  <rect x="400" y="580" width="300" height="200" class="box" fill="#6a1b9a" stroke="#4a148c"/>
+  <text x="550" y="608" text-anchor="middle" class="component-label" font-size="17">555 Timer</text>
+  <text x="550" y="628" text-anchor="middle" class="component-detail">Monostable — auto-off timer</text>
+
+  <!-- 555 pin details -->
+  <rect x="412" y="645" width="130" height="120" rx="5" fill="#4a148c" stroke="#ce93d8" stroke-width="1"/>
+  <text x="477" y="662" text-anchor="middle" font-size="10" font-weight="bold" fill="#ce93d8">INPUTS</text>
+  <text x="477" y="680" text-anchor="middle" class="pin-num" fill="#81c784">Pin 2: Trigger ← D3</text>
+  <text x="477" y="698" text-anchor="middle" class="pin-num" fill="#81c784">Pin 4: Reset ← D5</text>
+  <text x="477" y="716" text-anchor="middle" class="pin-num" fill="#bbb">Pin 5: Ctrl → 10nF → GND</text>
+  <text x="477" y="734" text-anchor="middle" class="pin-num" fill="#90caf9">Pin 8: VCC ← 5V</text>
+  <text x="477" y="752" text-anchor="middle" class="pin-num" fill="#bbb">Pin 1: GND</text>
+
+  <rect x="558" y="645" width="130" height="120" rx="5" fill="#4a148c" stroke="#ce93d8" stroke-width="1"/>
+  <text x="623" y="662" text-anchor="middle" font-size="10" font-weight="bold" fill="#ce93d8">TIMING + OUTPUT</text>
+  <text x="623" y="680" text-anchor="middle" class="pin-num" fill="#ffcc80">Pin 3: Output → Gate</text>
+  <text x="623" y="698" text-anchor="middle" class="pin-num" fill="#ffcc80">Pin 3: Output → D4</text>
+  <text x="623" y="720" text-anchor="middle" class="pin-num" fill="#ce93d8">Pin 6: Threshold ┐</text>
+  <text x="623" y="736" text-anchor="middle" class="pin-num" fill="#ce93d8">Pin 7: Discharge ┘→ T</text>
+  <text x="623" y="756" text-anchor="middle" class="pin-num" fill="#ddd">5V → R → [T] → C → GND</text>
+
+  <!-- 5V bus → 555 VCC -->
+  <path d="M 500 520 L 500 580" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="508" y="555" class="label" fill="#e65100">5V</text>
+
+  <!-- 555 GND → GND bus -->
+  <path d="M 400 760 L 380 760 L 380 212" class="wire-black" marker-end="url(#aBlack)"/>
+
+  <!-- Nano D3 → 555 Pin 2 (Trigger) -->
+  <path d="M 432 435 L 410 435 L 410 550 L 445 550 L 445 580" class="wire-purple" marker-end="url(#aPurple)"/>
+  <text x="350" y="498" class="label" fill="#7b1fa2">D3 → Trig</text>
+
+  <!-- Nano D5 → 555 Pin 4 (Reset) -->
+  <path d="M 780 463 L 810 463 L 810 550 L 470 550 L 470 580" class="wire-purple" marker-end="url(#aPurple)"/>
+  <text x="815" y="510" class="label" fill="#7b1fa2">D5 → Reset</text>
+
+  <!-- 555 Output → MOSFET Gate -->
+  <path d="M 700 690 L 820 690 L 820 640 L 860 640" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="770" y="680" class="label" fill="#e65100">Pin 3 → 220Ω → Gate</text>
+
+  <!-- 555 Output → Nano D4 -->
+  <path d="M 700 705 L 790 705 L 790 435 L 780 435" class="wire-cyan" marker-end="url(#aCyan)"/>
+  <text x="795" y="570" class="label" fill="#00838f">Pin 3 → D4</text>
+
+  <!-- ======================================================
+       IRLZ44N MOSFET — right
+       ====================================================== -->
+
+  <rect x="860" y="580" width="200" height="160" class="box" fill="#bf360c" stroke="#8e0000"/>
+  <text x="960" y="608" text-anchor="middle" class="component-label">IRLZ44N</text>
+  <text x="960" y="628" text-anchor="middle" class="component-detail">Logic-Level MOSFET</text>
+
+  <rect x="872" y="645" width="176" height="80" rx="5" fill="#8e0000"/>
+  <text x="960" y="667" text-anchor="middle" class="pin-label">GATE ← 555 Out (via 220Ω)</text>
+  <text x="960" y="685" text-anchor="middle" class="pin-label">         + 10kΩ pulldown to GND</text>
+  <text x="960" y="707" text-anchor="middle" class="pin-label">DRAIN → Load Out (−)</text>
+  <text x="960" y="723" text-anchor="middle" class="pin-label">SOURCE → GND</text>
+
+  <!-- MOSFET Source → GND bus -->
+  <path d="M 1060 710 L 1100 710 L 1100 212" class="wire-black" marker-end="url(#aBlack)"/>
+  <text x="1108" y="460" class="label" fill="#222">Source</text>
+  <text x="1108" y="473" class="label" fill="#222">GND</text>
+
+  <!-- MOSFET Drain → Load OUT screw terminal (−) — routed up right side -->
+  <path d="M 1060 690 L 1140 690 L 1140 126 L 898 126" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="1148" y="400" class="label" fill="#e65100">Drain</text>
+  <text x="1148" y="413" class="label" fill="#e65100">→ Out(−)</text>
+
+  <!-- ======================================================
+       OLED DISPLAY — far right bottom
+       ====================================================== -->
+
+  <rect x="860" y="810" width="200" height="110" class="box" fill="#1565c0" stroke="#0d47a1"/>
+  <text x="960" y="840" text-anchor="middle" class="component-label">OLED 128×64</text>
+  <text x="960" y="860" text-anchor="middle" class="component-detail">I2C Display (SSD1306)</text>
+
+  <!-- OLED screen mockup -->
+  <rect x="910" y="870" width="100" height="35" rx="4" fill="#000" stroke="#444"/>
+  <text x="960" y="886" text-anchor="middle" font-size="11" font-weight="bold" fill="#00e676">ON</text>
+  <text x="960" y="900" text-anchor="middle" font-size="9" fill="#64b5f6">4:32 remaining</text>
+
+  <!-- 5V bus → OLED -->
+  <path d="M 900 520 L 900 810" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="908" y="670" class="label" fill="#e65100">5V</text>
+
+  <!-- OLED GND → GND bus -->
+  <path d="M 1060 870 L 1135 870 L 1135 212" class="wire-black" marker-end="url(#aBlack)"/>
+
+  <!-- Nano A4 → OLED SDA -->
+  <path d="M 780 379 L 830 379 L 830 850 L 860 850" class="wire-blue" marker-end="url(#aBlue)"/>
+  <text x="838" y="620" class="label" fill="#1565c0">A4</text>
+  <text x="838" y="633" class="label" fill="#1565c0">SDA</text>
+
+  <!-- Nano A5 → OLED SCL -->
+  <path d="M 780 407 L 850 407 L 850 865 L 860 865" class="wire-blue" marker-end="url(#aBlue)"/>
+  <text x="855" y="740" class="label" fill="#1565c0">A5 SCL</text>
+
+  <!-- ======================================================
+       TIMER R-C NETWORK — below 555
+       ====================================================== -->
+
+  <rect x="400" y="810" width="300" height="80" class="box" fill="#4e342e" stroke="#3e2723"/>
+  <text x="550" y="835" text-anchor="middle" class="component-label">Timer R-C Network</text>
+  <text x="550" y="858" text-anchor="middle" class="component-detail">5V → R_timing → [Node T] → C_timing → GND</text>
+  <text x="550" y="878" text-anchor="middle" class="component-detail">T = 1.1 × R × C (see table below)</text>
+
+  <!-- 555 Threshold/Discharge → R-C Node -->
+  <path d="M 550 780 L 550 810" class="wire-purple" marker-end="url(#aPurple)"/>
+  <text x="558" y="800" class="label" fill="#7b1fa2">Pin 6,7 → Node T</text>
+
+  <!-- ======================================================
+       TRIGGER PULLUP NOTE
+       ====================================================== -->
+
+  <rect x="80" y="810" width="280" height="80" class="box" fill="#455a64" stroke="#37474f"/>
+  <text x="220" y="835" text-anchor="middle" class="component-label">Trigger Circuit</text>
+  <text x="220" y="858" text-anchor="middle" class="component-detail">555 Pin 2 ← 10kΩ pullup to 5V</text>
+  <text x="220" y="878" text-anchor="middle" class="component-detail">Nano D3 pulses LOW to trigger</text>
+
+  <!-- ======================================================
+       TIMER VALUES TABLE
+       ====================================================== -->
+
+  <rect x="80" y="920" width="350" height="85" rx="8" fill="#fff" stroke="#bbb" stroke-width="1"/>
+  <text x="255" y="942" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">Timer Values  (T = 1.1 × R × C)</text>
+  <line x1="90" y1="950" x2="420" y2="950" stroke="#ddd"/>
+  <text x="130" y="968" text-anchor="middle" class="legend" font-weight="bold">Duration</text>
+  <text x="250" y="968" text-anchor="middle" class="legend" font-weight="bold">R</text>
+  <text x="370" y="968" text-anchor="middle" class="legend" font-weight="bold">C</text>
+  <line x1="90" y1="974" x2="420" y2="974" stroke="#eee"/>
+  <text x="130" y="990" text-anchor="middle" class="legend">~10 sec</text>
+  <text x="250" y="990" text-anchor="middle" class="legend">91kΩ</text>
+  <text x="370" y="990" text-anchor="middle" class="legend">100µF</text>
+
+  <!-- ======================================================
+       LEGEND
+       ====================================================== -->
+
+  <rect x="60" y="1020" width="1080" height="68" rx="10" fill="#e8e8e3" stroke="#bbb" stroke-width="1"/>
+
+  <text x="90" y="1042" font-size="14" font-weight="bold" fill="#333">Wire Colors</text>
+
+  <line x1="90" y1="1062" x2="130" y2="1062" class="wire-red" marker-end="url(#aRed)"/>
+  <text x="140" y="1067" class="legend">+12V power</text>
+
+  <line x1="260" y1="1062" x2="300" y2="1062" class="wire-black" marker-end="url(#aBlack)"/>
+  <text x="310" y="1067" class="legend">Ground</text>
+
+  <line x1="410" y1="1062" x2="450" y2="1062" class="wire-orange" marker-end="url(#aOrange)"/>
+  <text x="460" y="1067" class="legend">5V / switched</text>
+
+  <line x1="580" y1="1062" x2="620" y2="1062" class="wire-green" marker-end="url(#aGreen)"/>
+  <text x="630" y="1067" class="legend">Touch signal</text>
+
+  <line x1="740" y1="1062" x2="780" y2="1062" class="wire-purple" marker-end="url(#aPurple)"/>
+  <text x="790" y="1067" class="legend">555 control</text>
+
+  <line x1="900" y1="1062" x2="940" y2="1062" class="wire-blue" marker-end="url(#aBlue)"/>
+  <text x="950" y="1067" class="legend">I2C (OLED)</text>
+
+  <!-- Connector callout -->
+  <rect x="470" y="920" width="420" height="85" rx="8" fill="#fff" stroke="#607d8b" stroke-width="1.5"/>
+  <text x="680" y="942" text-anchor="middle" font-size="13" font-weight="bold" fill="#37474f">Physical Connectors</text>
+  <line x1="480" y1="950" x2="880" y2="950" stroke="#ddd"/>
+  <circle cx="500" cy="968" r="6" fill="#607d8b" stroke="#37474f" stroke-width="1"/>
+  <line x1="497" y1="968" x2="503" y2="968" stroke="#37474f" stroke-width="1"/>
+  <text x="515" y="972" class="legend">PWR IN — 2-pos screw terminal (left wall)</text>
+  <circle cx="500" cy="990" r="6" fill="#607d8b" stroke="#37474f" stroke-width="1"/>
+  <line x1="497" y1="990" x2="503" y2="990" stroke="#37474f" stroke-width="1"/>
+  <text x="515" y="994" class="legend">LOAD OUT — 2-pos screw terminal (right wall)</text>
+
+</svg>
