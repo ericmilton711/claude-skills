@@ -106,6 +106,9 @@ Central inventory of all electronic components Eric has in the house — install
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
 | Motor driver modules | Multiple, specs unknown | spare | |
+| 6VDC motors | Multiple | spare | |
+| Servo motors | Multiple | spare | |
+| Solenoids | Multiple | spare | |
 
 ## Wireless / Communication
 
