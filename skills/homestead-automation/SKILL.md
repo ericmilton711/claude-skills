@@ -17,7 +17,7 @@ Pi runs completely **offline** (no WiFi needed in the field). Cron fires the Pyt
 | Battery | DR.PREPARE 12V 20Ah LiFePO4 |
 | Solar panel | ECO-WORTHY 25W |
 | Charge controller | Renogy Wanderer 10A PWM (LiFePO4) |
-| Buck converters | DROK LM2596 adjustable ×2 (12V→5V for Pi, 12V→3.2V for LEDs) |
+| Buck converters | D-Planet 5A DC-DC adjustable ×2 (12V→5V for Pi, 12V→3.2V for LEDs) — 4-pack, 2 spares |
 | SSRs | SSR-41FDD ×2 (input 3–32VDC, output 6A 60VDC) |
 | UV LEDs | 5× CHANZON 3W 365nm (UV) |
 | Blue LEDs | 5× 1W 460–465nm (blue) |
@@ -63,7 +63,7 @@ Homestead Automation — Raspberry Pi 3 A+
 Chicken run bug lights + garden irrigation controller
 
 GPIO (BCM):
-  17 → SSR #1 → DROK buck (12V→3.2V) → 5x UV + 5x Blue LEDs
+  17 → SSR #1 → D-Planet buck (12V→3.2V) → 5x UV + 5x Blue LEDs
   27 → SSR #2 → 12V solenoid valve → rain barrel → garden
 """
 
@@ -258,4 +258,4 @@ The T-Mobile TMO-G5AR gateway has an **Advanced Security** feature enabled by de
 
 | Item | Spec | Notes |
 |------|------|-------|
-| Battery | 24VDC, 1A rated | Ordered by mistake. Does NOT fit this 12V project. Ah capacity unknown — check label. Could be used for a future 24V project. |
+| Battery | Rapthor 24V 4Ah (4000mAh) Li-ion with charger | Ordered by mistake. Does NOT fit this 12V project — 96Wh capacity can't cover overnight LED schedule (100Wh needed), and charge controller is 12V LiFePO4 only. Save for a separate indoor/portable project. |
