@@ -16,20 +16,19 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| DR.PREPARE LiFePO4 | 12V 20Ah (240Wh) | installed | Homestead automation — main power |
-| Unknown brand | 24VDC, 5A output | spare | Ordered by mistake. Ah capacity unknown — check label. |
+| Unknown brand | 24VDC, 5A output | spare | Ah capacity unknown — check label. |
 
 ## Solar
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| ECO-WORTHY panel | 25W | installed | Homestead automation — charges 12V battery |
+| *(none purchased yet)* | | | |
 
 ## Charge Controllers
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| Renogy Wanderer | 10A PWM, LiFePO4 mode | installed | Homestead automation |
+| *(none purchased yet)* | | | |
 
 ## Buck Converters
 
