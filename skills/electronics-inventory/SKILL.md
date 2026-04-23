@@ -17,7 +17,7 @@ Central inventory of all electronic components Eric has in the house — install
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
 | DR.PREPARE LiFePO4 | 12V 20Ah (240Wh) | installed | Homestead automation — main power |
-| Unknown brand | 24VDC, 1A rated | spare | Ordered by mistake. Ah capacity unknown — check label. |
+| Unknown brand | 24VDC, 5A output | spare | Ordered by mistake. Ah capacity unknown — check label. |
 
 ## Solar
 
