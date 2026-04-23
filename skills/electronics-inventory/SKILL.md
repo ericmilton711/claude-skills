@@ -142,6 +142,12 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | Cherry MX hall effect switches | Multiple, analog hall effect sensor type | spare | |
 
+## Audio
+
+| Item | Spec | Status | Project / Notes |
+|------|------|--------|-----------------|
+| Piezo buzzer | | spare | Verify specs |
+
 ## Other / Uncategorized
 
 | Item | Spec | Status | Project / Notes |
@@ -150,4 +156,4 @@ Central inventory of all electronic components Eric has in the house — install
 
 ---
 
-*Last updated: 2026-04-20*
+*Last updated: 2026-04-23*
