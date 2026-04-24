@@ -34,11 +34,32 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 ```
 
 ### Workflow: Unblock a Site for a Specific Device
+
+**CRITICAL:** The `.*` regex deny blocks everything. Exact allow entries (`/api/domains/allow/exact`) DO NOT override regex deny rules. You MUST use **regex allow** rules instead. And the allow rules MUST be assigned to the device's group — group 0 (Default) alone won't work if the device is in a different group.
+
+**Recommended approach — direct DB (most reliable):**
+1. SSH into ThinkCentre: `ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136`
+2. Find the device's group: `docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "SELECT * FROM client WHERE ip='<IP>';"`
+3. Add regex allow domain: `docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist (domain, type, enabled, comment) VALUES ('(^|[.])example[.]com$', 2, 1, 'reason');"`
+   - type 2 = allow regex
+4. Get the new domain's ID: `docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "SELECT id FROM domainlist WHERE domain='(^|[.])example[.]com$';"`
+5. Assign to device's group: `docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO domainlist_by_group (domainlist_id, group_id) VALUES (<ID>, <GROUP_ID>);"`
+6. Reload: `docker exec pihole pihole reloaddns`
+
+**API approach (fragile — group assignment often fails):**
 1. Authenticate → get SID
 2. `GET /api/clients` → find the device's group number
-3. `POST /api/domains/allow/exact` → add domain to that group
-4. Check query log for blocked CDN/asset domains the site needs
-5. Whitelist those too, then have the user hard-refresh (Ctrl+Shift+R)
+3. `POST /api/domains/allow/regex` → add regex allow (but groups default to [0] only)
+4. API PUT/DELETE for group changes is unreliable — falls back to treating IDs as domain strings. Use direct DB for group assignment.
+5. Check query log for blocked CDN/asset domains the site needs
+6. Whitelist those too, then have the user hard-refresh (Ctrl+Shift+R)
+
+**Firefox also needs these regex allows to function:**
+- `(^|[.])firefox[.]com$`
+- `(^|[.])mozilla[.]com$`
+- `(^|[.])mozilla[.]net$`
+- `(^|[.])mozilla[.]org$`
+- `(^|[.])ipv4only[.]arpa$`
 
 ---
 
