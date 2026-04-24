@@ -29,15 +29,19 @@ Pi runs completely **offline** (no WiFi needed in the field). Cron fires the Pyt
 
 ---
 
-## GPIO Wiring (BCM numbering)
+## GPIO Wiring (BCM numbering) — Updated 2026-04-24
 
 | Pi Pin | BCM | Connected to |
 |--------|-----|-------------|
+| Pin 1  | 3.3V | DS3231 RTC VCC |
+| Pin 2/4 | 5V | Two cooling fans (always on) |
+| Pin 3  | GPIO 2 (SDA) | DS3231 RTC SDA |
+| Pin 5  | GPIO 3 (SCL) | DS3231 RTC SCL |
+| Pin 6/9 | GND | Fan ground + SSR input (−) |
 | Pin 11 | GPIO 17 | SSR #1 input (+) → LED circuit |
 | Pin 13 | GPIO 27 | SSR #2 input (+) → solenoid |
-| Pin 6/9/14 | GND | SSR input (−) for both |
-| Pin 2/4 | 5V | Two cooling fans (always on) |
-| Pin 6/9 | GND | Fan ground |
+| Pin 14 | GND | LED circuit ground |
+| Pin 20 | GND | DS3231 RTC ground |
 
 SSR input (−) → Pi GND  
 SSR output → load circuit (LEDs via buck, or solenoid directly)
