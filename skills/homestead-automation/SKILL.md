@@ -324,6 +324,9 @@ This means the app works identically whether the Pi is on WiFi or deployed offli
 | `pi-led-test.sh` | Blink test |
 | `pi-water-on.sh` | Open solenoid |
 | `pi-water-off.sh` | Close solenoid |
+| `pi-shutdown.sh` | Safe shutdown (LEDs off, solenoid closed, then poweroff) |
+
+Shutdown has a Zenity confirmation dialog before executing.
 
 ---
 
@@ -331,6 +334,6 @@ This means the app works identically whether the Pi is on WiFi or deployed offli
 
 The Pi runs `bt-homestead.service` (systemd, enabled, auto-restart) which accepts commands over Bluetooth RFCOMM. See skill `homestead-bluetooth` for full details.
 
-**Commands:** `status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`, `help`
+**Commands:** `status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`, `shutdown`, `help`
 
 The `status` command includes current LED and irrigation state (parsed from homestead.log) at the top of its output.

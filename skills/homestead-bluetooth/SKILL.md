@@ -401,6 +401,7 @@ Pairing is NOT required for RFCOMM — the Pi's NoInputNoOutput agent auto-accep
 | `ledsoff` | Turn off LEDs on GPIO 17 |
 | `wateron` | Open solenoid valve (GPIO 27) — starts watering |
 | `wateroff` | Close solenoid valve (GPIO 27) — stops watering |
+| `shutdown` | Safe shutdown — turns off LEDs and solenoid, then powers off |
 | `help` | List commands |
 
 ## Bluetooth Details
