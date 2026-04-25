@@ -2,6 +2,8 @@
 
 Bluetooth RFCOMM serial service on the Homestead Pi (192.168.12.114) for WiFi-free status checks and LED control. Works from Eric's Fedora laptop and Samsung phone.
 
+> **Last verified working:** 2026-04-25 — `status` and `ledtest` both confirmed over Bluetooth from Fedora laptop. No SSH involved — pure Bluetooth RFCOMM.
+
 ## Architecture
 
 - **Pi service** (`bt-homestead.service`): systemd unit that fixes the BD address, enables discoverable mode, and runs a Python RFCOMM server on channel 1
