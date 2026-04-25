@@ -30,6 +30,7 @@ Requires=bluetooth.target
 
 [Service]
 Type=simple
+ExecStartPre=/usr/bin/hciconfig hci0 up
 ExecStartPre=/usr/bin/hcitool cmd 0x3F 0x001 0xE9 0x24 0xF6 0xEB 0x27 0xB8
 ExecStartPre=/usr/bin/hciconfig hci0 down
 ExecStartPre=/usr/bin/hciconfig hci0 up
@@ -43,6 +44,8 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 ```
+
+Note: The first `hciconfig hci0 up` is needed so `hcitool cmd` can reach the adapter. Then down/up cycle applies the new BD address.
 
 ## Pi Side — Server Script
 
@@ -88,13 +91,14 @@ def get_status():
 
 def led_test():
     try:
-        r = subprocess.run(['sudo', 'python3', '/home/eric/blink_test.py'],
-                          capture_output=True, text=True, timeout=30)
-        return f'LED TEST: {r.stdout.strip()}\n{r.stderr.strip()}'.strip()
+        r = subprocess.run(["sudo", "python3", "-c",
+            "import RPi.GPIO as GPIO,time;GPIO.setmode(GPIO.BCM);GPIO.setwarnings(False);GPIO.setup(17,GPIO.OUT);[(GPIO.output(17,True),time.sleep(0.125),GPIO.output(17,False),time.sleep(0.25)) for _ in range(27)];GPIO.cleanup()"],
+            capture_output=True, text=True, timeout=15)
+        return "LED TEST: 10s blink complete"
     except subprocess.TimeoutExpired:
-        return 'LED TEST: timed out after 30s'
+        return "LED TEST: timed out"
     except Exception as e:
-        return f'LED TEST ERROR: {e}'
+        return f"LED TEST ERROR: {e}"
 
 def leds_off():
     try:
