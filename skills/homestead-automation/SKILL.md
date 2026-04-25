@@ -104,10 +104,33 @@ def leds_off():
     GPIO.output(LED_PIN, GPIO.LOW)
     log("LEDs OFF")
 
+def leds_test():
+    log("LEDs TEST start -- 0.125s on / 0.25s off for 1 min")
+    end_time = time.time() + 60
+    while time.time() < end_time:
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        time.sleep(0.125)
+        GPIO.output(LED_PIN, GPIO.LOW)
+        time.sleep(0.25)
+    log("LEDs TEST done")
+    from datetime import datetime
+    hour = datetime.now().hour
+    if 18 <= hour < 23:
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        log("LEDs ON")
+
 def irrigate(minutes=20):
-    log(f"Irrigation ON — {minutes} min")
+    log(f"Irrigation ON -- {minutes} min")
     GPIO.output(SOLENOID_PIN, GPIO.HIGH)
     time.sleep(minutes * 60)
+    GPIO.output(SOLENOID_PIN, GPIO.LOW)
+    log("Irrigation OFF")
+
+def irrigate_on():
+    GPIO.output(SOLENOID_PIN, GPIO.HIGH)
+    log("Irrigation ON")
+
+def irrigate_off():
     GPIO.output(SOLENOID_PIN, GPIO.LOW)
     log("Irrigation OFF")
 
@@ -117,15 +140,21 @@ if __name__ == '__main__':
         leds_on()
     elif cmd == 'leds-off':
         leds_off()
+    elif cmd == 'leds-test':
+        leds_test()
     elif cmd == 'irrigate':
         mins = int(sys.argv[2]) if len(sys.argv) > 2 else 20
         irrigate(mins)
+    elif cmd == 'irrigate-on':
+        irrigate_on()
+    elif cmd == 'irrigate-off':
+        irrigate_off()
     elif cmd == 'status':
         import subprocess
         result = subprocess.run(['tail', '-20', LOG_FILE], capture_output=True, text=True)
         print(result.stdout or '(no log entries yet)')
     else:
-        print("Usage: homestead.py [leds-on | leds-off | irrigate [minutes] | status]")
+        print("Usage: homestead.py [leds-on | leds-off | leds-test | irrigate [minutes] | irrigate-on | irrigate-off | status]")
         sys.exit(1)
 ```
 
@@ -263,3 +292,45 @@ The T-Mobile TMO-G5AR gateway has an **Advanced Security** feature enabled by de
 | Item | Spec | Notes |
 |------|------|-------|
 | Battery | Rapthor 24V 4Ah (4000mAh) Li-ion with charger | Ordered by mistake. Does NOT fit this 12V project — 96Wh capacity can't cover overnight LED schedule (100Wh needed), and charge controller is 12V LiFePO4 only. Save for a separate indoor/portable project. |
+
+---
+
+## Pi-Tools Desktop App (added 2026-04-25)
+
+Zenity-based GUI at `/home/ericmilton/Pi-Tools/` on Eric's laptop. One-click access to all Pi commands via a popup menu. Each tool opens in a ptyxis terminal.
+
+### Menu Options
+1. **Pi Status** — LEDs ON/OFF, Irrigation ON/OFF, uptime, temp, memory, disk
+2. **Pi Log** — full homestead.log
+3. **Pi LED Test** — 1-minute blink test (GPIO 17)
+4. **Water On** — opens solenoid (GPIO 27)
+5. **Water Off** — closes solenoid (GPIO 27)
+
+### Connectivity: SSH with Bluetooth Fallback
+All scripts use `pi-run.sh` — a shared helper that:
+1. Pings the Pi (192.168.12.114) with a 2-second timeout
+2. If reachable → runs the command via SSH
+3. If unreachable → runs the command via Bluetooth (`~/homestead-bt.py`)
+
+This means the app works identically whether the Pi is on WiFi or deployed offline in the barn.
+
+### Files
+| File | Purpose |
+|------|---------|
+| `pi-tools.sh` | Main Zenity menu |
+| `pi-run.sh` | Shared SSH/Bluetooth fallback helper |
+| `pi-status.sh` | Status with LED/irrigation state at top |
+| `pi-log.sh` | Full log display |
+| `pi-led-test.sh` | Blink test |
+| `pi-water-on.sh` | Open solenoid |
+| `pi-water-off.sh` | Close solenoid |
+
+---
+
+## Bluetooth Command Server (added 2026-04-25)
+
+The Pi runs `bt-homestead.service` (systemd, enabled, auto-restart) which accepts commands over Bluetooth RFCOMM. See skill `homestead-bluetooth` for full details.
+
+**Commands:** `status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`, `help`
+
+The `status` command includes current LED and irrigation state (parsed from homestead.log) at the top of its output.

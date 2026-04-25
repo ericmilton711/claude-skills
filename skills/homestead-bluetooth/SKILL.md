@@ -2,7 +2,7 @@
 
 Bluetooth RFCOMM serial service on the Homestead Pi (192.168.12.114) for WiFi-free status checks and LED control. Works from Eric's Fedora laptop and Samsung phone.
 
-> **Last verified working:** 2026-04-25 — `status` and `ledtest` both confirmed over Bluetooth from Fedora laptop. No SSH involved — pure Bluetooth RFCOMM.
+> **Last verified working:** 2026-04-25 — all commands (`status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`) confirmed working over Bluetooth from Fedora laptop. No SSH involved — pure Bluetooth RFCOMM.
 
 ## Architecture
 
@@ -61,9 +61,31 @@ import os
 
 CHANNEL = 1
 
+LOG_FILE = '/home/eric/homestead.log'
+
+def get_current_states():
+    led_state = 'OFF'
+    water_state = 'OFF'
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE) as f:
+            for line in f:
+                if 'LEDs ON' in line and 'TEST' not in line:
+                    led_state = 'ON'
+                elif 'LEDs OFF' in line:
+                    led_state = 'OFF'
+                elif 'Irrigation ON' in line:
+                    water_state = 'ON'
+                elif 'Irrigation OFF' in line:
+                    water_state = 'OFF'
+    return led_state, water_state
+
 def get_status():
     lines = []
     lines.append('=== HOMESTEAD PI STATUS ===')
+    led_state, water_state = get_current_states()
+    lines.append(f'LEDs: {led_state}')
+    lines.append(f'Irrigation: {water_state}')
+    lines.append('')
     r = subprocess.run(['uptime', '-p'], capture_output=True, text=True)
     lines.append(f'Uptime: {r.stdout.strip()}')
     try:
@@ -80,9 +102,8 @@ def get_status():
     for l in r.stdout.strip().split('\n'):
         if '/' in l and 'Filesystem' not in l:
             lines.append(f'Disk: {l.strip()}')
-    logpath = '/home/eric/homestead.log'
-    if os.path.exists(logpath):
-        with open(logpath) as f:
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE) as f:
             log = f.read().strip()
         lines.append('--- LOG ---')
         lines.append(log)
@@ -90,6 +111,12 @@ def get_status():
         lines.append('No homestead.log found')
     lines.append('===========================')
     return '\n'.join(lines)
+
+def get_log():
+    if os.path.exists(LOG_FILE):
+        with open(LOG_FILE) as f:
+            return f.read().strip()
+    return 'No homestead.log found'
 
 def led_test():
     try:
@@ -111,16 +138,38 @@ def leds_off():
     except Exception as e:
         return f'LEDs OFF ERROR: {e}'
 
+def water_on():
+    try:
+        subprocess.run(['sudo', 'python3', '/home/eric/homestead.py', 'irrigate-on'],
+            capture_output=True, text=True, timeout=10)
+        return 'WATER ON: solenoid opened'
+    except Exception as e:
+        return f'WATER ON ERROR: {e}'
+
+def water_off():
+    try:
+        subprocess.run(['sudo', 'python3', '/home/eric/homestead.py', 'irrigate-off'],
+            capture_output=True, text=True, timeout=10)
+        return 'WATER OFF: solenoid closed'
+    except Exception as e:
+        return f'WATER OFF ERROR: {e}'
+
 def handle_command(cmd):
     cmd = cmd.strip().lower()
     if cmd == 'status':
         return get_status()
+    elif cmd == 'log':
+        return get_log()
     elif cmd == 'ledtest':
         return led_test()
     elif cmd == 'ledsoff':
         return leds_off()
+    elif cmd == 'wateron':
+        return water_on()
+    elif cmd == 'wateroff':
+        return water_off()
     elif cmd == 'help':
-        return 'Commands: status, ledtest, ledsoff, help'
+        return 'Commands: status, log, ledtest, ledsoff, wateron, wateroff, help'
     else:
         return f'Unknown command: {cmd}\nType help for available commands'
 
@@ -340,15 +389,18 @@ Pairing is NOT required for RFCOMM — the Pi's NoInputNoOutput agent auto-accep
 1. Install "Serial Bluetooth Terminal" by Kai Morich from Play Store
 2. Pair with "homestead" in Android Bluetooth settings
 3. Open app, connect to "homestead"
-4. Type commands: `status`, `ledtest`, `ledsoff`, `help`
+4. Type commands: `status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`, `help`
 
 ## Available Commands
 
 | Command | Description |
 |---------|-------------|
-| `status` | Full Pi status: uptime, CPU temp, memory, disk, homestead.log |
+| `status` | Full Pi status: LED/irrigation state, uptime, CPU temp, memory, disk, homestead.log |
+| `log` | Just the homestead.log contents |
 | `ledtest` | Run the LED blink test on GPIO 17 |
 | `ledsoff` | Turn off LEDs on GPIO 17 |
+| `wateron` | Open solenoid valve (GPIO 27) — starts watering |
+| `wateroff` | Close solenoid valve (GPIO 27) — stops watering |
 | `help` | List commands |
 
 ## Bluetooth Details
