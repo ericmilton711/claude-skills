@@ -133,6 +133,8 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
+| DHT11 | Temp + humidity, blue square, 3 pins | installed | Weather station — outdoor sensor |
+| HR202 humidity module | Analog humidity, 4 pins (VCC/GND/DO/AO), orange 2-prong sensor | installed | Weather station — outdoor humidity |
 | Light sensors | Multiple | spare | |
 | Touch capacitor modules | Multiple | spare | |
 
@@ -152,8 +154,9 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
+| Breadboard | Standard | spare | |
 | | | | |
 
 ---
 
-*Last updated: 2026-04-23*
+*Last updated: 2026-04-26*
