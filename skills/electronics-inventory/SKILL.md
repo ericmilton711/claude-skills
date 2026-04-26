@@ -58,8 +58,10 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | Raspberry Pi 3 A+ | MILTONRP3, 64GB microSD | installed | Homestead automation |
 | ESP32 #1 | | installed | Closet LED lighting project |
-| ESP32-S3 | | spare | |
+| ESP32-S3 | | installed | Weather station |
+| ESP32-CAM + ESP32-CAM-MB | ESP-32S chip, camera connector, microSD slot, WiFi+BT | spare | Includes USB programmer base board |
 | Arduino Nano ×2 | | spare | |
+| Arduino Uno | | spare | |
 
 ## Solenoids / Valves
 
