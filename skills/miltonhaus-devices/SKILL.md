@@ -63,7 +63,7 @@ When Eric says "the server," "ssh into the server," etc., he means the ThinkCent
 |--------|----|------|
 | Homestead Pi 3 A+ | 192.168.12.114 | Automation controller — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
 | Mac Mini (Fedora) | 192.168.12.163 | Kids device — 3D printing, schoolwork |
-| Patrick's Chromebook | 192.168.12.220 | Docker host — `host.docker.internal` |
+| Eric's Windows laptop | 192.168.12.220 | Eric's laptop — Windows, SSH: `ericm@192.168.12.220` / pw: 645866 (use pexpect). Pi-Tools app at `C:\Pi-Tools\` |
 | Raspberry Pi | 192.168.12.162 | Secondary Pi-hole |
 
 ---
