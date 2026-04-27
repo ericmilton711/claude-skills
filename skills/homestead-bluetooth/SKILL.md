@@ -1,13 +1,14 @@
 # Homestead Bluetooth — Pi Remote Control via BT Serial
 
-Bluetooth RFCOMM serial service on the Homestead Pi (192.168.12.114) for WiFi-free status checks and LED control. Works from Eric's Fedora laptop and Samsung phone.
+Bluetooth RFCOMM serial service on the Homestead Pi (192.168.12.114) for WiFi-free status checks and LED control. Works from Eric's Fedora laptop, Windows laptop, and Samsung phone.
 
-> **Last verified working:** 2026-04-25 — all commands (`status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`) confirmed working over Bluetooth from Fedora laptop. No SSH involved — pure Bluetooth RFCOMM.
+> **Last verified working:** 2026-04-27 — `status` confirmed working over Bluetooth from Windows laptop (Pi Tools GUI app). All commands also verified from Fedora laptop (2026-04-25). No SSH involved — pure Bluetooth RFCOMM.
 
 ## Architecture
 
 - **Pi service** (`bt-homestead.service`): systemd unit that fixes the BD address, enables discoverable mode, and runs a Python RFCOMM server on channel 1
-- **Laptop client** (`~/homestead-bt.py`): Python script using raw AF_BLUETOOTH sockets — no pybluez needed on Fedora
+- **Fedora laptop client** (`~/homestead-bt.py`): Python script using raw AF_BLUETOOTH sockets — no pybluez needed on Fedora
+- **Windows laptop client**: Pi Tools GUI app (`C:\Pi-Tools\pi-tools-gui.py`) — Tkinter app that tries SSH first, falls back to Bluetooth RFCOMM. Shortcut on Desktop as "Pi Tools". Uses Python 3.12's built-in `socket.AF_BLUETOOTH` (MediaTek BT adapter)
 - **Phone client**: "Serial Bluetooth Terminal" app by Kai Morich on Android — pair and connect to channel 1
 
 ## Known Issue: BCM43455 Default BD Address
@@ -384,6 +385,14 @@ Name = homestead
 4. Connect: `sudo python3 ~/homestead-bt.py status`
 
 Pairing is NOT required for RFCOMM — the Pi's NoInputNoOutput agent auto-accepts. Just scan, trust, and connect.
+
+### From Windows Laptop (Pi Tools GUI)
+1. Pair with "homestead" in Windows Settings > Bluetooth & devices > Add device > Bluetooth
+2. Pi's NoInputNoOutput agent auto-accepts — no PIN needed
+3. Launch Pi Tools shortcut on Desktop (runs `C:\Pi-Tools\pi-tools-gui.py` with Python 3.12)
+4. Click any button — app tries SSH first, auto-falls back to Bluetooth RFCOMM
+
+**Requirements:** MediaTek Bluetooth Adapter (built-in), Python 3.12 (`socket.AF_BLUETOOTH` + `paramiko`), Pi paired in Windows
 
 ### From Samsung Phone
 1. Install "Serial Bluetooth Terminal" by Kai Morich from Play Store
