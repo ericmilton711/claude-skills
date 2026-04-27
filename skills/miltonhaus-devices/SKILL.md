@@ -35,7 +35,7 @@ type: reference
 | 192.168.12.219 | — | Eric.lan | Windows 11 PC | Eric's main PC |
 | 192.168.12.221 | b0-47-e9-e3-78-d0 | host.docker.internal | Chromebook (ChromeOS) | Patrick's Chromebook — running Docker (Linux on ChromeOS); DHCP assigned .221, Pi-hole registered at .221 |
 | 192.168.12.226 | 06-f0-9a-33-c5-6c (random) | — | Asus laptop (Fedora) | Gianna's laptop — SSH open |
-| 192.168.12.237 | b8-c7-5d-12-c0-4d | — | MacBook Pro (macOS) | Rosemary's MacBook Pro |
+| 192.168.12.109 | b8-c7-5d-12-c0-4d | Rosemarys-MacBook-Pro.local | MacBook Pro (macOS) | Rosemary's MacBook Pro — Python 3.9, SSH: `rosemary@Rosemarys-MacBook-Pro.local` / pw: wisdom22!! (use pexpect). Pi-Tools at `/Users/rosemary/Pi-Tools/` |
 | ~~.238~~ | e0-63-da-c7-43-84 | ubnt.lan | Ubiquiti UniFi AP | **REMOVED from house** — never adopted, no longer on network (as of 2026-04) |
 | 192.168.12.239 | c8-15-4e-2c-03-b7 | kids2.lan | Kids device #2 | Unconfirmed device type |
 | 192.168.12.249 | c8-15-4e-1c-a6-ba | kids1.lan | Kids device #1 | Unconfirmed device type |
