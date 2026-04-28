@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
+#include <BLEDevice.h>
+#include <Update.h>
 #include <DHT.h>
 #include <ArduinoJson.h>
 #include <time.h>
@@ -36,6 +38,17 @@ String forecast2Day = "";
 String forecast2High = "--";
 String forecast2Low = "--";
 String forecast2Desc = "";
+
+SemaphoreHandle_t piMutex;
+String piLedState = "--";
+String piIrrigationState = "--";
+String piCpuTemp = "--";
+String piUptime = "--";
+bool piConnected = false;
+
+static BLEUUID piServiceUUID("12345678-1234-5678-1234-56789abcdef0");
+static BLEUUID piCmdUUID("12345678-1234-5678-1234-56789abcdef1");
+static BLEUUID piRespUUID("12345678-1234-5678-1234-56789abcdef2");
 
 String weatherCodeToDesc(int code) {
   if (code == 0) return "Clear";
@@ -145,6 +158,92 @@ void readSensors() {
   }
 }
 
+String extractField(const String& text, const String& key) {
+  int idx = text.indexOf(key);
+  if (idx < 0) return "--";
+  int start = idx + key.length();
+  int end = text.indexOf('\n', start);
+  if (end < 0) end = text.length();
+  String val = text.substring(start, end);
+  val.trim();
+  return val;
+}
+
+void bleTask(void* param) {
+  BLEClient* client = BLEDevice::createClient();
+  delay(2000);
+
+  while (true) {
+    BLEScan* scan = BLEDevice::getScan();
+    scan->setActiveScan(true);
+    scan->setInterval(100);
+    scan->setWindow(99);
+    BLEScanResults* results = scan->start(5, false);
+
+    BLEAdvertisedDevice* target = nullptr;
+    if (results) {
+      for (int i = 0; i < results->getCount(); i++) {
+        BLEAdvertisedDevice dev = results->getDevice(i);
+        if (dev.getName() == "homestead") {
+          target = new BLEAdvertisedDevice(dev);
+          break;
+        }
+      }
+    }
+    scan->clearResults();
+
+    if (target) {
+      bool ok = false;
+      try {
+        ok = client->connect(target);
+      } catch (...) {
+        ok = false;
+      }
+
+      if (ok) {
+        BLERemoteService* svc = client->getService(piServiceUUID);
+        if (svc) {
+          BLERemoteCharacteristic* cmdChar = svc->getCharacteristic(piCmdUUID);
+          BLERemoteCharacteristic* respChar = svc->getCharacteristic(piRespUUID);
+          if (cmdChar && respChar) {
+            cmdChar->writeValue(String("status"), true);
+            delay(500);
+            String resp = respChar->readValue();
+            if (resp.length() > 0) {
+              String response = resp;
+              if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
+                piLedState = extractField(response, "LEDs: ");
+                piIrrigationState = extractField(response, "Irrigation: ");
+                piUptime = extractField(response, "Uptime: ");
+                piCpuTemp = extractField(response, "CPU Temp: ");
+                piConnected = true;
+                xSemaphoreGive(piMutex);
+              }
+              Serial.println("Pi status updated via BLE");
+            }
+          }
+        }
+        client->disconnect();
+      } else {
+        if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
+          piConnected = false;
+          xSemaphoreGive(piMutex);
+        }
+        Serial.println("BLE connect failed");
+      }
+      delete target;
+    } else {
+      if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
+        piConnected = false;
+        xSemaphoreGive(piMutex);
+      }
+      Serial.println("Pi not found via BLE scan");
+    }
+
+    delay(30000);
+  }
+}
+
 const char* page = R"rawliteral(
 <!DOCTYPE html>
 <html>
@@ -216,6 +315,8 @@ const char* page = R"rawliteral(
       background: #e94560;
     }
     .pill.ok { background: #4ecca3; }
+    .pi-on { color: #4ecca3; }
+    .pi-off { color: #888; }
     .footer { text-align: center; margin-top: 28px; color: #555; font-size: 0.8em; }
   </style>
 </head>
@@ -295,12 +396,64 @@ const char* page = R"rawliteral(
       </div>
     </div>
 
-    <div class="footer">Weather updates every 10 min</div>
+    <div class="section">Homestead Pi</div>
+    <div class="status-pill"><div class="pill" id="piStatus">Scanning...</div></div>
+    <div class="row">
+      <div class="card">
+        <div class="label">LEDs</div>
+        <div class="value pi-off" id="piLed" style="font-size:1.4em;">--</div>
+      </div>
+      <div class="card">
+        <div class="label">Irrigation</div>
+        <div class="value pi-off" id="piWater" style="font-size:1.4em;">--</div>
+      </div>
+      <div class="card">
+        <div class="label">CPU</div>
+        <div class="value temp" id="piTemp" style="font-size:1.4em;">--</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card" style="flex:1;">
+        <div class="label">Uptime</div>
+        <div class="value" id="piUp" style="font-size:1em; color:#a8d8ea;">--</div>
+      </div>
+    </div>
+
+    <div class="footer">Weather every 10 min &bull; Pi every 30 sec via BLE &bull; <a href="/update" style="color:#e94560;">OTA Update</a></div>
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/New_York'});},1000)}());
-    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;document.getElementById('f1Day').textContent=d.f1Day;document.getElementById('f1Desc').innerHTML=d.f1Desc;document.getElementById('f1Hi').textContent=d.f1Hi;document.getElementById('f1Lo').textContent=d.f1Lo;document.getElementById('f2Day').textContent=d.f2Day;document.getElementById('f2Desc').innerHTML=d.f2Desc;document.getElementById('f2Hi').textContent=d.f2Hi;document.getElementById('f2Lo').textContent=d.f2Lo}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;document.getElementById('f1Day').textContent=d.f1Day;document.getElementById('f1Desc').innerHTML=d.f1Desc;document.getElementById('f1Hi').textContent=d.f1Hi;document.getElementById('f1Lo').textContent=d.f1Lo;document.getElementById('f2Day').textContent=d.f2Day;document.getElementById('f2Desc').innerHTML=d.f2Desc;document.getElementById('f2Hi').textContent=d.f2Hi;document.getElementById('f2Lo').textContent=d.f2Lo;var ps=document.getElementById('piStatus');if(d.piConn){ps.textContent='BLE Connected';ps.className='pill ok';document.getElementById('piLed').textContent=d.piLed;document.getElementById('piLed').className='value '+(d.piLed==='ON'?'pi-on':'pi-off');document.getElementById('piWater').textContent=d.piWater;document.getElementById('piWater').className='value '+(d.piWater==='ON'?'pi-on':'pi-off');document.getElementById('piTemp').textContent=d.piTemp;document.getElementById('piUp').textContent=d.piUp}else{ps.textContent='Not in Range';ps.className='pill';document.getElementById('piLed').textContent='--';document.getElementById('piLed').className='value pi-off';document.getElementById('piWater').textContent='--';document.getElementById('piWater').className='value pi-off';document.getElementById('piTemp').textContent='--';document.getElementById('piUp').textContent='--'}}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
   </script>
+</body>
+</html>
+)rawliteral";
+
+const char* otaPage = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MILTONHAUS OTA Update</title>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Comfortaa', sans-serif; background: #1a1a2e; color: #eee; padding: 40px; text-align: center; }
+    h2 { color: #e94560; margin-bottom: 20px; }
+    input[type=file] { margin: 20px; }
+    input[type=submit] { padding: 12px 24px; background: #e94560; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 1em; }
+    input[type=submit]:hover { background: #c73650; }
+    a { color: #4ecca3; }
+  </style>
+</head>
+<body>
+  <h2>MILTONHAUS OTA Update</h2>
+  <p>Select a compiled .bin file to upload new firmware.</p>
+  <form method="POST" action="/update" enctype="multipart/form-data">
+    <input type="file" name="update" accept=".bin"><br>
+    <input type="submit" value="Upload Firmware">
+  </form>
+  <p style="margin-top:30px;"><a href="/">Back to Dashboard</a></p>
 </body>
 </html>
 )rawliteral";
@@ -310,6 +463,20 @@ void handleRoot() {
 }
 
 void handleData() {
+  String pLed, pWater, pTemp, pUp;
+  bool pConn;
+  if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(100))) {
+    pLed = piLedState;
+    pWater = piIrrigationState;
+    pTemp = piCpuTemp;
+    pUp = piUptime;
+    pConn = piConnected;
+    xSemaphoreGive(piMutex);
+  } else {
+    pLed = "--"; pWater = "--"; pTemp = "--"; pUp = "--";
+    pConn = false;
+  }
+
   String json = "{\"tempC\":" + String(tempC, 1) +
                 ",\"tempF\":" + String(tempF, 1) +
                 ",\"dhtH\":" + String(dhtHumidity, 1) +
@@ -329,7 +496,12 @@ void handleData() {
                 ",\"f2Day\":\"" + forecast2Day + "\"" +
                 ",\"f2Desc\":\"" + forecast2Desc + "\"" +
                 ",\"f2Hi\":\"" + forecast2High + "\"" +
-                ",\"f2Lo\":\"" + forecast2Low + "\"}";
+                ",\"f2Lo\":\"" + forecast2Low + "\"" +
+                ",\"piConn\":" + (pConn ? "true" : "false") +
+                ",\"piLed\":\"" + pLed + "\"" +
+                ",\"piWater\":\"" + pWater + "\"" +
+                ",\"piTemp\":\"" + pTemp + "\"" +
+                ",\"piUp\":\"" + pUp + "\"}";
   server.send(200, "application/json", json);
 }
 
@@ -363,8 +535,45 @@ void setup() {
 
   server.on("/", handleRoot);
   server.on("/data", handleData);
+
+  server.on("/update", HTTP_GET, []() {
+    server.send(200, "text/html", otaPage);
+  });
+  server.on("/update", HTTP_POST, []() {
+    server.sendHeader("Connection", "close");
+    server.send(200, "text/plain", Update.hasError() ? "Update FAILED" : "Update OK - Rebooting...");
+    delay(1000);
+    ESP.restart();
+  }, []() {
+    HTTPUpload& upload = server.upload();
+    if (upload.status == UPLOAD_FILE_START) {
+      Serial.printf("OTA update: %s\n", upload.filename.c_str());
+      if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_WRITE) {
+      if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
+        Update.printError(Serial);
+      }
+    } else if (upload.status == UPLOAD_FILE_END) {
+      if (Update.end(true)) {
+        Serial.printf("OTA success: %u bytes\n", upload.totalSize);
+      } else {
+        Update.printError(Serial);
+      }
+    }
+  });
+
   server.begin();
   Serial.println("Web server started");
+
+  piMutex = xSemaphoreCreateMutex();
+
+  BLEDevice::init("miltonhaus-weather");
+  Serial.println("BLE initialized");
+
+  xTaskCreatePinnedToCore(bleTask, "bleTask", 8192, NULL, 1, NULL, 0);
+  Serial.println("BLE task started on core 0");
 }
 
 void loop() {
