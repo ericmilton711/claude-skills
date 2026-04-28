@@ -45,6 +45,8 @@ String piIrrigationState = "--";
 String piCpuTemp = "--";
 String piUptime = "--";
 bool piConnected = false;
+int bleMissCount = 0;
+volatile bool otaInProgress = false;
 
 static BLEUUID piServiceUUID("12345678-1234-5678-1234-56789abcdef0");
 static BLEUUID piCmdUUID("12345678-1234-5678-1234-56789abcdef1");
@@ -170,74 +172,53 @@ String extractField(const String& text, const String& key) {
 }
 
 void bleTask(void* param) {
+  delay(5000);
+  BLEAddress piAddress("b8:27:eb:f6:24:e9");
   BLEClient* client = BLEDevice::createClient();
-  delay(2000);
+  Serial.println("BLE: direct connect to b8:27:eb:f6:24:e9");
 
   while (true) {
-    BLEScan* scan = BLEDevice::getScan();
-    scan->setActiveScan(true);
-    scan->setInterval(100);
-    scan->setWindow(99);
-    BLEScanResults* results = scan->start(5, false);
-
-    BLEAdvertisedDevice* target = nullptr;
-    if (results) {
-      for (int i = 0; i < results->getCount(); i++) {
-        BLEAdvertisedDevice dev = results->getDevice(i);
-        if (dev.getName() == "homestead") {
-          target = new BLEAdvertisedDevice(dev);
-          break;
-        }
-      }
+    if (otaInProgress) {
+      delay(1000);
+      continue;
     }
-    scan->clearResults();
 
-    if (target) {
-      bool ok = false;
-      try {
-        ok = client->connect(target);
-      } catch (...) {
-        ok = false;
-      }
+    Serial.printf("BLE: connecting (heap: %d)\n", ESP.getFreeHeap());
+    bool ok = client->connect(piAddress);
 
-      if (ok) {
-        BLERemoteService* svc = client->getService(piServiceUUID);
-        if (svc) {
-          BLERemoteCharacteristic* cmdChar = svc->getCharacteristic(piCmdUUID);
-          BLERemoteCharacteristic* respChar = svc->getCharacteristic(piRespUUID);
-          if (cmdChar && respChar) {
-            cmdChar->writeValue(String("status"), true);
-            delay(500);
-            String resp = respChar->readValue();
-            if (resp.length() > 0) {
-              String response = resp;
-              if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
-                piLedState = extractField(response, "LEDs: ");
-                piIrrigationState = extractField(response, "Irrigation: ");
-                piUptime = extractField(response, "Uptime: ");
-                piCpuTemp = extractField(response, "CPU Temp: ");
-                piConnected = true;
-                xSemaphoreGive(piMutex);
-              }
-              Serial.println("Pi status updated via BLE");
+    if (ok) {
+      Serial.println("BLE: connected!");
+      BLERemoteService* svc = client->getService(piServiceUUID);
+      if (svc) {
+        BLERemoteCharacteristic* cmdChar = svc->getCharacteristic(piCmdUUID);
+        BLERemoteCharacteristic* respChar = svc->getCharacteristic(piRespUUID);
+        if (cmdChar && respChar) {
+          cmdChar->writeValue(String("status"), true);
+          delay(500);
+          String resp = respChar->readValue();
+          if (resp.length() > 0) {
+            String response = resp;
+            if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
+              piLedState = extractField(response, "LEDs: ");
+              piIrrigationState = extractField(response, "Irrigation: ");
+              piUptime = extractField(response, "Uptime: ");
+              piCpuTemp = extractField(response, "CPU Temp: ");
+              piConnected = true;
+              bleMissCount = 0;
+              xSemaphoreGive(piMutex);
             }
+            Serial.println("Pi status updated via BLE");
           }
         }
-        client->disconnect();
-      } else {
-        if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
-          piConnected = false;
-          xSemaphoreGive(piMutex);
-        }
-        Serial.println("BLE connect failed");
       }
-      delete target;
+      client->disconnect();
     } else {
-      if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
+      bleMissCount++;
+      if (bleMissCount >= 3 && xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
         piConnected = false;
         xSemaphoreGive(piMutex);
       }
-      Serial.println("Pi not found via BLE scan");
+      Serial.println("BLE connect failed");
     }
 
     delay(30000);
@@ -547,7 +528,9 @@ void setup() {
   }, []() {
     HTTPUpload& upload = server.upload();
     if (upload.status == UPLOAD_FILE_START) {
-      Serial.printf("OTA update: %s\n", upload.filename.c_str());
+      otaInProgress = true;
+      BLEDevice::deinit(false);
+      Serial.printf("OTA update: %s (BLE paused)\n", upload.filename.c_str());
       if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
         Update.printError(Serial);
       }
@@ -572,7 +555,7 @@ void setup() {
   BLEDevice::init("miltonhaus-weather");
   Serial.println("BLE initialized");
 
-  xTaskCreatePinnedToCore(bleTask, "bleTask", 8192, NULL, 1, NULL, 0);
+  xTaskCreatePinnedToCore(bleTask, "bleTask", 16384, NULL, 1, NULL, 0);
   Serial.println("BLE task started on core 0");
 }
 
