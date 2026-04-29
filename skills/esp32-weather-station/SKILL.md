@@ -98,10 +98,17 @@ arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /d
 
 ### Via OTA (wireless, after first flash)
 
+**Manual:**
 1. Compile: `arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather`
-2. Open browser: `http://192.168.12.240/update`
-3. Upload the .bin file from `~/esp32-weather/build/esp32.esp32.esp32/esp32-weather.ino.bin`
-4. ESP32 reboots automatically with new firmware
+2. Flash: `curl -F "firmware=@$HOME/esp32-weather/build/esp32.esp32.esp32/esp32-weather.ino.bin" http://192.168.12.240/update`
+3. Or browse to `http://192.168.12.240/update` and upload the .bin file
+
+**Automated (ThinkCentre .136):**
+- Cron job runs hourly, pulls skills repo from GitHub, checks if `firmware.bin` changed
+- If new firmware detected, curls it to the ESP32 OTA endpoint
+- Script: `/home/milton/esp32-ota-deploy.sh`
+- Service: cron job as user `milton`
+- **When saving ESP32 weather station to skills:** also copy the compiled `.bin` to `skills/esp32-weather-station/firmware.bin` before pushing
 
 ## JSON API
 
