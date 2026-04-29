@@ -1,9 +1,11 @@
 # Homestead Automation — Raspberry Pi 3 A+ Controller
 
 ## Project Overview
-Raspberry Pi 3 A+ controlling two things in the chicken run / garden:
+Raspberry Pi 3 A+ controlling two things in the chicken run:
 1. **Bug attraction lights** — UV (365nm) + Blue (460nm) LEDs to attract insects for chickens
-2. **Garden irrigation** — 12V solenoid valve off a rain barrel, 40×50ft garden (18 rows)
+2. **Chicken water** — 12V solenoid valve off a rain barrel → chicken waterer
+
+**Plan change (2026-04-29):** Drip line PSI too high for rain barrel gravity. Garden drip line now hooks to outdoor spout instead. Solenoid controls chicken water only.
 
 Pi runs completely **offline** (no WiFi needed in the field). Cron fires the Python script on schedule.
 
@@ -337,3 +339,22 @@ The Pi runs `bt-homestead.service` (systemd, enabled, auto-restart) which accept
 **Commands:** `status`, `log`, `ledtest`, `ledsoff`, `wateron`, `wateroff`, `shutdown`, `help`
 
 The `status` command includes current LED and irrigation state (parsed from homestead.log) at the top of its output.
+
+---
+
+## Remaining Tasks (updated 2026-04-29)
+
+- [ ] **Wire UV/Blue LEDs** — Replace green test LED with 5x UV (365nm) + 5x Blue (460nm), parallel at 3.2V through DROK buck. Mount in aluminum bar in ground for heatsinking.
+- [ ] **Wire solenoid** — GPIO 27 → SSR #2 → 12V solenoid → rain barrel → chicken waterer. Update schedule for chicken watering (shorter/more frequent than old 20-min garden cycle).
+- [ ] **Print enclosure** — Base (~12-14 hrs) + lid (~3 hrs) in PETG. Need: 4x neodymium magnets (8mm×3mm), 1x hinge pin (3mm rod or M3×180 screw).
+- [ ] **Assemble box** — Mount Pi, Wanderer, SSRs, bucks inside with zip ties. Glue magnets, insert hinge pin. Route cables out bottom slot.
+- [ ] **Deploy to barn** — Mount box on wall (4x M4 screws), connect solar panel, battery, LED circuit, solenoid. Field test all functions.
+- [ ] **Update solenoid code** — Rename irrigate() to chicken_water() in homestead.py. Update cron schedule, BLE GATT labels, ESP32 dashboard labels.
+- [ ] **Bluetooth dongle** (if needed) — Edimax BT-8500 ordered 2026-04-29. Plug into Pi USB, update ESP32 BLE MAC address, test range from barn to house.
+
+### Hardware Still Needed
+- 4x neodymium disc magnets (8mm × 3mm)
+- 1x 3mm steel rod or M3×180mm screw (hinge pin)
+- 4x M4 × 16mm screws + wall anchors
+- Aluminum bar stock (LED heatsink mount)
+- CA (super glue) for magnets

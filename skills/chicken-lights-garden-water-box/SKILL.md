@@ -1,7 +1,9 @@
 # Chicken Lights and Garden Water Box
 
 ## Project Overview
-3D-printed weather-resistant enclosure for the Raspberry Pi 3 A+ controller that runs bug-attraction LEDs in the chicken run and garden irrigation solenoid. Mounts inside the barn on a wall.
+3D-printed weather-resistant enclosure for the Raspberry Pi 3 A+ controller that runs bug-attraction LEDs in the chicken run and chicken water solenoid. Mounts inside the barn on a wall.
+
+**Plan change (2026-04-29):** Solenoid controls chicken water from rain barrel only. Garden drip line hooks to outdoor spout (gravity PSI too low for drip line).
 
 Related skill: `homestead-automation` — the electronics, wiring, code, and cron jobs that go inside this box.
 
