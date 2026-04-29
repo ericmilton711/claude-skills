@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
 **Status:** Flashed and working. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
-**Last Updated:** 2026-04-28
+**Last Updated:** 2026-04-29
 
 ## Hardware
 
@@ -130,6 +130,7 @@ arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /d
 ## Build Notes
 
 - Raw string literals in Arduino: avoid `function`, `!`, or other C++ keywords at column 1 inside `R"rawliteral(...)rawliteral"` — the compiler parses them as C++. Use `void(function(){...}())` or `var x = function(){}` instead.
+- HTML pages (`page`, `otaPage`) MUST use `const char page[] PROGMEM` (not `const char*`) to store in flash, not RAM. Serving uses chunked `sendContent()` in 1KB chunks — `server.send()` with the full string fails silently (0 bytes) due to heap fragmentation.
 - ESP32 program storage is 93% used (1.84MB of 1.96MB with min_spiffs partition).
 - BLE library (v3.3.8) uses Arduino `String` type, not `std::string` — use `String()` for writeValue/readValue.
 - BLE scan + connect cycle takes ~5-10 seconds. Runs on core 0 via FreeRTOS task to avoid blocking web server on core 1.

@@ -225,7 +225,7 @@ void bleTask(void* param) {
   }
 }
 
-const char* page = R"rawliteral(
+const char page[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
@@ -410,7 +410,7 @@ const char* page = R"rawliteral(
 </html>
 )rawliteral";
 
-const char* otaPage = R"rawliteral(
+const char otaPage[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
 <head>
@@ -440,7 +440,17 @@ const char* otaPage = R"rawliteral(
 )rawliteral";
 
 void handleRoot() {
-  server.send(200, "text/html", page);
+  size_t totalLen = strlen(page);
+  server.setContentLength(totalLen);
+  server.send(200, "text/html", "");
+  const size_t chunkSize = 1024;
+  size_t sent = 0;
+  while (sent < totalLen) {
+    size_t len = totalLen - sent;
+    if (len > chunkSize) len = chunkSize;
+    server.sendContent(page + sent, len);
+    sent += len;
+  }
 }
 
 void handleData() {
@@ -518,7 +528,17 @@ void setup() {
   server.on("/data", handleData);
 
   server.on("/update", HTTP_GET, []() {
-    server.send(200, "text/html", otaPage);
+    size_t totalLen = strlen(otaPage);
+    server.setContentLength(totalLen);
+    server.send(200, "text/html", "");
+    const size_t chunkSize = 1024;
+    size_t sent = 0;
+    while (sent < totalLen) {
+      size_t len = totalLen - sent;
+      if (len > chunkSize) len = chunkSize;
+      server.sendContent(otaPage + sent, len);
+      sent += len;
+    }
   });
   server.on("/update", HTTP_POST, []() {
     server.sendHeader("Connection", "close");
