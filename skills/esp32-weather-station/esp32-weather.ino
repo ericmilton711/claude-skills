@@ -591,4 +591,19 @@ void loop() {
     fetchWeather();
     lastWeatherFetch = millis();
   }
+
+  // Heap watchdog: reboot if free heap drops below 8KB
+  if (ESP.getFreeHeap() < 8192) {
+    Serial.println("WATCHDOG: heap critical, rebooting");
+    delay(100);
+    ESP.restart();
+  }
+
+  // Daily reboot at 3:00 AM to clear heap fragmentation
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo) && timeinfo.tm_hour == 3 && timeinfo.tm_min == 0 && timeinfo.tm_sec < 3) {
+    Serial.println("Scheduled daily reboot");
+    delay(100);
+    ESP.restart();
+  }
 }
