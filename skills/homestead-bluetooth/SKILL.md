@@ -195,11 +195,13 @@ The Pi-Tools GUI (`~/Pi-Tools/pi-tools-gui.py`) has BLE built in:
 
 ## Bluetooth Details
 
-- **Pi BD Address:** `B8:27:EB:F6:24:E9` (programmed via HCI vendor command)
-- **Chip:** BCM43438
+- **Adapter:** Edimax BT-8500 USB dongle (RTL8761BU, BT 5.0) — replaced built-in BCM43438 on 2026-04-30 for better range
+- **Pi BD Address:** `08:BE:AC:4D:39:71` (Edimax hardware MAC)
+- **Old BD Address:** `B8:27:EB:F6:24:E9` (built-in BCM43438, now disabled via `dtoverlay=disable-bt` in config.txt)
 - **Protocol:** BLE only (ControllerMode = le)
-- **Range:** ~10-30 meters
+- **Range:** ~50-100 meters (USB dongle with better antenna vs built-in chip)
 - **Advertising name:** `homestead`
+- **ESP32 connects by name**, not MAC — no ESP32 code change needed
 
 ## Troubleshooting
 
@@ -209,7 +211,7 @@ The Pi-Tools GUI (`~/Pi-Tools/pi-tools-gui.py`) has BLE built in:
 
 ### "BREDR.ProfileUnavailable" error
 - **Cause:** Client BlueZ has Pi cached as classic BR/EDR device
-- **Fix:** `bluetoothctl remove B8:27:EB:F6:24:E9`, wait 5 seconds, then retry
+- **Fix:** `bluetoothctl remove 08:BE:AC:4D:39:71`, wait 5 seconds, then retry
 
 ### BLE command works once but fails on reconnect
 - **Cause:** BlueZ caches the device after first connection

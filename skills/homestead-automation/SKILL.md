@@ -350,7 +350,7 @@ The `status` command includes current LED and irrigation state (parsed from home
 - [ ] **Assemble box** — Mount Pi, Wanderer, SSRs, bucks inside with zip ties. Glue magnets, insert hinge pin. Route cables out bottom slot.
 - [ ] **Deploy to barn** — Mount box on wall (4x M4 screws), connect solar panel, battery, LED circuit, solenoid. Field test all functions.
 - [ ] **Update solenoid code** — Rename irrigate() to chicken_water() in homestead.py. Update cron schedule, BLE GATT labels, ESP32 dashboard labels.
-- [ ] **Bluetooth dongle** (if needed) — Edimax BT-8500 ordered 2026-04-29. Plug into Pi USB, update ESP32 BLE MAC address, test range from barn to house.
+- [x] **Bluetooth dongle** — Edimax BT-8500 installed 2026-04-30. Built-in BT disabled (`dtoverlay=disable-bt`). BLE service using Edimax (hci0 after reboot). ESP32 connects by name, no code change needed. Range test from barn pending.
 
 ### Hardware Still Needed
 - 4x neodymium disc magnets (8mm × 3mm)
