@@ -76,7 +76,7 @@ The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service
 ## WiFi
 
 - **SSID:** DIEMILTONHAUS
-- **IP:** 192.168.12.240 (DHCP — should set static before gifting)
+- **IP:** 192.168.12.239 (DHCP — changed from .240 after full erase on 2026-04-30; should set static before gifting)
 
 ## Flashing
 
