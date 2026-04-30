@@ -185,6 +185,18 @@ Solves the problem where a reboot mid-schedule (e.g. power cycle at 8 PM) leaves
 - 6-11 PM: turns LEDs on
 - 6:00-6:19 AM: starts irrigation (minute < 20 guard added 2026-04-30 — `irrigate-on` has no timer, so it must only fire during the cron's actual 20-min window or the solenoid stays open indefinitely)
 
+### 2026-04-30 Incident: Hard Boot → Irrigation Running Indefinitely
+
+**What happened:** Eric had to hard-boot the Pi because it was unresponsive and the LED was stuck on. After reboot, irrigation turned on and stayed on indefinitely.
+
+**Two root causes found and fixed:**
+
+1. **`boot_check.py` irrigation guard too broad** — The condition `if 6 <= hour < 7` matched any minute in the 6 AM hour. The hard boot happened at 06:39, well after the cron's 20-minute irrigation window ended at 06:20. `irrigate-on` has NO timer (unlike `irrigate 20`), so it stayed open indefinitely. **Fix:** Added `and now.minute < 20` to only fire during 06:00-06:19.
+
+2. **`keypad_controller.py` GPIO read drove pin HIGH** — The `get_gpio_state()` function used `GPIO.setup(pin, GPIO.OUT)` to read pin state. On a fresh boot, setting a pin to OUTPUT drives it HIGH, which turned on the LEDs via SSR #1 (GPIO 17) every single reboot regardless of time. **Fix:** Changed to `GPIO.setup(pin, GPIO.IN)` — reading the pin as INPUT doesn't drive it.
+
+**Lesson:** `irrigate-on` is dangerous — it opens the solenoid with no auto-shutoff. Any code that calls it must have a tight time window guard.
+
 ## Boot Configuration (added 2026-04-13)
 
 - **Autologin enabled** on tty1 via systemd override:
@@ -350,7 +362,7 @@ The `status` command includes current LED and irrigation state (parsed from home
 - [ ] **Assemble box** — Mount Pi, Wanderer, SSRs, bucks inside with zip ties. Glue magnets, insert hinge pin. Route cables out bottom slot.
 - [ ] **Deploy to barn** — Mount box on wall (4x M4 screws), connect solar panel, battery, LED circuit, solenoid. Field test all functions.
 - [ ] **Update solenoid code** — Rename irrigate() to chicken_water() in homestead.py. Update cron schedule, BLE GATT labels, ESP32 dashboard labels.
-- [x] **Bluetooth dongle** — Edimax BT-8500 installed 2026-04-30. Built-in BT disabled (`dtoverlay=disable-bt`). BLE service using Edimax (hci0 after reboot). ESP32 connects by name, no code change needed. Range test from barn pending.
+- [ ] **Bluetooth dongle** — Edimax BT-8500 (RTL8761BU) installed 2026-04-30 but **BLE advertising does not work** under BlueZ LE mode. BlueZ says "Advertisement registered" but adapter doesn't actually broadcast — ESP32 scans find nothing, direct MAC connect fails too. **Reverted to built-in BCM43438 (hci0)**. Edimax plugged in as hci1 but idle. `dtoverlay=disable-bt` was removed from config.txt. Needs separate investigation.
 
 ### Hardware Still Needed
 - 4x neodymium disc magnets (8mm × 3mm)

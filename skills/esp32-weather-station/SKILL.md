@@ -148,14 +148,41 @@ arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /d
 - Blink test sketch at `~/esp32-blink/esp32-blink.ino` (GPIO 2 = onboard blue LED).
 - User must be in `dialout` group for serial access (`/dev/ttyUSB0`).
 
+## 2026-04-30 Incident: erase_flash Disaster & Recovery
+
+**What happened:** While troubleshooting BLE connectivity (trying to switch to Edimax dongle), `esptool erase_flash` was run on the ESP32. This wiped the NVS partition, caused a persistent boot loop with garbled serial output, and lost the DHCP lease.
+
+**Recovery steps:**
+1. BOOT/EN button sequence: hold BOOT, press+release EN/RST, release BOOT after ~1 second
+2. Upload firmware within seconds of the sequence
+3. `arduino-cli compile + upload` with `PartitionScheme=min_spiffs`
+
+**Consequences:**
+- Boot loop with garbled serial — required physical BOOT/EN button recovery
+- DHCP assigned .239 instead of .240 — broke bookmarks and ESP32 references
+- Multiple reflash attempts before BOOT/EN sequence was tried, making it worse
+- **Fix:** Hardcoded static IP 192.168.12.240 via `WiFi.config()` so this can never happen again
+
+**NEVER run `esptool erase_flash` or `erase-flash`.** Just compile and re-upload. If the ESP32 is stuck:
+1. Unplug USB, wait, plug back in
+2. If still stuck, use BOOT/EN button sequence, then upload immediately
+
+### BLE MAC Attempt (also 2026-04-30)
+
+Tried switching ESP32 to connect to Edimax dongle MAC (`08:BE:AC:4D:39:71`) — failed because Edimax BLE advertising doesn't work under BlueZ (see homestead-bluetooth skill). Reverted to built-in BCM MAC (`b8:27:eb:f6:24:e9`). ESP32 connects by MAC address in firmware line 176.
+
+### BLE Range Test (2026-04-30)
+
+Pi and ESP32 moved farther apart to test BLE range over built-in BCM adapter. **Connection successful** — BLE polls every 30 seconds and maintained connection at increased distance.
+
 ## TODO
 
 - [ ] Wire DHT11 sensor
-- [ ] Set static IP (DHCP reservation or hardcode in sketch)
+- [x] Set static IP — hardcoded 192.168.12.240 via `WiFi.config()` (2026-04-30)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-04-28*
+*Created: 2026-04-26 | Updated: 2026-04-30*

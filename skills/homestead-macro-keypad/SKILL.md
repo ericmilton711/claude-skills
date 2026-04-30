@@ -60,7 +60,7 @@ The 6 keys send standard keyboard scancodes through interface 0 (event0):
 - Uses numeric keypad mapping (KEY_1, KEY_KP1, etc.) — different from keypad.py
 - Currently attaches to wrong device (vc4-hdmi instead of keypad) — has a bug in `find_keypad()` that picks the first device with EV_KEY capability regardless of vendor ID
 - Runs alongside keypad.py
-- **Bug fixed 2026-04-30:** `get_gpio_state()` was using `GPIO.setup(pin, GPIO.OUT)` to read pin state — setting a pin to OUTPUT on a fresh boot drives it HIGH, which turned on the LEDs (GPIO 17 → SSR #1) every reboot. Fixed to `GPIO.setup(pin, GPIO.IN)`.
+- **Bug fixed 2026-04-30:** `get_gpio_state()` was using `GPIO.setup(pin, GPIO.OUT)` to read pin state — setting a pin to OUTPUT on a fresh boot drives it HIGH, which turned on the LEDs (GPIO 17 → SSR #1) every single reboot regardless of time of day. This was one of two root causes discovered when Eric had to hard-boot the Pi and the LED was stuck on (the other was `boot_check.py` firing irrigation outside its window — see homestead-automation skill). Fixed to `GPIO.setup(pin, GPIO.IN)`. The function spawns a subprocess: `sudo python3 -c "import RPi.GPIO as GPIO; GPIO.setmode(GPIO.BCM); GPIO.setwarnings(False); GPIO.setup(%d,GPIO.IN); print(GPIO.input(%d))"`.
 
 ### `/home/eric/homestead.py` — GPIO control script
 - GPIO 17 = LED circuit (SSR #1)

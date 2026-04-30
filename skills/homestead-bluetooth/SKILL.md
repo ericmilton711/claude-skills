@@ -195,13 +195,22 @@ The Pi-Tools GUI (`~/Pi-Tools/pi-tools-gui.py`) has BLE built in:
 
 ## Bluetooth Details
 
-- **Adapter:** Edimax BT-8500 USB dongle (RTL8761BU, BT 5.0) — replaced built-in BCM43438 on 2026-04-30 for better range
-- **Pi BD Address:** `08:BE:AC:4D:39:71` (Edimax hardware MAC)
-- **Old BD Address:** `B8:27:EB:F6:24:E9` (built-in BCM43438, now disabled via `dtoverlay=disable-bt` in config.txt)
+- **Active Adapter:** Built-in BCM43438 (UART, hci0)
+- **Pi BD Address:** `B8:27:EB:F6:24:E9` (built-in BCM)
 - **Protocol:** BLE only (ControllerMode = le)
-- **Range:** ~50-100 meters (USB dongle with better antenna vs built-in chip)
 - **Advertising name:** `homestead`
-- **ESP32 connects by name**, not MAC — no ESP32 code change needed
+- **ESP32 connects by MAC** (`b8:27:eb:f6:24:e9`) via BLE direct connect every 30 seconds
+
+### Edimax BT-8500 (RTL8761BU) — Plugged in but NOT in use
+
+The Edimax BT-8500 USB dongle was purchased for better BLE range and installed on 2026-04-30. **BLE advertising does not work** under BlueZ LE mode with this chipset:
+
+- BlueZ reports "Advertisement registered" but `btmgmt` shows advertising is NOT in the current settings
+- ESP32 BLE scans find nothing; direct MAC connect (`08:BE:AC:4D:39:71`) also fails
+- The adapter shows up as hci1 and can be seen by `hciconfig`, but it does not actually broadcast
+- Reverting to built-in BCM43438 immediately fixed everything
+- `dtoverlay=disable-bt` was added then REMOVED from `/boot/firmware/config.txt` — built-in BT must stay enabled
+- **Do NOT switch BLE to Edimax** until the RTL8761BU advertising issue is resolved
 
 ## Troubleshooting
 
