@@ -96,6 +96,10 @@ arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /d
 
 **IMPORTANT:** Must use `PartitionScheme=min_spiffs` — the sketch is 93% of the 1.9MB min_spiffs partition and does NOT fit in the default 1.3MB partition.
 
+**NEVER use `esptool erase-flash`** — it wipes NVS, causes boot loops, and loses network state. Just compile and re-upload. If stuck, unplug USB or use BOOT/EN sequence above.
+
+**Static IP:** 192.168.12.240 is hardcoded via `WiFi.config()` in `setup()`. Do not remove this or switch to DHCP.
+
 ### Via OTA (wireless, after first flash)
 
 **Manual:**
