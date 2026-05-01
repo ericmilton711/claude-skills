@@ -22,6 +22,7 @@ bool sensorConnected = false;
 unsigned long lastSensorRead = 0;
 unsigned long lastWeatherFetch = 0;
 unsigned long lastWifiCheck = 0;
+int wifiFailCount = 0;
 
 String outsideTemp = "--";
 String outsideHigh = "--";
@@ -172,8 +173,10 @@ String extractField(const String& text, const String& key) {
   return val;
 }
 
+volatile bool bleResetRequested = false;
+
 void bleTask(void* param) {
-  delay(5000);
+  delay(15000);
   BLEAddress piAddress("b8:27:eb:f6:24:e9");
   Serial.println("BLE: direct connect to b8:27:eb:f6:24:e9");
   int backoffMs = 30000;
@@ -184,12 +187,25 @@ void bleTask(void* param) {
       continue;
     }
 
+    if (bleResetRequested) {
+      bleResetRequested = false;
+      backoffMs = 30000;
+      bleMissCount = 0;
+      Serial.println("BLE: manual reset, retrying now");
+    }
+
+    if (WiFi.status() != WL_CONNECTED || WiFi.RSSI() == 0 || WiFi.RSSI() < -80) {
+      Serial.printf("BLE: skipping, WiFi weak (status=%d RSSI=%d)\n", WiFi.status(), WiFi.RSSI());
+      delay(30000);
+      continue;
+    }
+
     Serial.printf("BLE: connecting (heap: %d, WiFi: %d, RSSI: %d)\n", ESP.getFreeHeap(), WiFi.status(), WiFi.RSSI());
     BLEClient* client = BLEDevice::createClient();
     bool ok = false;
 
     try {
-      ok = client->connect(piAddress, 0xFF, 5000);
+      ok = client->connect(piAddress, BLE_ADDR_TYPE_PUBLIC, 5000);
     } catch (...) {
       Serial.println("BLE: connect exception");
       ok = false;
@@ -202,8 +218,15 @@ void bleTask(void* param) {
         BLERemoteCharacteristic* respChar = svc->getCharacteristic(piRespUUID);
         if (cmdChar && respChar) {
           cmdChar->writeValue(String("status"), true);
-          delay(500);
-          String resp = respChar->readValue();
+
+          String resp;
+          for (int attempt = 0; attempt < 3; attempt++) {
+            delay(500);
+            resp = respChar->readValue();
+            if (resp.length() > 0) break;
+            Serial.printf("BLE: empty read, retry %d/3\n", attempt + 1);
+          }
+
           if (resp.length() > 0) {
             String response = resp;
             if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
@@ -216,12 +239,15 @@ void bleTask(void* param) {
               xSemaphoreGive(piMutex);
             }
             Serial.println("Pi status updated via BLE");
+          } else {
+            Serial.println("BLE: connected but got empty response");
           }
         }
       }
       client->disconnect();
       delete client;
       backoffMs = 30000;
+      if (bleMissCount > 0) bleMissCount--;
     } else {
       bleMissCount++;
       if (bleMissCount >= 3 && xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
@@ -230,8 +256,8 @@ void bleTask(void* param) {
       }
       client->disconnect();
       delete client;
-      Serial.printf("BLE connect failed (retry in %ds)\n", backoffMs / 1000);
-      if (backoffMs < 120000) backoffMs += 15000;
+      Serial.printf("BLE connect failed (miss %d, retry in %ds)\n", bleMissCount, backoffMs / 1000);
+      if (backoffMs < 60000) backoffMs += 10000;
     }
 
     delay(backoffMs);
@@ -505,7 +531,8 @@ void handleData() {
                 ",\"piLed\":\"" + pLed + "\"" +
                 ",\"piWater\":\"" + pWater + "\"" +
                 ",\"piTemp\":\"" + pTemp + "\"" +
-                ",\"piUp\":\"" + pUp + "\"}";
+                ",\"piUp\":\"" + pUp + "\"" +
+                ",\"bleMiss\":" + String(bleMissCount) + "}";
   server.send(200, "application/json", json);
 }
 
@@ -549,6 +576,11 @@ void setup() {
 
   server.on("/", handleRoot);
   server.on("/data", handleData);
+
+  server.on("/ble-reset", []() {
+    bleResetRequested = true;
+    server.send(200, "text/plain", "BLE reset requested — will retry on next cycle");
+  });
 
   server.on("/update", HTTP_GET, []() {
     size_t totalLen = strlen(otaPage);
@@ -636,7 +668,16 @@ void loop() {
       WiFi.config(staticIP, gateway, subnet, dns);
       Serial.print("WiFi reconnected! IP: ");
       Serial.println(WiFi.localIP());
+      wifiFailCount = 0;
       fetchWeather();
+    } else {
+      wifiFailCount++;
+      Serial.printf("WiFi reconnect failed (%d/5)\n", wifiFailCount);
+      if (wifiFailCount >= 5) {
+        Serial.println("WATCHDOG: WiFi failed 5x, rebooting");
+        delay(100);
+        ESP.restart();
+      }
     }
   }
 

@@ -82,10 +82,15 @@ The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service
 - **Response characteristic:** `...def2` (read parsed result)
 - **Poll interval:** 30 seconds — **NEVER reduce below 30s** (10s causes WiFi drops due to shared radio)
 - **Connect timeout:** 5 seconds
-- **Backoff:** 30s → 120s on repeated failures, resets to 30s on success
+- **Address type:** `BLE_ADDR_TYPE_PUBLIC` (Pi uses public BCM address)
+- **Backoff:** 30s → 60s on repeated failures (10s increments), resets to 30s on success
+- **Read retry:** retries readValue() up to 3 times (500ms apart) if empty response
+- **Miss recovery:** successful connection decrements bleMissCount even if read is empty
+- **Manual reset:** `GET /ble-reset` forces immediate retry and clears backoff
 - **Client cleanup:** new `BLEClient` per attempt, `delete client` after each attempt (prevents heap leak)
 - **try/catch:** around `connect()` to prevent crash loops from exceptions
 - **Thread safety:** FreeRTOS mutex protects shared Pi data between BLE task (core 0) and web server (core 1)
+- **Known issue:** Pi BCM handles only 1 BLE connection at a time. If another client (laptop, phone) connects to Pi, ESP32 fails until that client disconnects. Restarting `ble-homestead.service` on Pi clears stuck state.
 
 ## WiFi
 
@@ -111,13 +116,9 @@ This board does NOT always auto-enter bootloader. If upload fails:
 
 **NEVER use `esptool erase_flash`** — it wipes NVS, causes boot loops, and loses network state. Just compile and re-upload.
 
-### Via OTA (wireless — only when WiFi is stable)
+### Via OTA — BROKEN (do not use)
 
-1. Compile: `arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=huge_app --output-dir /tmp/esp32-build ~/esp32-weather`
-2. Upload: `curl -F "update=@/tmp/esp32-build/esp32-weather.ino.bin" http://192.168.12.240/update`
-3. Or browse to `http://192.168.12.240/update` and upload the .bin file
-
-**Note:** OTA requires sustained WiFi for the ~1.8MB transfer. If WiFi is flaky, use USB instead.
+**OTA does not work** with the `huge_app` partition scheme. The partition table has only one app slot (`ota_0`) and no `ota_1`, so `Update.begin()` has nowhere to write the new firmware. The `/update` page exists in the UI but uploads will always fail. **USB is the only way to flash.**
 
 ## JSON API
 
@@ -131,7 +132,8 @@ This board does NOT always auto-enter bootloader. If upload fails:
   "f1Day": "Sat", "f1Desc": "&#9925; Partly Cloudy", "f1Hi": "58", "f1Lo": "43",
   "f2Day": "Sun", "f2Desc": "&#9925; Partly Cloudy", "f2Hi": "58", "f2Lo": "35",
   "piConn": true, "piLed": "OFF", "piWater": "OFF",
-  "piTemp": "32.7'C", "piUp": "up 6 hours, 19 minutes"
+  "piTemp": "32.7'C", "piUp": "up 6 hours, 19 minutes",
+  "bleMiss": 0
 }
 ```
 
@@ -153,6 +155,8 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [x] Fix WiFi stability — setSleep(false), max TX power, post-connect config (2026-05-01)
 - [x] Fix BLE crash loop — timeout, backoff, client cleanup (2026-05-01)
 - [x] Fix Pi BLE adapter selection — hci1 over hci0 (2026-05-01)
+- [x] BLE resilience — read retry, lower backoff cap, /ble-reset endpoint, bleMiss debug field (2026-05-01, pending USB flash)
+- [x] Discovered OTA is broken with huge_app partition — no second OTA slot (2026-05-01)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
