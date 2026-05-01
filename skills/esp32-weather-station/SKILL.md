@@ -1,12 +1,13 @@
 # ESP32 Weather Station
 
-**Status:** Flashed and working. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
-**Last Updated:** 2026-04-29
+**Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
+**Last Updated:** 2026-05-01
 
 ## Hardware
 
 - **Board:** ESP32-D0WD-V3 (Hosyond ESP-WROOM-32, 2-pack)
-- **MAC:** a4:f0:0f:76:70:0c
+- **Active unit MAC:** a4:f0:0f:74:11:74
+- **Spare unit MAC:** a4:f0:0f:76:70:0c
 - **USB Port:** /dev/ttyUSB0 (Silicon Labs CP210x)
 - **Display:** Amazon Fire HD 8 tablet (to be ordered) showing web dashboard in browser
 - **Sensor:** DHT11 (blue square, 3 pins) — not yet wired
@@ -35,7 +36,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 
 - **arduino-cli** 1.4.1 at `~/.local/bin/arduino-cli`
 - **Board package:** esp32:esp32 3.3.8 (FQBN: `esp32:esp32:esp32`)
-- **Partition scheme:** `min_spiffs` (1.9MB app + 1.9MB OTA + 128KB SPIFFS)
+- **Partition scheme:** `huge_app` (3MB app, no OTA partition, no SPIFFS)
 - **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, BLE (built-in)
 - **esptool** 5.2.0 via pip
 
@@ -56,63 +57,67 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
   - LED state (ON/OFF), irrigation state (ON/OFF), CPU temp, uptime
   - Shows "Not in Range" when Pi is unreachable
   - BLE task runs on core 0, web server on core 1 (FreeRTOS dual-core)
-- **Web dashboard** — served at `http://<ESP32_IP>/` on port 80, auto-refreshes every 5 seconds
+- **Web dashboard** — served at `http://192.168.12.240/` on port 80, auto-refreshes every 5 seconds
 - **OTA firmware updates** — browse to `/update` to upload .bin files wirelessly
 - **Weather updates** every 10 minutes from Open-Meteo
 - **Font:** Comfortaa (Google Fonts)
 - **Theme:** Dark (#1a1a2e background), red (#e94560) accents, teal (#4ecca3) humidity
 
-## BLE Connection
+## WiFi Hardening (critical — do not change)
+
+- `WiFi.setSleep(false)` — keeps WiFi radio always active (prevents phantom disconnects)
+- `WiFi.setTxPower(WIFI_POWER_19_5dBm)` — max transmit power
+- `WiFi.setAutoReconnect(true)` — auto-reconnect on drop
+- **Static IP set AFTER `WiFi.begin()` connects** — ESP32 Arduino Core 3.3.8 bug ignores `WiFi.config()` before `WiFi.begin()`
+- Reconnect logic in `loop()` checks every 30s, also checks RSSI == 0 for phantom WiFi detection
+- `WiFi.disconnect(true)` before reconnect to fully reset the radio
+
+## BLE Connection (critical — do not change)
 
 The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service`):
 
+- **Pi BLE MAC:** `b8:27:eb:f6:24:e9` (built-in BCM, NOT Edimax dongle)
 - **Service UUID:** `12345678-1234-5678-1234-56789abcdef0`
 - **Command characteristic:** `...def1` (write "status")
 - **Response characteristic:** `...def2` (read parsed result)
-- **Pi BLE name:** `homestead`
-- **Poll interval:** 30 seconds
+- **Poll interval:** 30 seconds — **NEVER reduce below 30s** (10s causes WiFi drops due to shared radio)
+- **Connect timeout:** 5 seconds
+- **Backoff:** 30s → 120s on repeated failures, resets to 30s on success
+- **Client cleanup:** new `BLEClient` per attempt, `delete client` after each attempt (prevents heap leak)
+- **try/catch:** around `connect()` to prevent crash loops from exceptions
 - **Thread safety:** FreeRTOS mutex protects shared Pi data between BLE task (core 0) and web server (core 1)
 
 ## WiFi
 
 - **SSID:** DIEMILTONHAUS
-- **IP:** 192.168.12.240 (static — hardcoded in firmware as of 2026-04-30)
+- **IP:** 192.168.12.240 (static — hardcoded in firmware)
 
 ## Flashing
 
-### Via USB (first time or recovery)
+### Via USB (preferred)
 
-This board does NOT always auto-enter bootloader. If upload fails, try:
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=huge_app ~/esp32-weather
+arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=huge_app --port /dev/ttyUSB0 ~/esp32-weather
+```
 
+**IMPORTANT:** Must use `PartitionScheme=huge_app` — the sketch is 58% of the 3MB huge_app partition and does NOT fit in the default 1.3MB partition.
+
+This board does NOT always auto-enter bootloader. If upload fails:
 1. Hold **BOOT** button
 2. While holding BOOT, press and release **EN/RST** button
 3. Release BOOT after ~1 second
 4. Upload within a few seconds
 
-```bash
-arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
-arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /dev/ttyUSB0 ~/esp32-weather
-```
+**NEVER use `esptool erase_flash`** — it wipes NVS, causes boot loops, and loses network state. Just compile and re-upload.
 
-**IMPORTANT:** Must use `PartitionScheme=min_spiffs` — the sketch is 93% of the 1.9MB min_spiffs partition and does NOT fit in the default 1.3MB partition.
+### Via OTA (wireless — only when WiFi is stable)
 
-**NEVER use `esptool erase-flash`** — it wipes NVS, causes boot loops, and loses network state. Just compile and re-upload. If stuck, unplug USB or use BOOT/EN sequence above.
-
-**Static IP:** 192.168.12.240 is hardcoded via `WiFi.config()` in `setup()`. Do not remove this or switch to DHCP.
-
-### Via OTA (wireless, after first flash)
-
-**Manual:**
-1. Compile: `arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather`
-2. Flash: `curl -F "firmware=@$HOME/esp32-weather/build/esp32.esp32.esp32/esp32-weather.ino.bin" http://192.168.12.240/update`
+1. Compile: `arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=huge_app --output-dir /tmp/esp32-build ~/esp32-weather`
+2. Upload: `curl -F "update=@/tmp/esp32-build/esp32-weather.ino.bin" http://192.168.12.240/update`
 3. Or browse to `http://192.168.12.240/update` and upload the .bin file
 
-**Automated (ThinkCentre .136):**
-- Cron job runs hourly, pulls skills repo from GitHub, checks if `firmware.bin` changed
-- If new firmware detected, curls it to the ESP32 OTA endpoint
-- Script: `/home/milton/esp32-ota-deploy.sh`
-- Service: cron job as user `milton`
-- **When saving ESP32 weather station to skills:** also copy the compiled `.bin` to `skills/esp32-weather-station/firmware.bin` before pushing
+**Note:** OTA requires sustained WiFi for the ~1.8MB transfer. If WiFi is flaky, use USB instead.
 
 ## JSON API
 
@@ -120,69 +125,39 @@ arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /d
 ```json
 {
   "tempC": 0.0, "tempF": 0.0, "dhtH": 0.0, "sensor": false,
-  "oTemp": "47.3", "oHigh": "59", "oLow": "44",
-  "oHum": "63", "oWind": "1.9", "oDesc": "&#9925; Partly Cloudy",
-  "sunrise": "6:08 AM", "sunset": "7:56 PM",
-  "f1Day": "Wed", "f1Desc": "&#127783;&#65039; Rain", "f1Hi": "60", "f1Lo": "46",
-  "f2Day": "Thu", "f2Desc": "&#127782;&#65039; Drizzle", "f2Hi": "58", "f2Lo": "42",
+  "oTemp": "45.9", "oHigh": "64", "oLow": "39",
+  "oHum": "81", "oWind": "5.2", "oDesc": "&#9728;&#65039; Clear",
+  "sunrise": "6:04 AM", "sunset": "7:59 PM",
+  "f1Day": "Sat", "f1Desc": "&#9925; Partly Cloudy", "f1Hi": "58", "f1Lo": "43",
+  "f2Day": "Sun", "f2Desc": "&#9925; Partly Cloudy", "f2Hi": "58", "f2Lo": "35",
   "piConn": true, "piLed": "OFF", "piWater": "OFF",
-  "piTemp": "30.6'C", "piUp": "up 5 hours, 43 minutes"
+  "piTemp": "32.7'C", "piUp": "up 6 hours, 19 minutes"
 }
 ```
 
-## Architecture
+## Pi BLE Service Fix (2026-05-01)
 
-- **ESP32** connects to WiFi, pulls weather from Open-Meteo, reads DHT11 sensor, connects to Pi via BLE, serves web dashboard
-- **Homestead Pi** runs BLE GATT server exposing status/control commands
-- **Any browser on the network** can view the dashboard at the ESP32's IP
-- **Amazon Fire HD 8 tablet** will be the dedicated always-on display (gift for Rosemary)
-- No Raspberry Pi or intermediate device needed — tablet runs browser directly to ESP32
+The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken BLE) instead of hci1 (built-in BCM, working). Fixed by changing `adapters.sort()` to `adapters.sort(reverse=True)` so hci1 is preferred.
 
 ## Build Notes
 
-- Raw string literals in Arduino: avoid `function`, `!`, or other C++ keywords at column 1 inside `R"rawliteral(...)rawliteral"` — the compiler parses them as C++. Use `void(function(){...}())` or `var x = function(){}` instead.
-- HTML pages (`page`, `otaPage`) MUST use `const char page[] PROGMEM` (not `const char*`) to store in flash, not RAM. Serving uses chunked `sendContent()` in 1KB chunks — `server.send()` with the full string fails silently (0 bytes) due to heap fragmentation.
-- ESP32 program storage is 93% used (1.84MB of 1.96MB with min_spiffs partition).
-- BLE library (v3.3.8) uses Arduino `String` type, not `std::string` — use `String()` for writeValue/readValue.
-- BLE scan + connect cycle takes ~5-10 seconds. Runs on core 0 via FreeRTOS task to avoid blocking web server on core 1.
-- Blink test sketch at `~/esp32-blink/esp32-blink.ino` (GPIO 2 = onboard blue LED).
+- Raw string literals in Arduino: avoid `function`, `!`, or other C++ keywords at column 1 inside `R"rawliteral(...)rawliteral"` — the compiler parses them as C++.
+- HTML pages use `const char page[] PROGMEM` (not `const char*`) to store in flash. Serving uses chunked `sendContent()` in 1KB chunks.
+- BLE library (v3.3.8) uses Arduino `String` type, not `std::string`.
 - User must be in `dialout` group for serial access (`/dev/ttyUSB0`).
-
-## 2026-04-30 Incident: erase_flash Disaster & Recovery
-
-**What happened:** While troubleshooting BLE connectivity (trying to switch to Edimax dongle), `esptool erase_flash` was run on the ESP32. This wiped the NVS partition, caused a persistent boot loop with garbled serial output, and lost the DHCP lease.
-
-**Recovery steps:**
-1. BOOT/EN button sequence: hold BOOT, press+release EN/RST, release BOOT after ~1 second
-2. Upload firmware within seconds of the sequence
-3. `arduino-cli compile + upload` with `PartitionScheme=min_spiffs`
-
-**Consequences:**
-- Boot loop with garbled serial — required physical BOOT/EN button recovery
-- DHCP assigned .239 instead of .240 — broke bookmarks and ESP32 references
-- Multiple reflash attempts before BOOT/EN sequence was tried, making it worse
-- **Fix:** Hardcoded static IP 192.168.12.240 via `WiFi.config()` so this can never happen again
-
-**NEVER run `esptool erase_flash` or `erase-flash`.** Just compile and re-upload. If the ESP32 is stuck:
-1. Unplug USB, wait, plug back in
-2. If still stuck, use BOOT/EN button sequence, then upload immediately
-
-### BLE MAC Attempt (also 2026-04-30)
-
-Tried switching ESP32 to connect to Edimax dongle MAC (`08:BE:AC:4D:39:71`) — failed because Edimax BLE advertising doesn't work under BlueZ (see homestead-bluetooth skill). Reverted to built-in BCM MAC (`b8:27:eb:f6:24:e9`). ESP32 connects by MAC address in firmware line 176.
-
-### BLE Range Test (2026-04-30)
-
-Pi and ESP32 moved farther apart to test BLE range over built-in BCM adapter. **Connection successful** — BLE polls every 30 seconds and maintained connection at increased distance.
 
 ## TODO
 
 - [ ] Wire DHT11 sensor
-- [x] Set static IP — hardcoded 192.168.12.240 via `WiFi.config()` (2026-04-30)
+- [x] Set static IP — hardcoded 192.168.12.240 (2026-04-30)
+- [x] Fix WiFi stability — setSleep(false), max TX power, post-connect config (2026-05-01)
+- [x] Fix BLE crash loop — timeout, backoff, client cleanup (2026-05-01)
+- [x] Fix Pi BLE adapter selection — hci1 over hci0 (2026-05-01)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
+- [ ] ESP32 needs heatsink + fan + case (runs warm with WiFi + BLE)
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-04-30*
+*Created: 2026-04-26 | Updated: 2026-05-01*

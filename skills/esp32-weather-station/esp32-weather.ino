@@ -21,6 +21,7 @@ float tempC = 0, tempF = 0, dhtHumidity = 0;
 bool sensorConnected = false;
 unsigned long lastSensorRead = 0;
 unsigned long lastWeatherFetch = 0;
+unsigned long lastWifiCheck = 0;
 
 String outsideTemp = "--";
 String outsideHigh = "--";
@@ -174,8 +175,8 @@ String extractField(const String& text, const String& key) {
 void bleTask(void* param) {
   delay(5000);
   BLEAddress piAddress("b8:27:eb:f6:24:e9");
-  BLEClient* client = BLEDevice::createClient();
   Serial.println("BLE: direct connect to b8:27:eb:f6:24:e9");
+  int backoffMs = 30000;
 
   while (true) {
     if (otaInProgress) {
@@ -183,11 +184,18 @@ void bleTask(void* param) {
       continue;
     }
 
-    Serial.printf("BLE: connecting (heap: %d)\n", ESP.getFreeHeap());
-    bool ok = client->connect(piAddress);
+    Serial.printf("BLE: connecting (heap: %d, WiFi: %d, RSSI: %d)\n", ESP.getFreeHeap(), WiFi.status(), WiFi.RSSI());
+    BLEClient* client = BLEDevice::createClient();
+    bool ok = false;
+
+    try {
+      ok = client->connect(piAddress, 0xFF, 5000);
+    } catch (...) {
+      Serial.println("BLE: connect exception");
+      ok = false;
+    }
 
     if (ok) {
-      Serial.println("BLE: connected!");
       BLERemoteService* svc = client->getService(piServiceUUID);
       if (svc) {
         BLERemoteCharacteristic* cmdChar = svc->getCharacteristic(piCmdUUID);
@@ -212,16 +220,21 @@ void bleTask(void* param) {
         }
       }
       client->disconnect();
+      delete client;
+      backoffMs = 30000;
     } else {
       bleMissCount++;
       if (bleMissCount >= 3 && xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
         piConnected = false;
         xSemaphoreGive(piMutex);
       }
-      Serial.println("BLE connect failed");
+      client->disconnect();
+      delete client;
+      Serial.printf("BLE connect failed (retry in %ds)\n", backoffMs / 1000);
+      if (backoffMs < 120000) backoffMs += 15000;
     }
 
-    delay(30000);
+    delay(backoffMs);
   }
 }
 
@@ -502,6 +515,10 @@ void setup() {
 
   dht.begin();
 
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+  WiFi.setAutoReconnect(true);
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
   int attempts = 0;
@@ -512,16 +529,22 @@ void setup() {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
+    IPAddress staticIP(192, 168, 12, 240);
+    IPAddress gateway(192, 168, 12, 1);
+    IPAddress subnet(255, 255, 255, 0);
+    IPAddress dns(192, 168, 12, 1);
+    WiFi.config(staticIP, gateway, subnet, dns);
     Serial.println("\nWiFi connected!");
     Serial.print("IP: ");
     Serial.println(WiFi.localIP());
+    Serial.printf("RSSI: %d dBm | TX Power: max\n", WiFi.RSSI());
 
     configTzTime("EST5EDT,M3.2.0,M11.1.0", ntpServer);
     Serial.println("NTP time sync started (Eastern)");
 
     fetchWeather();
   } else {
-    Serial.println("\nWiFi FAILED");
+    Serial.println("\nWiFi FAILED - will retry in loop");
   }
 
   server.on("/", handleRoot);
@@ -590,6 +613,31 @@ void loop() {
   if (millis() - lastWeatherFetch > 600000) {
     fetchWeather();
     lastWeatherFetch = millis();
+  }
+
+  bool wifiDead = (WiFi.status() != WL_CONNECTED) || (WiFi.status() == WL_CONNECTED && WiFi.RSSI() == 0);
+  if (wifiDead && millis() - lastWifiCheck > 30000) {
+    lastWifiCheck = millis();
+    Serial.printf("WiFi lost (status=%d RSSI=%d) - reconnecting...\n", WiFi.status(), WiFi.RSSI());
+    WiFi.disconnect(true);
+    delay(500);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      attempts++;
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      IPAddress staticIP(192, 168, 12, 240);
+      IPAddress gateway(192, 168, 12, 1);
+      IPAddress subnet(255, 255, 255, 0);
+      IPAddress dns(192, 168, 12, 1);
+      WiFi.config(staticIP, gateway, subnet, dns);
+      Serial.print("WiFi reconnected! IP: ");
+      Serial.println(WiFi.localIP());
+      fetchWeather();
+    }
   }
 
   // Heap watchdog: reboot if free heap drops below 8KB
