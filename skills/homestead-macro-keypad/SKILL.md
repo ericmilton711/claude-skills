@@ -1,13 +1,35 @@
-# Homestead Macro Keypad — QINIZX 6-Key USB HID Pad
+# Homestead Macro Keypad — QINIZX 4-Key USB-C Pad
 
 ## Product Info
 - **Brand:** QINIZX
-- **Description:** Mini 6-Key Macro Mechanical Keypad RGB Gaming Keyboard
-- **Features:** Red switches, RGB backlight, hot-swap sockets, USB-Micro cable
+- **Amazon:** B09PD2BWHL
+- **Description:** Mini 4-Key Macro Mechanical Keypad RGB
+- **Features:** Red switches, RGB backlight, hot-swap sockets, USB-C cable
 - **USB Vendor ID:** 0x8808
-- **USB Product ID:** 0x6606
+- **USB Product ID:** 0x6611
 - **Connected to:** Homestead Pi (Raspberry Pi 3 A+) via USB hub (Genesys Logic 05e3:0610)
-- **Status:** Top-left key position is DEAD (hardware defect, needs return/replacement)
+- **Config software:** key.itytsoft.com (Windows .exe, needed to program keys — ships with no default mapping)
+
+---
+
+## Key Layout & Mapping
+
+Keys were programmed via the QINIZX config software to send Z/X/C/V.
+
+| Physical Position | HID Code | Letter | Action | homestead.py Command |
+|-------------------|----------|--------|--------|---------------------|
+| Top (single key) | 0x1d | Z | LED test | `leds-test` (60s rapid on/off) |
+| Bottom-left | 0x1b | X | Water ON | `irrigate-on` |
+| Bottom-center | 0x06 | C | Water OFF | `irrigate-off` |
+| Bottom-right | 0x19 | V | Safe shutdown | `sudo shutdown now` (double-press within 2s required) |
+
+---
+
+## How It Works
+
+This keypad does NOT generate evdev input events — the kernel's hid-generic driver handles the USB reports but doesn't route them to /dev/input/event*. The daemon reads raw HID reports directly from /dev/hidraw instead.
+
+Each key press sends an 8-byte HID keyboard report. Byte 2 contains the HID usage code (0x1d=Z, 0x1b=X, 0x06=C, 0x19=V). Byte 2 = 0x00 is a key release (ignored).
 
 ---
 
@@ -15,108 +37,64 @@
 
 The keypad enumerates as 4 HID interfaces:
 
-| Interface | hidraw | evdev | Name | Usage Page | Purpose |
-|-----------|--------|-------|------|------------|---------|
-| 0 | hidraw0 | event0 | HID 8808:6606 | 0x01 (Generic Desktop) / Keyboard | **Main key events — keypad.py grabs this one** |
-| 1 | hidraw1 | event1 | HID 8808:6606 | 0x01 (Generic Desktop) / Mouse | Mouse HID (unused) |
-| 2 | hidraw2 | event2 | HID 8808:6606 Keyboard | 0xFFA0 + 0x0C (Consumer) | Multimedia/consumer keys |
-| 3 | hidraw3 | — | HID 8808:6606 | 0xFF00 (Vendor Defined) | **RGB LED control interface** |
-
-### Interface 3 — RGB LED Control
-- **Bidirectional:** EP 4 IN + EP 4 OUT, both 64 bytes, interrupt transfer
-- **Report descriptor (34 bytes):** `06 00 ff 09 01 a1 01 09 02 15 00 26 ff 00 75 08 95 40 81 06 09 02 15 00 26 00 ff 75 08 95 40 91 06 c0`
-- **Decoded:** Vendor-defined usage page 0xFF00, 64-byte input report + 64-byte output report, no report ID
-- **RGB protocol:** UNKNOWN — blind byte-pattern probing did not produce visible LED changes. Needs USB packet capture from Windows config software to reverse-engineer.
-
----
-
-## Key Mapping
-
-The 6 keys send standard keyboard scancodes through interface 0 (event0):
-
-| Physical Position | Key Code | keypad.py Action | homestead.py Command |
-|-------------------|----------|------------------|---------------------|
-| Top-left (pos 1) | KEY_A | LEDs TEST | `leds-test` (60s rapid on/off) |
-| Top-center (pos 2) | KEY_S | LEDs ON | `leds-on` |
-| Top-right (pos 3) | KEY_D | LEDs OFF | `leds-off` |
-| Bottom-left (pos 4) | KEY_F | Irrigation ON | `irrigate-on` |
-| Bottom-center (pos 5) | KEY_G | Irrigation OFF | `irrigate-off` |
-| Bottom-right (pos 6) | KEY_H | Safe shutdown | `sudo shutdown now` |
+| Interface | hidraw | evdev | Name | HID_PHYS |
+|-----------|--------|-------|------|----------|
+| 0 | hidraw0 | event2/event4 | HID 8808:6611 / Keyboard | input0 — **keypad.py reads this one via hidraw** |
+| 1 | hidraw1 | event3 | HID 8808:6611 | input1 |
+| 2 | hidraw2 | event5 | HID 8808:6611 | input2 |
+| 3 | hidraw3 | event6 | HID 8808:6611 Mouse | input3 |
 
 ---
 
 ## Scripts on the Pi
 
-### `/home/eric/keypad.py` — Primary keypad daemon
-- Finds the keypad by vendor/product ID (0x8808/0x6606)
-- Filters OUT devices named "Keyboard", "Mouse", or "Jack"
-- Grabs the device exclusively via `dev.grab()`
-- Maps KEY_A through KEY_H to homestead.py commands
-- Runs as root (needs GPIO access)
-- Started at boot via systemd or cron
-
-### `/home/eric/keypad_controller.py` — Display + keypad controller
-- More feature-rich version with display sleep/wake, sensor readings, manual override mode
-- Uses numeric keypad mapping (KEY_1, KEY_KP1, etc.) — different from keypad.py
-- Currently attaches to wrong device (vc4-hdmi instead of keypad) — has a bug in `find_keypad()` that picks the first device with EV_KEY capability regardless of vendor ID
-- Runs alongside keypad.py
-- **Bug fixed 2026-04-30:** `get_gpio_state()` was using `GPIO.setup(pin, GPIO.OUT)` to read pin state — setting a pin to OUTPUT on a fresh boot drives it HIGH, which turned on the LEDs (GPIO 17 → SSR #1) every single reboot regardless of time of day. This was one of two root causes discovered when Eric had to hard-boot the Pi and the LED was stuck on (the other was `boot_check.py` firing irrigation outside its window — see homestead-automation skill). Fixed to `GPIO.setup(pin, GPIO.IN)`. The function spawns a subprocess: `sudo python3 -c "import RPi.GPIO as GPIO; GPIO.setmode(GPIO.BCM); GPIO.setwarnings(False); GPIO.setup(%d,GPIO.IN); print(GPIO.input(%d))"`.
+### `/home/eric/keypad.py` — Keypad daemon
+- Finds the keypad by scanning /sys/class/hidraw/*/device/uevent for vendor/product ID
+- Reads raw 8-byte HID reports from /dev/hidraw (NOT evdev)
+- Maps HID usage codes to homestead.py commands
+- Power down requires double-press within 2 seconds (safety)
+- Power down chains `leds-off` first if between 18:00-23:00 (LED hours)
+- Runs as root via systemd
 
 ### `/home/eric/homestead.py` — GPIO control script
 - GPIO 17 = LED circuit (SSR #1)
-- GPIO 27 = Solenoid valve (SSR #2)
+- GPIO 27 = Solenoid valve — chicken water (SSR #2)
 - Commands: `leds-on`, `leds-off`, `leds-test`, `irrigate [minutes]`, `irrigate-on`, `irrigate-off`, `status`
+
+---
+
+## Systemd Service
+
+```
+/etc/systemd/system/keypad.service
+```
+
+- **Enabled at boot**, restarts on failure (5s delay)
+- `systemctl status keypad` to check
+- `systemctl restart keypad` after editing keypad.py
 
 ---
 
 ## Diagnosing Key Issues
 
-### Test if a key registers:
+### Test if keys send raw HID data:
 ```bash
-# Stop keypad daemon first (it grabs the device exclusively)
-ssh eric@192.168.12.114 "sudo killall python3 2>/dev/null"
+# Stop keypad daemon first
+ssh eric@192.168.12.114 "sudo systemctl stop keypad"
 
-# Monitor ALL keypad event devices for any input
-ssh eric@192.168.12.114 "sudo timeout 30 python3 -u -c '
-import evdev, select, time
-devices = [evdev.InputDevice(p) for p in evdev.list_devices() if evdev.InputDevice(p).info.vendor == 0x8808]
-print(\"Press keys now...\", flush=True)
-end = time.time() + 30
-while time.time() < end:
-    r, w, x = select.select(devices, [], [], 1)
-    for dev in r:
-        for event in dev.read():
-            if event.type == 1 and event.value == 1:
-                name = evdev.ecodes.KEY.get(event.code, \"UNK_%d\" % event.code)
-                print(\"%s %s key=%s code=%d\" % (dev.path, dev.name, name, event.code), flush=True)
-'"
+# Read raw HID bytes — press keys and watch for output
+ssh eric@192.168.12.114 "sudo timeout 15 cat /dev/hidraw0 | od -A x -t x1"
 
-# IMPORTANT: Restart keypad daemon after testing
-ssh eric@192.168.12.114 "nohup sudo python3 /home/eric/keypad.py &>/dev/null &"
+# Restart daemon after testing
+ssh eric@192.168.12.114 "sudo systemctl start keypad"
 ```
 
-### If a key sends zero events on ALL 5 interfaces:
-- Not a mapping issue — the key position is electrically dead
-- Hot-swap socket may have a bent pin or cracked solder joint
-- Swap a known-working switch into that position to confirm socket vs switch
+### If no raw HID data appears:
+- Keys may need reprogramming via the Windows config software (key.itytsoft.com)
+- Check USB connection: `lsusb` should show `8808:6611`
 
 ---
 
-## RGB Backlight — What We Know
+## Previous Keypad (Replaced)
 
-- The keypad has built-in RGB LEDs that cycle through colors by default
-- Control is through interface 3 (/dev/hidraw3) via 64-byte output reports
-- The vendor-specific protocol is NOT documented
-- Common Chinese keypad byte patterns (0x03, 0x07, 0xB0 commands) did NOT work
-- **Next step:** Plug keypad into Windows PC, install QINIZX config software, capture USB traffic with Wireshark + USBPcap, decode the LED control packets, then replicate from Pi
-- WARNING: Writing arbitrary bytes to hidraw3 does NOT break the keypad but the keypad daemon may need restarting afterward
-
----
-
-## Known Issues
-
-1. **Top-left key (KEY_A position) is dead** — switch and socket inspected, new Cherry MX switch tried, zero events on any interface. Hardware defect. Keypad needs to be returned/replaced.
-
-2. **keypad_controller.py picks wrong device** — `find_keypad()` selects the first input device with EV_KEY capability, which is often vc4-hdmi (HDMI hotplug) instead of the actual keypad. Should filter by vendor/product ID like keypad.py does.
-
-3. **Both keypad.py and keypad_controller.py run simultaneously** — keypad.py grabs event0 exclusively, so keypad_controller.py can't read from it. The controller ends up on the HDMI device doing nothing useful. These should be consolidated into one script.
+The original QINIZX 6-key pad (product ID 0x6606) had a dead top-left key (hardware defect). It used evdev (event0) and mapped KEY_A through KEY_H. The new 4-key pad replaced it on 2026-05-01.
