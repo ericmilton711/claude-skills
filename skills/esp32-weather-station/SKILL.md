@@ -91,6 +91,17 @@ The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service
 - **try/catch:** around `connect()` to prevent crash loops from exceptions
 - **Thread safety:** FreeRTOS mutex protects shared Pi data between BLE task (core 0) and web server (core 1)
 - **Known issue:** Pi BCM handles only 1 BLE connection at a time. If another client (laptop, phone) connects to Pi, ESP32 fails until that client disconnects. Restarting `ble-homestead.service` on Pi clears stuck state.
+- **piConn bug:** The `piConn` field in `/data` reflects whether the BLE connection is active *at the moment* the endpoint is hit. At 20 feet, the connect-fetch-disconnect cycle is brief, so the dashboard almost always shows "Not in Range" even when data is flowing. **Fix needed:** Change `piConn` to true if a successful BLE response was received within the last 60 seconds (`lastSuccessfulBleMillis` approach).
+
+### BLE Watchdog (added 2026-05-02)
+
+The Pi side has a self-healing watchdog to recover from BlueZ/hci0 wedges (common on Pi 3 where BLE and WiFi share the BCM43455 chip):
+
+1. **Heartbeat:** `ble-homestead.py` writes a timestamp to `/tmp/ble-heartbeat` on every BLE command received
+2. **Watchdog script:** `/home/eric/ble-watchdog.sh` — checks heartbeat age, if >5 min stale: power-cycles hci0 and restarts ble-homestead.service
+3. **Systemd timer:** `ble-watchdog.timer` — runs the watchdog every 2 minutes
+
+See `homestead-automation` skill for full watchdog script and systemd unit details.
 
 ## WiFi
 
@@ -164,4 +175,4 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-01*
+*Created: 2026-04-26 | Updated: 2026-05-02*

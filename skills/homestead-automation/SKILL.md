@@ -77,10 +77,12 @@ import sys
 import time
 import logging
 import RPi.GPIO as GPIO
+import urllib.request
 
 LED_PIN      = 17
 SOLENOID_PIN = 27
 LOG_FILE     = '/home/eric/homestead.log'
+NTFY_TOPIC   = 'homestead-a2f9f4b5e449'
 
 logging.basicConfig(
     filename=LOG_FILE,
@@ -88,6 +90,17 @@ logging.basicConfig(
     format='%(asctime)s  %(message)s',
     datefmt='%Y-%m-%d %H:%M'
 )
+
+def notify(msg):
+    try:
+        req = urllib.request.Request(
+            f"https://ntfy.sh/{NTFY_TOPIC}",
+            data=msg.encode(),
+            headers={"Title": "Homestead Pi"},
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception:
+        pass
 
 def log(msg):
     logging.info(msg)
@@ -107,6 +120,7 @@ def leds_off():
     log("LEDs OFF")
 
 def leds_test():
+    notify("LED test starting -- 1 min blink cycle")
     log("LEDs TEST start -- 0.125s on / 0.25s off for 1 min")
     end_time = time.time() + 60
     while time.time() < end_time:
@@ -115,6 +129,7 @@ def leds_test():
         GPIO.output(LED_PIN, GPIO.LOW)
         time.sleep(0.25)
     log("LEDs TEST done")
+    notify("LED test complete")
     from datetime import datetime
     hour = datetime.now().hour
     if 18 <= hour < 23:
@@ -354,7 +369,112 @@ The `status` command includes current LED and irrigation state (parsed from home
 
 ---
 
-## Remaining Tasks (updated 2026-04-29)
+## BLE GATT Service — ESP32 Weather Station Link (added 2026-05-01)
+
+The Pi also runs a BLE GATT server (`ble-homestead.service`) that the ESP32 weather station connects to every ~30 seconds to pull status data for its web dashboard.
+
+- **Script:** `/home/eric/ble-homestead.py`
+- **Service:** `ble-homestead.service` (systemd, enabled, `Restart=always`, runs as root)
+- **GATT service UUID:** `12345678-1234-5678-1234-56789abcdef0`
+- **Advertises as:** `homestead`
+- **Heartbeat file:** `/tmp/ble-heartbeat` — updated with Unix timestamp on every BLE command received
+
+See `esp32-weather-station` skill for full BLE UUID details and piConn bug.
+
+---
+
+## BLE Watchdog — Self-Healing (added 2026-05-02)
+
+The Pi 3's BCM43455 shares WiFi and BLE on one chip. BlueZ/hci0 can silently wedge, causing the ESP32 to lose contact with no recovery until the 2 AM reboot. The watchdog fixes this.
+
+### How it works
+1. `ble-homestead.py` writes a timestamp to `/tmp/ble-heartbeat` every time it receives a BLE command
+2. `/home/eric/ble-watchdog.sh` checks that file every 2 minutes via systemd timer
+3. If no command in 5 minutes: power-cycles hci0 and restarts ble-homestead.service
+
+### Watchdog script — `/home/eric/ble-watchdog.sh`
+
+```bash
+#!/bin/bash
+HEARTBEAT=/tmp/ble-heartbeat
+MAX_AGE=300
+
+if [ ! -f "$HEARTBEAT" ]; then
+    echo "$(date): No heartbeat file yet — skipping"
+    exit 0
+fi
+
+LAST=$(cat "$HEARTBEAT")
+NOW=$(date +%s)
+AGE=$(echo "$NOW - ${LAST%.*}" | bc)
+
+if [ "$AGE" -gt "$MAX_AGE" ]; then
+    echo "$(date): BLE stale (${AGE}s) — recycling bluetooth"
+    sudo systemctl stop ble-homestead.service
+    sudo hciconfig hci0 down
+    sleep 2
+    sudo hciconfig hci0 up
+    sleep 2
+    sudo systemctl start ble-homestead.service
+    echo "$(date): BLE service restarted"
+else
+    echo "$(date): BLE healthy (${AGE}s old)"
+fi
+```
+
+### Systemd units
+
+**`/etc/systemd/system/ble-watchdog.service`**
+```ini
+[Unit]
+Description=BLE Watchdog - recycle bluetooth if stale
+
+[Service]
+Type=oneshot
+ExecStart=/home/eric/ble-watchdog.sh
+```
+
+**`/etc/systemd/system/ble-watchdog.timer`**
+```ini
+[Unit]
+Description=Run BLE watchdog every 2 minutes
+
+[Timer]
+OnBootSec=120
+OnUnitActiveSec=120
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable: `sudo systemctl enable --now ble-watchdog.timer`
+
+---
+
+## Push Notifications — ntfy (added 2026-05-02)
+
+The Pi sends push notifications to Eric's phone via [ntfy.sh](https://ntfy.sh) — a free, no-account push notification service.
+
+- **Topic:** `homestead-a2f9f4b5e449`
+- **Phone app:** ntfy (Android — Google Play)
+- **Works on:** any internet connection (WiFi, 5G, LTE — not local-only)
+- **Currently notifies on:** LED test start and LED test complete
+
+### How it works
+`homestead.py` calls `notify()` which POSTs to `https://ntfy.sh/homestead-a2f9f4b5e449`. The ntfy app on Eric's phone receives it as a push notification.
+
+### Adding notifications to other events
+Add `notify("your message")` anywhere in `homestead.py`. The function silently fails if the Pi has no internet — won't break offline operation.
+
+---
+
+## Persistent Journal Logging (added 2026-05-02)
+
+Journal storage set to persistent so logs survive the 2 AM nightly reboot. Changed `/etc/systemd/journald.conf` from `#Storage=auto` to `Storage=persistent`. Logs stored in `/var/log/journal/`.
+
+---
+
+## Remaining Tasks (updated 2026-05-02)
 
 - [ ] **Wire UV/Blue LEDs** — Replace green test LED with 5x UV (365nm) + 5x Blue (460nm), parallel at 3.2V through DROK buck. Mount in aluminum bar in ground for heatsinking.
 - [ ] **Wire solenoid** — GPIO 27 → SSR #2 → 12V solenoid → rain barrel → chicken waterer. Update schedule for chicken watering (shorter/more frequent than old 20-min garden cycle).
