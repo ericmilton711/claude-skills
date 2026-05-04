@@ -439,7 +439,7 @@ const char page[] PROGMEM = R"rawliteral(
       </div>
     </div>
 
-    <div class="footer">Weather every 10 min &bull; Pi every 30 sec via BLE &bull; <a href="/update" style="color:#e94560;">OTA Update</a></div>
+    <div class="footer">Weather every 45 sec &bull; Pi every 30 sec via BLE &bull; <a href="/update" style="color:#e94560;">OTA Update</a></div>
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/New_York'});},1000)}());
@@ -642,7 +642,7 @@ void loop() {
     lastSensorRead = millis();
   }
 
-  if (millis() - lastWeatherFetch > 600000) {
+  if (millis() - lastWeatherFetch > 45000) {
     fetchWeather();
     lastWeatherFetch = millis();
   }

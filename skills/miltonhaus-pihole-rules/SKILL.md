@@ -82,7 +82,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 1 | mac-mini | Mac Mini - block all |
 | 2 | kids1 | Kids1 laptop - limited whitelist |
 | 3 | kids2 | Kids2 Windows laptop |
-| 4 | patricks-chromebook | Patrick's Chromebook |
+| 4 | yti-chromebook | YTI Chromebook — UNRESTRICTED (deny-all rule removed) |
 | 5 | ev-chromebook | Ev's Chromebook |
 | 6 | ev-temp-unrestricted | Ev's Chromebook - temp full access |
 
@@ -93,8 +93,8 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 192.168.12.163 | Mac Mini | 1 (mac-mini) |
 | 192.168.12.249 | Kids1 laptop | 2 (kids1) |
 | 192.168.12.239 | Kids2 Windows laptop | 3 (kids2) |
-| 192.168.12.220 | Patrick Chromebook | 4 (patricks-chromebook) |
-| 192.168.12.221 | Patrick Chromebook (alt IP) | 4 (patricks-chromebook) |
+| 192.168.12.220 | YTI Chromebook | 4 (yti-chromebook) |
+| 192.168.12.221 | YTI Chromebook (alt IP) | 4 (yti-chromebook) |
 | 192.168.12.164 | (unidentified) | 1 (mac-mini) |
 | 192.168.12.194 | Ev Chromebook | 6 (ev-temp-unrestricted) |
 
@@ -134,7 +134,8 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 
 ## Default Deny Rule
 
-Regex deny `.*` applies to groups: 0, 1, 2, 3, 4, 5 — blocks ALL domains unless explicitly whitelisted.
+Regex deny `.*` applies to groups: 0, 1, 2, 3, 5 — blocks ALL domains unless explicitly whitelisted.
+Group 4 (yti-chromebook) was removed from the deny-all rule on 2026-05-04 — Patrick's Chromebook is now unrestricted.
 
 ---
 

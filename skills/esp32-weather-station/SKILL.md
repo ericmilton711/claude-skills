@@ -1,14 +1,14 @@
 # ESP32 Weather Station
 
 **Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
-**Last Updated:** 2026-05-01
+**Last Updated:** 2026-05-02
 
 ## Hardware
 
 - **Board:** ESP32-D0WD-V3 (Hosyond ESP-WROOM-32, 2-pack)
 - **Active unit MAC:** a4:f0:0f:74:11:74
 - **Spare unit MAC:** a4:f0:0f:76:70:0c
-- **USB Port:** /dev/ttyUSB0 (Silicon Labs CP210x)
+- **USB Port:** /dev/ttyUSB0 (Linux) or COM15 (Windows) — Silicon Labs CP210x
 - **Display:** Amazon Fire HD 8 tablet (to be ordered) showing web dashboard in browser
 - **Sensor:** DHT11 (blue square, 3 pins) — not yet wired
 
