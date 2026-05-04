@@ -85,6 +85,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 4 | yti-chromebook | YTI Chromebook — UNRESTRICTED (deny-all rule removed) |
 | 5 | ev-chromebook | Ev's Chromebook |
 | 6 | ev-temp-unrestricted | Ev's Chromebook - temp full access |
+| 7 | tower-of-gondor | Tower of Gondor (ThinkCentre M900) — DEFAULT-ALLOW with specific blocks |
 
 ## Client Assignments
 
@@ -97,6 +98,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 192.168.12.221 | YTI Chromebook (alt IP) | 4 (yti-chromebook) |
 | 192.168.12.164 | (unidentified) | 1 (mac-mini) |
 | 192.168.12.194 | Ev Chromebook | 6 (ev-temp-unrestricted) |
+| 192.168.12.160 | Tower of Gondor (M900) | 7 (tower-of-gondor) |
 
 ---
 
@@ -136,6 +138,26 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 
 Regex deny `.*` applies to groups: 0, 1, 2, 3, 5 — blocks ALL domains unless explicitly whitelisted.
 Group 4 (yti-chromebook) was removed from the deny-all rule on 2026-05-04 — Patrick's Chromebook is now unrestricted.
+Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of deny-all (see below).
+
+---
+
+## Tower of Gondor (Group 7) — Default-Allow with Specific Blocks
+
+**Device:** Lenovo ThinkCentre M900 at 192.168.12.160 (MAC: 44-85-00-3f-26-7c)
+**Hostname:** Tower-of-Gondor
+**OS:** Windows (local account: `tower-of-gondor\user`, pw: 645866)
+**WiFi DNS:** Manually set to Pi-hole (192.168.12.136) via `netsh interface ip set dns "Wi-Fi" static 192.168.12.136`
+**Approach:** Everything allowed by default. Specific sites blocked via regex deny rules in group 7.
+
+**Blocked sites (regex deny, group 7):**
+- `(^|[.])google[.]com$` — Google search blocked
+
+**Allowed via shared regex allows (group 7 added to existing rules):**
+- Gmail: mail.google.com, gmail.com, accounts.google.com, googleapis.com, gstatic.com, googleusercontent.com
+- Firefox: firefox.com, mozilla.com, mozilla.net, mozilla.org, ipv4only.arpa
+
+**Important:** Do NOT add `google.com` as a regex allow for group 7 — it overrides the deny and re-enables Google search. Gmail works without it because mail.google.com, gmail.com, etc. are allowed individually.
 
 ---
 
