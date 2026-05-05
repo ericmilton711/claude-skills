@@ -47,6 +47,7 @@ String piIrrigationState = "--";
 String piCpuTemp = "--";
 String piUptime = "--";
 bool piConnected = false;
+unsigned long lastSuccessfulBleMillis = 0;
 int bleMissCount = 0;
 volatile bool otaInProgress = false;
 
@@ -235,6 +236,7 @@ void bleTask(void* param) {
               piUptime = extractField(response, "Uptime: ");
               piCpuTemp = extractField(response, "CPU Temp: ");
               piConnected = true;
+              lastSuccessfulBleMillis = millis();
               bleMissCount = 0;
               xSemaphoreGive(piMutex);
             }
@@ -443,7 +445,7 @@ const char page[] PROGMEM = R"rawliteral(
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/New_York'});},1000)}());
-    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;document.getElementById('f1Day').textContent=d.f1Day;document.getElementById('f1Desc').innerHTML=d.f1Desc;document.getElementById('f1Hi').textContent=d.f1Hi;document.getElementById('f1Lo').textContent=d.f1Lo;document.getElementById('f2Day').textContent=d.f2Day;document.getElementById('f2Desc').innerHTML=d.f2Desc;document.getElementById('f2Hi').textContent=d.f2Hi;document.getElementById('f2Lo').textContent=d.f2Lo;var ps=document.getElementById('piStatus');if(d.piConn){ps.textContent='BLE Connected';ps.className='pill ok';document.getElementById('piLed').textContent=d.piLed;document.getElementById('piLed').className='value '+(d.piLed==='ON'?'pi-on':'pi-off');document.getElementById('piWater').textContent=d.piWater;document.getElementById('piWater').className='value '+(d.piWater==='ON'?'pi-on':'pi-off');document.getElementById('piTemp').textContent=d.piTemp;document.getElementById('piUp').textContent=d.piUp}else{ps.textContent='Not in Range';ps.className='pill';document.getElementById('piLed').textContent='--';document.getElementById('piLed').className='value pi-off';document.getElementById('piWater').textContent='--';document.getElementById('piWater').className='value pi-off';document.getElementById('piTemp').textContent='--';document.getElementById('piUp').textContent='--'}}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;document.getElementById('f1Day').textContent=d.f1Day;document.getElementById('f1Desc').innerHTML=d.f1Desc;document.getElementById('f1Hi').textContent=d.f1Hi;document.getElementById('f1Lo').textContent=d.f1Lo;document.getElementById('f2Day').textContent=d.f2Day;document.getElementById('f2Desc').innerHTML=d.f2Desc;document.getElementById('f2Hi').textContent=d.f2Hi;document.getElementById('f2Lo').textContent=d.f2Lo;var ps=document.getElementById('piStatus');var hasPiData=d.piLed&&d.piLed!=='--';if(d.piConn){ps.textContent='BLE Connected';ps.className='pill ok'}else if(hasPiData){ps.textContent='Last Data Received';ps.className='pill ok'}else{ps.textContent='Not in Range';ps.className='pill'}if(hasPiData||d.piConn){document.getElementById('piLed').textContent=d.piLed;document.getElementById('piLed').className='value '+(d.piLed==='ON'?'pi-on':'pi-off');document.getElementById('piWater').textContent=d.piWater;document.getElementById('piWater').className='value '+(d.piWater==='ON'?'pi-on':'pi-off');document.getElementById('piTemp').textContent=d.piTemp;document.getElementById('piUp').textContent=d.piUp}else{document.getElementById('piLed').textContent='--';document.getElementById('piLed').className='value pi-off';document.getElementById('piWater').textContent='--';document.getElementById('piWater').className='value pi-off';document.getElementById('piTemp').textContent='--';document.getElementById('piUp').textContent='--'}}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
   </script>
 </body>
 </html>
@@ -500,7 +502,7 @@ void handleData() {
     pWater = piIrrigationState;
     pTemp = piCpuTemp;
     pUp = piUptime;
-    pConn = piConnected;
+    pConn = (lastSuccessfulBleMillis > 0 && (millis() - lastSuccessfulBleMillis < 90000));
     xSemaphoreGive(piMutex);
   } else {
     pLed = "--"; pWater = "--"; pTemp = "--"; pUp = "--";

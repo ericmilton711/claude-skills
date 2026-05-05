@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
 **Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
-**Last Updated:** 2026-05-02
+**Last Updated:** 2026-05-05
 
 ## Hardware
 
@@ -34,11 +34,12 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 
 ## Software Stack
 
-- **arduino-cli** 1.4.1 at `~/.local/bin/arduino-cli`
+- **arduino-cli** 1.5.0 at `~/.local/bin/arduino-cli` (Linux) or `%USERPROFILE%\.local\bin\arduino-cli.exe` (Windows)
 - **Board package:** esp32:esp32 3.3.8 (FQBN: `esp32:esp32:esp32`)
 - **Partition scheme:** `huge_app` (3MB app, no OTA partition, no SPIFFS)
 - **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, BLE (built-in)
 - **esptool** 5.2.0 via pip
+- **CRITICAL: Do NOT use PlatformIO.** PlatformIO's framework-arduinoespressif32 3.3.7 breaks BLE connectivity. The ESP32 can connect to WiFi but BLE fails silently (connect() returns false, Pi never receives any commands). Only use arduino-cli with esp32:esp32 3.3.8. Learned the hard way 2026-05-05.
 
 ## Sketch Location
 
@@ -91,7 +92,7 @@ The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service
 - **try/catch:** around `connect()` to prevent crash loops from exceptions
 - **Thread safety:** FreeRTOS mutex protects shared Pi data between BLE task (core 0) and web server (core 1)
 - **Known issue:** Pi BCM handles only 1 BLE connection at a time. If another client (laptop, phone) connects to Pi, ESP32 fails until that client disconnects. Restarting `ble-homestead.service` on Pi clears stuck state.
-- **piConn bug:** The `piConn` field in `/data` reflects whether the BLE connection is active *at the moment* the endpoint is hit. At 20 feet, the connect-fetch-disconnect cycle is brief, so the dashboard almost always shows "Not in Range" even when data is flowing. **Fix needed:** Change `piConn` to true if a successful BLE response was received within the last 60 seconds (`lastSuccessfulBleMillis` approach).
+- **piConn bug: FIXED (2026-05-05).** `piConn` now uses `lastSuccessfulBleMillis` -- true if a successful BLE response was received within the last 90 seconds. Dashboard JS also updated: shows Pi data whenever it exists (not just when piConn is true), with status pill showing "BLE Connected" / "Last Data Received" / "Not in Range".
 
 ### BLE Watchdog (added 2026-05-02)
 
@@ -168,6 +169,7 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [x] Fix Pi BLE adapter selection — hci1 over hci0 (2026-05-01)
 - [x] BLE resilience — read retry, lower backoff cap, /ble-reset endpoint, bleMiss debug field (2026-05-01, pending USB flash)
 - [x] Discovered OTA is broken with huge_app partition — no second OTA slot (2026-05-01)
+- [x] Fix piConn display bug — time-based check + JS shows data when available (2026-05-05)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
@@ -175,4 +177,4 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-02*
+*Created: 2026-04-26 | Updated: 2026-05-05*
