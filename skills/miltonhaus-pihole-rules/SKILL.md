@@ -82,7 +82,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 1 | mac-mini | Mac Mini - block all |
 | 2 | kids1 | Kids1 laptop - limited whitelist |
 | 3 | kids2 | Kids2 Windows laptop |
-| 4 | yti-chromebook | YTI Chromebook — UNRESTRICTED (deny-all rule removed) |
+| 4 | yti-chromebook | YTI Chromebook — legacy group (device moved to group 7) |
 | 5 | ev-chromebook | Ev's Chromebook |
 | 6 | ev-temp-unrestricted | Ev's Chromebook - temp full access |
 | 7 | tower-of-gondor | Tower of Gondor (ThinkCentre M900) — DEFAULT-ALLOW with specific blocks |
@@ -94,8 +94,9 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 192.168.12.163 | Mac Mini | 1 (mac-mini) |
 | 192.168.12.249 | Kids1 laptop | 2 (kids1) |
 | 192.168.12.239 | Kids2 Windows laptop | 3 (kids2) |
-| 192.168.12.220 | YTI Chromebook | 4 (yti-chromebook) |
-| 192.168.12.221 | YTI Chromebook (alt IP) | 4 (yti-chromebook) |
+| 192.168.12.220 | YTI Chromebook (old IP) | 4 (yti-chromebook) |
+| 192.168.12.221 | YTI Chromebook (old IP) | 4 (yti-chromebook) |
+| 192.168.12.219 | YTI Chromebook (current IP, 2026-05-05) | 7 (tower-of-gondor) |
 | 192.168.12.164 | (unidentified) | 1 (mac-mini) |
 | 192.168.12.194 | Ev Chromebook | 6 (ev-temp-unrestricted) |
 | 192.168.12.160 | Tower of Gondor (M900) | 7 (tower-of-gondor) |
@@ -137,17 +138,19 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 ## Default Deny Rule
 
 Regex deny `.*` applies to groups: 0, 1, 2, 3, 5 — blocks ALL domains unless explicitly whitelisted.
-Group 4 (yti-chromebook) was removed from the deny-all rule on 2026-05-04 — Patrick's Chromebook is now unrestricted.
+Group 4 (yti-chromebook) was removed from the deny-all rule on 2026-05-04 — legacy group, no longer actively used.
 Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of deny-all (see below).
+
+**YTI Chromebook (Patrick's Chromebook)** was moved to group 7 on 2026-05-05. Same restrictions as Tower of Gondor: Google search blocked, Gmail works. DNS manually set to 192.168.12.136 on the Chromebook, and Secure DNS (DoH) disabled in `chrome://settings/security`.
 
 ---
 
-## Tower of Gondor (Group 7) — Default-Allow with Specific Blocks
+## Group 7 (tower-of-gondor) — Default-Allow with Specific Blocks
 
-**Device:** Lenovo ThinkCentre M900 at 192.168.12.160 (MAC: 44-85-00-3f-26-7c)
-**Hostname:** Tower-of-Gondor
-**OS:** Windows (local account: `tower-of-gondor\user`, pw: 645866)
-**WiFi DNS:** Manually set to Pi-hole (192.168.12.136) via `netsh interface ip set dns "Wi-Fi" static 192.168.12.136`
+**Devices in this group:**
+1. **Tower of Gondor** (Lenovo ThinkCentre M900) at 192.168.12.160 (MAC: 44-85-00-3f-26-7c). Windows, local account `tower-of-gondor\user`, pw: 645866. WiFi DNS set via `netsh interface ip set dns "Wi-Fi" static 192.168.12.136`.
+2. **YTI Chromebook** (Patrick's Chromebook, MAC: b0-47-e9-e3-78-d0) at 192.168.12.219 (DHCP, was .220/.221). ChromeOS. DNS manually set to 192.168.12.136 in WiFi settings. Secure DNS (DoH) disabled in `chrome://settings/security`. Added 2026-05-05.
+
 **Approach:** Everything allowed by default. Specific sites blocked via regex deny rules in group 7.
 
 **Blocked sites (regex deny, group 7):**

@@ -6,7 +6,7 @@ type: reference
 
 # MILTONHAUS — All Network Devices
 
-**Last updated:** 2026-03-23
+**Last updated:** 2026-05-05
 **Network:** DIEMILTONHAUS (T-Mobile, 192.168.12.x)
 **Gateway:** TMO-G5AR at 192.168.12.1
 
@@ -32,8 +32,8 @@ type: reference
 | 192.168.12.189 | 34-36-3b-c6-bc:70 | — | MacBook Pro (Fedora) | SSH: `ssh -i ~/.ssh/id_ed25519 ericmilton@192.168.12.189` |
 | 192.168.12.194 | e8-84-a5-82-df-fc | — | Chromebook (ChromeOS) | Eva's Chromebook — WireGuard installed (Android app); also on Tailscale at 100.115.92.195 |
 | 192.168.12.215 | 3e-e7-96-3e-55-e9 (random) | iPhone.lan | iPhone | Rosemary's iPhone |
-| 192.168.12.219 | — | Eric.lan | Windows 11 PC | Eric's main PC |
-| 192.168.12.221 | b0-47-e9-e3-78-d0 | host.docker.internal | Chromebook (ChromeOS) | Patrick's Chromebook — running Docker (Linux on ChromeOS); DHCP assigned .221, Pi-hole registered at .221 |
+| 192.168.12.220 | — | Eric.lan | Windows 11 PC | Eric's main PC (was .219, DHCP drifted to .220 as of 2026-05-05) |
+| 192.168.12.219 | b0-47-e9-e3-78-d0 | — | Chromebook (ChromeOS) | Patrick's Chromebook (aka YTI Chromebook). DHCP drifted: was .221/.220, now .219 as of 2026-05-05. Pi-hole group 7 (tower-of-gondor): default-allow, Google search blocked, Gmail works. DNS manually set to 192.168.12.136. Secure DNS (DoH) disabled. |
 | 192.168.12.226 | 06-f0-9a-33-c5-6c (random) | — | Asus laptop (Fedora) | Gianna's laptop — SSH open |
 | 192.168.12.109 | b8-c7-5d-12-c0-4d | Rosemarys-MacBook-Pro.local | MacBook Pro (macOS) | Rosemary's MacBook Pro — Python 3.9, SSH: `rosemary@Rosemarys-MacBook-Pro.local` / pw: wisdom22!! (use pexpect). Pi-Tools at `/Users/rosemary/Pi-Tools/` |
 | ~~.238~~ | e0-63-da-c7-43-84 | ubnt.lan | Ubiquiti UniFi AP | **REMOVED from house** — never adopted, no longer on network (as of 2026-04) |
@@ -63,7 +63,7 @@ When Eric says "the server," "ssh into the server," etc., he means the ThinkCent
 |--------|----|------|
 | Homestead Pi 3 A+ | 192.168.12.114 | Automation controller — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
 | Mac Mini (Fedora) | 192.168.12.163 | Kids device — 3D printing, schoolwork |
-| Eric's Windows laptop | 192.168.12.220 | Eric's laptop — Windows, SSH: `ericm@192.168.12.220` / pw: 645866 (use pexpect). Pi-Tools app at `C:\Pi-Tools\` |
+| Eric's Windows PC | 192.168.12.220 | Eric's main PC — Windows 11, SSH: `ericm@192.168.12.220` / pw: 645866 (use pexpect). Pi-Tools app at `C:\Pi-Tools\` |
 | Raspberry Pi | 192.168.12.162 | Secondary Pi-hole |
 
 ---
