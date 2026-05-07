@@ -106,7 +106,7 @@ void fetchWeather() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   HTTPClient http;
-  http.begin("https://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=3");
+  http.begin("http://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=3");
   int code = http.GET();
 
   if (code == 200) {
