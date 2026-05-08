@@ -16,8 +16,9 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| Unknown brand | 24VDC, 5Ah (120Wh) | spare | Ordered by mistake. Too small for homestead. |
-| DR.PREPARE LiFePO4 | 12V 20Ah (240Wh) | to purchase | Homestead automation — main power |
+| Rapthor Li-ion | 24V 4Ah (96Wh) with charger | spare | Doesn't fit 12V homestead project. Save for separate project. |
+| DR.PREPARE LiFePO4 | 12V 20Ah (240Wh) | spare | Replaced by DieHard Marine for homestead. Available for another project. |
+| DieHard Marine 24M | 12V flooded, 500 CCA, 95 min reserve (~50Ah) | installed | Homestead automation — main power |
 
 ## Solar
 
@@ -29,14 +30,16 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| Renogy Wanderer | 10A PWM, LiFePO4 mode | to purchase | Homestead automation |
+| Renogy Wanderer | 10A PWM, **set to flooded mode** | installed | Homestead automation |
 
 ## Buck Converters
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| DROK LM2596 #1 | 12V → 3.2V (4A max) | installed | Homestead — LED power |
-| DROK LM2596 #2 | 12V → 5V | installed | Homestead — Pi power via micro-USB |
+| DROK 5A | 12V → 9.5V, case, LCD display, USB port | installed | Homestead — LED power (replaces LM2596) |
+| D-Planet 5A | 12V → 5V adjustable | installed | Homestead — Pi power |
+| D-Planet 5A ×3 | Adjustable, from 4-pack | spare | |
+| LM2596 3A | Adjustable | spare | Replaced by DROK 5A for homestead LEDs |
 
 ## Solid State Relays
 
@@ -58,7 +61,8 @@ Central inventory of all electronic components Eric has in the house — install
 |------|------|--------|-----------------|
 | Raspberry Pi 3 A+ | MILTONRP3, 64GB microSD | installed | Homestead automation |
 | ESP32 #1 | | installed | Closet LED lighting project |
-| ESP-WROOM-32 ×2 | Hosyond, CP2102, WiFi+BT, dual core 2.4GHz | to purchase | Weather station; CP2102 = no boot button needed |
+| ESP-WROOM-32 #1 | Hosyond, CP210x, WiFi+BT, dual core 2.4GHz | installed | Weather station at .240 (MAC: a4:f0:0f:74:11:74) |
+| ESP-WROOM-32 #2 | Hosyond, CP210x, WiFi+BT, dual core 2.4GHz | spare | Weather station spare (MAC: a4:f0:0f:76:70:0c) |
 | ESP32-S3 | | spare | |
 | ESP32-CAM + ESP32-CAM-MB | ESP-32S chip, camera connector, microSD slot, WiFi+BT, CH340 | spare | Pan-tilt camera project loaded (joystick+servos); includes USB programmer base board |
 | Arduino Nano ×2 | | spare | |
@@ -68,7 +72,7 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| U.S. Solid solenoid | 1/4" NC, 12V 1A | installed | Homestead — garden irrigation |
+| U.S. Solid solenoid | 1/4" NC, 12V 1A | installed | Homestead — chicken water |
 
 ## Fans
 
@@ -162,4 +166,4 @@ Central inventory of all electronic components Eric has in the house — install
 
 ---
 
-*Last updated: 2026-04-26*
+*Last updated: 2026-05-08*
