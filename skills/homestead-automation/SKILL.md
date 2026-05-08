@@ -16,10 +16,12 @@ Pi runs completely **offline** (no WiFi needed in the field). Cron fires the Pyt
 | Item | Detail |
 |------|--------|
 | Pi 3 A+ | MILTONRP3, booting from 64GB microSD |
-| Battery | DR.PREPARE 12V 20Ah LiFePO4 |
+| Battery | DieHard Marine 24M, 12V flooded, 500 CCA, 95 min reserve (~50Ah) — replaces DR.PREPARE LiFePO4 |
 | Solar panel | ECO-WORTHY 25W |
-| Charge controller | Renogy Wanderer 10A PWM (LiFePO4) |
-| Buck converters | D-Planet 5A DC-DC adjustable ×2 (12V→5V for Pi, 12V→3.2V for LEDs) — 4-pack, 2 spares |
+| Charge controller | Renogy Wanderer 10A PWM (**set to flooded mode**) |
+| Buck converter (LEDs) | DROK 5A DC-DC with case, LCD display, USB port (12V→9.5V for LEDs) |
+| Buck converter (Pi) | D-Planet 5A DC-DC adjustable (12V→5V for Pi) — from original 4-pack |
+| Fuse | 3A inline fuse on battery input |
 | SSRs | SSR-41FDD ×2 (input 3–32VDC, output 6A 60VDC) |
 | UV LEDs | 5× CHANZON 3W 365nm (UV) |
 | Blue LEDs | 5× 1W 460–465nm (blue) |
@@ -27,7 +29,7 @@ Pi runs completely **offline** (no WiFi needed in the field). Cron fires the Pyt
 | Enclosure | 3D printed PETG (weatherproof) |
 | Sealant | DAP High Temp RTV Silicone |
 
-**LED wiring**: All 10 chips in **parallel** at ~3.2V. LEDs buried in aluminum bar in ground for heatsinking.
+**LED wiring**: All 10 chips in **parallel** at ~9.5V (running voltage confirmed on LM2596, upgrading to DROK 5A). LEDs buried in aluminum bar in ground for heatsinking.
 
 ---
 
@@ -52,11 +54,12 @@ SSR output → load circuit (LEDs via buck, or solenoid directly)
 
 ## Power Budget
 
-- LEDs: 5× UV @ 450mA + 5× Blue @ 350mA = **4A @ 3.2V** (~13W)
-- Pi: ~500mA @ 5V
-- Solenoid: ~1A @ 12V (only during irrigation window)
-- Battery: 12V 20Ah = 240Wh → ~5 hours LED runtime
+- LEDs: 5× UV + 5× Blue at 9.5V, under 3A (confirmed on LM2596) — through DROK 5A buck
+- Pi: ~500mA @ 5V — through D-Planet 5A buck
+- Solenoid: ~1A @ 12V (only during irrigation window) — direct through SSR
+- Battery: DieHard Marine 12V ~50Ah (discharge to 50% = ~25Ah usable, ~300Wh)
 - Solar: 25W panel charges during day, covers nightly draw
+- Fuse: 3A inline on battery input
 
 ---
 
@@ -320,7 +323,10 @@ The T-Mobile TMO-G5AR gateway has an **Advanced Security** feature enabled by de
 
 | Item | Spec | Notes |
 |------|------|-------|
-| Battery | Rapthor 24V 4Ah (4000mAh) Li-ion with charger | Ordered by mistake. Does NOT fit this 12V project — 96Wh capacity can't cover overnight LED schedule (100Wh needed), and charge controller is 12V LiFePO4 only. Save for a separate indoor/portable project. |
+| Battery | Rapthor 24V 4Ah Li-ion with charger | Does NOT fit this 12V project. Save for a separate project. |
+| Battery | DR.PREPARE 12V 20Ah LiFePO4 | Replaced by DieHard Marine 24M. Available for another project. |
+| Buck converters | D-Planet 5A DC-DC adjustable ×3 | Spares from original 4-pack (1 used for Pi) |
+| Buck converter | LM2596 3A | Originally used for LEDs, replaced by DROK 5A |
 
 ---
 
