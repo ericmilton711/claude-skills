@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
 **Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
-**Last Updated:** 2026-05-05
+**Last Updated:** 2026-05-08
 
 ## Hardware
 
@@ -36,7 +36,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 
 - **arduino-cli** 1.5.0 at `~/.local/bin/arduino-cli` (Linux) or `%USERPROFILE%\.local\bin\arduino-cli.exe` (Windows)
 - **Board package:** esp32:esp32 3.3.8 (FQBN: `esp32:esp32:esp32`)
-- **Partition scheme:** `huge_app` (3MB app, no OTA partition, no SPIFFS)
+- **Partition scheme:** `custom` dual-OTA (two 1.94MB app slots, no SPIFFS) — defined in `~/esp32-weather/partitions.csv`
 - **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, BLE (built-in)
 - **esptool** 5.2.0 via pip
 - **CRITICAL: Do NOT use PlatformIO.** PlatformIO's framework-arduinoespressif32 3.3.7 breaks BLE connectivity. The ESP32 can connect to WiFi but BLE fails silently (connect() returns false, Pi never receives any commands). Only use arduino-cli with esp32:esp32 3.3.8. Learned the hard way 2026-05-05.
@@ -111,14 +111,21 @@ See `homestead-automation` skill for full watchdog script and systemd unit detai
 
 ## Flashing
 
-### Via USB (preferred)
+### Via OTA (preferred — wireless)
 
 ```bash
-arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=huge_app ~/esp32-weather
-arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=huge_app --port /dev/ttyUSB0 ~/esp32-weather
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=custom ~/esp32-weather --output-dir ~/esp32-weather/build
+curl -F "update=@$HOME/esp32-weather/build/esp32-weather.ino.bin" http://192.168.12.240/update
 ```
 
-**IMPORTANT:** Must use `PartitionScheme=huge_app` — the sketch is 58% of the 3MB huge_app partition and does NOT fit in the default 1.3MB partition.
+Browse to `http://192.168.12.240/update` to upload `.bin` files via the web UI, or use `curl` as above. The custom dual-OTA partition table (2x 1.94MB slots) enables this. The ESP32 reboots automatically after a successful upload.
+
+### Via USB (fallback)
+
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=custom ~/esp32-weather
+arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=custom --port /dev/ttyUSB0 ~/esp32-weather
+```
 
 This board does NOT always auto-enter bootloader. If upload fails:
 1. Hold **BOOT** button
@@ -127,10 +134,6 @@ This board does NOT always auto-enter bootloader. If upload fails:
 4. Upload within a few seconds
 
 **NEVER use `esptool erase_flash`** — it wipes NVS, causes boot loops, and loses network state. Just compile and re-upload.
-
-### Via OTA — BROKEN (do not use)
-
-**OTA does not work** with the `huge_app` partition scheme. The partition table has only one app slot (`ota_0`) and no `ota_1`, so `Update.begin()` has nowhere to write the new firmware. The `/update` page exists in the UI but uploads will always fail. **USB is the only way to flash.**
 
 ## JSON API
 
@@ -149,9 +152,10 @@ This board does NOT always auto-enter bootloader. If upload fails:
 }
 ```
 
-## Pi BLE Service Fix (2026-05-01)
+## Pi BLE Service Fixes
 
-The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken BLE) instead of hci1 (built-in BCM, working). Fixed by changing `adapters.sort()` to `adapters.sort(reverse=True)` so hci1 is preferred.
+- **(2026-05-01)** `find_adapter()` was selecting hci0 (Edimax, broken BLE) instead of hci1 (built-in BCM, working). Fixed by changing `adapters.sort()` to `adapters.sort(reverse=True)` so hci1 is preferred.
+- **(2026-05-08)** Pi's hci0 loses `connectable` flag on reboot/hci reset, causing ESP32 BLE connections to fail silently. Fixed by adding `subprocess.run(["btmgmt", "connectable", "on"])` at the top of `ble-homestead.py` so it runs on every service start. Must use `stdin=subprocess.DEVNULL` and `timeout=5` or `btmgmt` hangs.
 
 ## Build Notes
 
@@ -170,6 +174,10 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [x] BLE resilience — read retry, lower backoff cap, /ble-reset endpoint, bleMiss debug field (2026-05-01, pending USB flash)
 - [x] Discovered OTA is broken with huge_app partition — no second OTA slot (2026-05-01)
 - [x] Fix piConn display bug — time-based check + JS shows data when available (2026-05-05)
+- [x] Custom dual-OTA partition — OTA now works wirelessly via /update (2026-05-08)
+- [x] Remove RSSI < -80 BLE skip guard — was causing unnecessary BLE disconnects (2026-05-08)
+- [x] Fix daily reboot time to 2:00 AM (was incorrectly set to 3 AM) (2026-05-08)
+- [x] Fix Pi connectable flag lost on reboot — btmgmt in ble-homestead.py startup (2026-05-08)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
@@ -177,4 +185,4 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-05*
+*Created: 2026-04-26 | Updated: 2026-05-08*
