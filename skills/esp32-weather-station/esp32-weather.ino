@@ -9,7 +9,7 @@
 
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
-#define FORECAST_DAYS 7
+#define FORECAST_DAYS 2
 
 const char* ssid = "DIEMILTONHAUS";
 const char* password = "wisdom22!!";
@@ -46,6 +46,10 @@ String piUptime = "--";
 bool piConnected = false;
 int bleMissCount = 0;
 volatile bool otaInProgress = false;
+volatile bool wifiOk = false;
+volatile int cachedRSSI = 0;
+volatile unsigned long lastBleHeartbeat = 0;
+TaskHandle_t bleTaskHandle = NULL;
 
 static BLEUUID piServiceUUID("12345678-1234-5678-1234-56789abcdef0");
 static BLEUUID piCmdUUID("12345678-1234-5678-1234-56789abcdef1");
@@ -102,7 +106,7 @@ void fetchWeather() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   HTTPClient http;
-  http.begin("http://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=8");
+  http.begin("http://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=3");
   int code = http.GET();
 
   if (code == 200) {
@@ -172,8 +176,11 @@ void bleTask(void* param) {
   BLEAddress piAddress("b8:27:eb:f6:24:e9");
   Serial.println("BLE: direct connect to b8:27:eb:f6:24:e9");
   int backoffMs = 30000;
+  int consecutiveFails = 0;
 
   while (true) {
+    lastBleHeartbeat = millis();
+
     if (otaInProgress) {
       delay(1000);
       continue;
@@ -183,27 +190,37 @@ void bleTask(void* param) {
       bleResetRequested = false;
       backoffMs = 30000;
       bleMissCount = 0;
+      consecutiveFails = 0;
       Serial.println("BLE: manual reset, retrying now");
     }
 
-    if (WiFi.status() != WL_CONNECTED || WiFi.RSSI() == 0) {
-      Serial.printf("BLE: skipping, WiFi down (status=%d RSSI=%d)\n", WiFi.status(), WiFi.RSSI());
-      delay(30000);
+    if (!wifiOk) {
+      delay(5000);
+      lastBleHeartbeat = millis();
       continue;
     }
 
-    Serial.printf("BLE: connecting (heap: %d, WiFi: %d, RSSI: %d)\n", ESP.getFreeHeap(), WiFi.status(), WiFi.RSSI());
-    BLEClient* client = BLEDevice::createClient();
-    bool ok = false;
-
-    try {
-      ok = client->connect(piAddress, BLE_ADDR_TYPE_PUBLIC, 5000);
-    } catch (...) {
-      Serial.println("BLE: connect exception");
-      ok = false;
+    if (consecutiveFails >= 10) {
+      Serial.println("BLE: 10 consecutive failures, long backoff");
+      consecutiveFails = 0;
+      backoffMs = 60000;
+      delay(60000);
+      lastBleHeartbeat = millis();
+      continue;
     }
 
-    if (ok) {
+    Serial.printf("BLE: connecting (heap: %d)\n", ESP.getFreeHeap());
+    BLEClient* client = BLEDevice::createClient();
+    bool connected = false;
+
+    try {
+      connected = client->connect(piAddress, BLE_ADDR_TYPE_PUBLIC, 5000);
+    } catch (...) {
+      Serial.println("BLE: connect exception");
+      connected = false;
+    }
+
+    if (connected) {
       BLERemoteService* svc = client->getService(piServiceUUID);
       if (svc) {
         BLERemoteCharacteristic* cmdChar = svc->getCharacteristic(piCmdUUID);
@@ -239,19 +256,21 @@ void bleTask(void* param) {
       client->disconnect();
       delete client;
       backoffMs = 30000;
+      consecutiveFails = 0;
       if (bleMissCount > 0) bleMissCount--;
     } else {
       bleMissCount++;
+      consecutiveFails++;
       if (bleMissCount >= 3 && xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
         piConnected = false;
         xSemaphoreGive(piMutex);
       }
-      client->disconnect();
       delete client;
-      Serial.printf("BLE connect failed (miss %d, retry in %ds)\n", bleMissCount, backoffMs / 1000);
+      Serial.printf("BLE connect failed (miss %d, consec %d, retry in %ds)\n", bleMissCount, consecutiveFails, backoffMs / 1000);
       if (backoffMs < 60000) backoffMs += 10000;
     }
 
+    lastBleHeartbeat = millis();
     delay(backoffMs);
   }
 }
@@ -424,7 +443,7 @@ const char page[] PROGMEM = R"rawliteral(
         </div>
       </div>
       <div class="col-full">
-        <div class="section">7-Day Forecast</div>
+        <div class="section">2-Day Forecast</div>
         <div id="forecast"></div>
       </div>
     </div>
@@ -547,8 +566,18 @@ void setup() {
     Serial.println(WiFi.localIP());
     Serial.printf("RSSI: %d dBm | TX Power: max\n", WiFi.RSSI());
 
-    configTzTime("EST5EDT,M3.2.0,M11.1.0", ntpServer);
+    setenv("TZ", "EST5EDT,M3.2.0,M11.1.0", 1);
+    tzset();
+    configTime(0, 0, ntpServer);
     Serial.println("NTP time sync started (Eastern)");
+    struct tm ti;
+    for (int i = 0; i < 10; i++) {
+      if (getLocalTime(&ti, 1000)) {
+        Serial.printf("NTP synced: %02d:%02d:%02d\n", ti.tm_hour, ti.tm_min, ti.tm_sec);
+        break;
+      }
+      delay(500);
+    }
 
     fetchWeather();
   } else {
@@ -608,15 +637,20 @@ void setup() {
 
   piMutex = xSemaphoreCreateMutex();
 
-  BLEDevice::init("miltonhaus-weather");
+  BLEDevice::init("MILTONHAUS");
   Serial.println("BLE initialized");
 
-  xTaskCreatePinnedToCore(bleTask, "bleTask", 16384, NULL, 1, NULL, 0);
+  lastBleHeartbeat = millis();
+  xTaskCreatePinnedToCore(bleTask, "bleTask", 16384, NULL, 1, &bleTaskHandle, 0);
   Serial.println("BLE task started on core 0");
+
 }
 
 void loop() {
   server.handleClient();
+
+  wifiOk = WiFi.isConnected();
+  if (wifiOk) cachedRSSI = WiFi.RSSI();
 
   if (millis() - lastSensorRead > 2000) {
     readSensors();
@@ -628,7 +662,7 @@ void loop() {
     lastWeatherFetch = millis();
   }
 
-  bool wifiDead = (WiFi.status() != WL_CONNECTED) || (WiFi.status() == WL_CONNECTED && WiFi.RSSI() == 0);
+  bool wifiDead = (WiFi.status() != WL_CONNECTED);
   if (wifiDead && millis() - lastWifiCheck > 30000) {
     lastWifiCheck = millis();
     Serial.printf("WiFi lost (status=%d RSSI=%d) - reconnecting...\n", WiFi.status(), WiFi.RSSI());
@@ -653,19 +687,12 @@ void loop() {
       fetchWeather();
     } else {
       wifiFailCount++;
-      Serial.printf("WiFi reconnect failed (%d/5)\n", wifiFailCount);
-      if (wifiFailCount >= 5) {
-        Serial.println("WATCHDOG: WiFi failed 5x, rebooting");
-        delay(100);
-        ESP.restart();
-      }
+      Serial.printf("WiFi reconnect failed (%d)\n", wifiFailCount);
     }
   }
 
   if (ESP.getFreeHeap() < 8192) {
-    Serial.println("WATCHDOG: heap critical, rebooting");
-    delay(100);
-    ESP.restart();
+    Serial.printf("WATCHDOG: heap low (%d bytes)\n", ESP.getFreeHeap());
   }
 
   struct tm timeinfo;

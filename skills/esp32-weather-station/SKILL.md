@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
-**Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor not yet wired. Gift for Rosemary.
-**Last Updated:** 2026-05-08
+**Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor wired and reading. OLED removed (caused heap exhaustion). Gift for Rosemary.
+**Last Updated:** 2026-05-09
 
 ## Hardware
 
@@ -10,9 +10,9 @@
 - **Spare unit MAC:** a4:f0:0f:76:70:0c
 - **USB Port:** /dev/ttyUSB0 (Linux) or COM15 (Windows) — Silicon Labs CP210x
 - **Display:** Amazon Fire HD 8 tablet (to be ordered) showing web dashboard in browser
-- **Sensor:** DHT11 (blue square, 3 pins) — not yet wired
+- **Sensor:** DHT11 (blue square, 3 pins) — wired and reading (GPIO 4)
 
-## Wiring Schematic (TODO — not yet wired)
+## Wiring Schematic
 
 ```
 ESP-WROOM-32       Component
@@ -30,7 +30,8 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - Pin 2 (middle): DATA
 - Pin 3 (right): GND
 
-**Dropped from original plan:** HR202 humidity sensor (redundant with DHT11), SSD1306 OLED (using tablet instead).
+**Dropped from original plan:** HR202 humidity sensor (redundant with DHT11).
+**Removed 2026-05-09:** SSD1306 OLED — caused heap exhaustion (~7.5KB free), killed WiFi/web server. With OLED removed and forecast reduced from 7-day to 2-day, heap is ~260KB free.
 
 ## Software Stack
 
@@ -53,7 +54,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
   - Temperature (°F), high/low, conditions with emoji, humidity, wind speed
 - **Sunrise/Sunset** — 12-hour AM/PM format
 - **2-day forecast** — day name, conditions, high/low temps
-- **Indoor sensor** — DHT11 temp (°F and °C) + humidity (shows "Sensor Not Connected" until wired)
+- **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
 - **Homestead Pi via BLE** — connects to Pi's GATT server every 30 seconds
   - LED state (ON/OFF), irrigation state (ON/OFF), CPU temp, uptime
   - Shows "Not in Range" when Pi is unreachable
@@ -144,8 +145,10 @@ This board does NOT always auto-enter bootloader. If upload fails:
   "oTemp": "45.9", "oHigh": "64", "oLow": "39",
   "oHum": "81", "oWind": "5.2", "oDesc": "&#9728;&#65039; Clear",
   "sunrise": "6:04 AM", "sunset": "7:59 PM",
-  "f1Day": "Sat", "f1Desc": "&#9925; Partly Cloudy", "f1Hi": "58", "f1Lo": "43",
-  "f2Day": "Sun", "f2Desc": "&#9925; Partly Cloudy", "f2Hi": "58", "f2Lo": "35",
+  "forecast": [
+    {"day": "Sat", "desc": "&#9925; Partly Cloudy", "hi": "58", "lo": "43"},
+    {"day": "Sun", "desc": "&#9925; Partly Cloudy", "hi": "58", "lo": "35"}
+  ],
   "piConn": true, "piLed": "OFF", "piWater": "OFF",
   "piTemp": "32.7'C", "piUp": "up 6 hours, 19 minutes",
   "bleMiss": 0
@@ -166,7 +169,8 @@ This board does NOT always auto-enter bootloader. If upload fails:
 
 ## TODO
 
-- [ ] Wire DHT11 sensor
+- [x] Wire DHT11 sensor — reading temp + humidity (2026-05-09)
+- [x] Fix heap exhaustion — removed OLED, reduced forecast 7→2 days (2026-05-09)
 - [x] Set static IP — hardcoded 192.168.12.240 (2026-04-30)
 - [x] Fix WiFi stability — setSleep(false), max TX power, post-connect config (2026-05-01)
 - [x] Fix BLE crash loop — timeout, backoff, client cleanup (2026-05-01)
@@ -185,4 +189,4 @@ This board does NOT always auto-enter bootloader. If upload fails:
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-08*
+*Created: 2026-04-26 | Updated: 2026-05-09*
