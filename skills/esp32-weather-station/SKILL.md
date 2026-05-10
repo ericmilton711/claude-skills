@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
 **Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor wired and reading. OLED removed (caused heap exhaustion). Gift for Rosemary.
-**Last Updated:** 2026-05-09
+**Last Updated:** 2026-05-10
 
 ## Hardware
 
@@ -31,13 +31,13 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - Pin 3 (right): GND
 
 **Dropped from original plan:** HR202 humidity sensor (redundant with DHT11).
-**Removed 2026-05-09:** SSD1306 OLED — caused heap exhaustion (~7.5KB free), killed WiFi/web server. With OLED removed and forecast reduced from 7-day to 2-day, heap is ~260KB free.
+**Removed 2026-05-09:** SSD1306 OLED — caused heap exhaustion (~7.5KB free), killed WiFi/web server.
 
 ## Software Stack
 
 - **arduino-cli** 1.5.0 at `~/.local/bin/arduino-cli` (Linux) or `%USERPROFILE%\.local\bin\arduino-cli.exe` (Windows)
 - **Board package:** esp32:esp32 3.3.8 (FQBN: `esp32:esp32:esp32`)
-- **Partition scheme:** `custom` dual-OTA (two 1.94MB app slots, no SPIFFS) — defined in `~/esp32-weather/partitions.csv`
+- **Partition scheme:** `min_spiffs` (1.9MB app x2 with OTA, 192KB SPIFFS) — sketch uses 93% of partition
 - **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, BLE (built-in)
 - **esptool** 5.2.0 via pip
 - **CRITICAL: Do NOT use PlatformIO.** PlatformIO's framework-arduinoespressif32 3.3.7 breaks BLE connectivity. The ESP32 can connect to WiFi but BLE fails silently (connect() returns false, Pi never receives any commands). Only use arduino-cli with esp32:esp32 3.3.8. Learned the hard way 2026-05-05.
@@ -53,13 +53,15 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - **Current weather** — Open-Meteo API (free, no API key), Willow Street PA (lat 39.98, lon -76.28)
   - Temperature (°F), high/low, conditions with emoji, humidity, wind speed
 - **Sunrise/Sunset** — 12-hour AM/PM format
-- **2-day forecast** — day name, conditions, high/low temps
+- **7-day forecast** — day name, conditions with emoji, high/low temps, dynamically rendered
 - **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
 - **Homestead Pi via BLE** — connects to Pi's GATT server every 30 seconds
   - LED state (ON/OFF), irrigation state (ON/OFF), CPU temp, uptime
   - Shows "Not in Range" when Pi is unreachable
   - BLE task runs on core 0, web server on core 1 (FreeRTOS dual-core)
 - **Web dashboard** — served at `http://192.168.12.240/` on port 80, auto-refreshes every 5 seconds
+  - Compact 2-column CSS grid layout, fits on phone without scrolling
+  - `overflow: hidden` on body to prevent scroll
 - **OTA firmware updates** — browse to `/update` to upload .bin files wirelessly
 - **Weather updates** every 10 minutes from Open-Meteo
 - **Font:** Comfortaa (Google Fonts)
@@ -71,8 +73,8 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - `WiFi.setTxPower(WIFI_POWER_19_5dBm)` — max transmit power
 - `WiFi.setAutoReconnect(true)` — auto-reconnect on drop
 - **Static IP set AFTER `WiFi.begin()` connects** — ESP32 Arduino Core 3.3.8 bug ignores `WiFi.config()` before `WiFi.begin()`
-- Reconnect logic in `loop()` checks every 30s, also checks RSSI == 0 for phantom WiFi detection
-- `WiFi.disconnect(true)` before reconnect to fully reset the radio
+- Non-blocking WiFi reconnect: calls `WiFi.disconnect(true)` + `WiFi.begin()` and moves on, checks result on next loop pass (does NOT block in a retry loop)
+- `fetchWeather()` has 5-second connect and read timeouts to prevent blocking the web server
 
 ## BLE Connection (critical — do not change)
 
@@ -93,7 +95,11 @@ The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service
 - **try/catch:** around `connect()` to prevent crash loops from exceptions
 - **Thread safety:** FreeRTOS mutex protects shared Pi data between BLE task (core 0) and web server (core 1)
 - **Known issue:** Pi BCM handles only 1 BLE connection at a time. If another client (laptop, phone) connects to Pi, ESP32 fails until that client disconnects. Restarting `ble-homestead.service` on Pi clears stuck state.
-- **piConn bug: FIXED (2026-05-05).** `piConn` now uses `lastSuccessfulBleMillis` -- true if a successful BLE response was received within the last 90 seconds. Dashboard JS also updated: shows Pi data whenever it exists (not just when piConn is true), with status pill showing "BLE Connected" / "Last Data Received" / "Not in Range".
+- **piConn bug: FIXED (2026-05-05).** `piConn` now uses `lastSuccessfulBleMillis` -- true if a successful BLE response was received within the last 90 seconds. Dashboard JS also updated: shows Pi data whenever it exists (not just when piConn is true), with status pill showing "Connected" / "Last Data" / "Not in Range".
+
+### Pi BLE Startup Flags (fixed 2026-05-10)
+
+`ble-homestead.py` now sets BOTH `btmgmt connectable on` AND `btmgmt advertising on` at startup. Previously only set `connectable`, causing the Pi to be invisible to the ESP32 after reboots/service restarts. Both flags are required for BLE LE connections.
 
 ### BLE Watchdog (added 2026-05-02)
 
@@ -114,19 +120,22 @@ See `homestead-automation` skill for full watchdog script and systemd unit detai
 
 ### Via OTA (preferred — wireless)
 
+Browse to `http://192.168.12.240/update`, upload the compiled `.bin` file. The ESP32 reboots automatically after upload.
+
+To get the `.bin` file:
 ```bash
-arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=custom ~/esp32-weather --output-dir ~/esp32-weather/build
-curl -F "update=@$HOME/esp32-weather/build/esp32-weather.ino.bin" http://192.168.12.240/update
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
+```
+The `.bin` is at `~/.arduino/sketches/<hash>/esp32-weather.ino.bin` (or use `--output-dir` flag).
+
+### Via USB
+
+```bash
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
+arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port COM15 ~/esp32-weather
 ```
 
-Browse to `http://192.168.12.240/update` to upload `.bin` files via the web UI, or use `curl` as above. The custom dual-OTA partition table (2x 1.94MB slots) enables this. The ESP32 reboots automatically after a successful upload.
-
-### Via USB (fallback)
-
-```bash
-arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=custom ~/esp32-weather
-arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=custom --port /dev/ttyUSB0 ~/esp32-weather
-```
+**IMPORTANT:** Must use `PartitionScheme=min_spiffs` — the sketch is 93% of the 1.9MB partition.
 
 This board does NOT always auto-enter bootloader. If upload fails:
 1. Hold **BOOT** button
@@ -141,13 +150,18 @@ This board does NOT always auto-enter bootloader. If upload fails:
 `GET /data` returns:
 ```json
 {
-  "tempC": 0.0, "tempF": 0.0, "dhtH": 0.0, "sensor": false,
-  "oTemp": "45.9", "oHigh": "64", "oLow": "39",
-  "oHum": "81", "oWind": "5.2", "oDesc": "&#9728;&#65039; Clear",
-  "sunrise": "6:04 AM", "sunset": "7:59 PM",
-  "forecast": [
-    {"day": "Sat", "desc": "&#9925; Partly Cloudy", "hi": "58", "lo": "43"},
-    {"day": "Sun", "desc": "&#9925; Partly Cloudy", "hi": "58", "lo": "35"}
+  "tempC": 25.8, "tempF": 78.4, "dhtH": 46.0, "sensor": true,
+  "oTemp": "72.4", "oHigh": "74", "oLow": "47",
+  "oHum": "51", "oWind": "9.0", "oDesc": "&#9728;&#65039; Clear",
+  "sunrise": "5:54 AM", "sunset": "8:08 PM",
+  "fc": [
+    {"d": "Mon", "c": "&#9925; Partly Cloudy", "h": "64", "l": "46"},
+    {"d": "Tue", "c": "&#9925; Partly Cloudy", "h": "61", "l": "40"},
+    {"d": "Wed", "c": "&#127783; Rain Showers", "h": "66", "l": "45"},
+    {"d": "Thu", "c": "&#127783; Rain Showers", "h": "56", "l": "45"},
+    {"d": "Fri", "c": "&#9925; Partly Cloudy", "h": "64", "l": "46"},
+    {"d": "Sat", "c": "&#9925; Partly Cloudy", "h": "77", "l": "51"},
+    {"d": "Sun", "c": "&#9925; Partly Cloudy", "h": "83", "l": "60"}
   ],
   "piConn": true, "piLed": "OFF", "piWater": "OFF",
   "piTemp": "32.7'C", "piUp": "up 6 hours, 19 minutes",
@@ -155,10 +169,9 @@ This board does NOT always auto-enter bootloader. If upload fails:
 }
 ```
 
-## Pi BLE Service Fixes
+## Pi BLE Service Fix (2026-05-01)
 
-- **(2026-05-01)** `find_adapter()` was selecting hci0 (Edimax, broken BLE) instead of hci1 (built-in BCM, working). Fixed by changing `adapters.sort()` to `adapters.sort(reverse=True)` so hci1 is preferred.
-- **(2026-05-08)** Pi's hci0 loses `connectable` flag on reboot/hci reset, causing ESP32 BLE connections to fail silently. Fixed by adding `subprocess.run(["btmgmt", "connectable", "on"])` at the top of `ble-homestead.py` so it runs on every service start. Must use `stdin=subprocess.DEVNULL` and `timeout=5` or `btmgmt` hangs.
+The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken BLE) instead of hci1 (built-in BCM, working). Fixed by changing `adapters.sort()` to `adapters.sort(reverse=True)` so hci1 is preferred. Note: as of 2026-05-10 only hci0 exists (Edimax removed), and it IS the built-in BCM.
 
 ## Build Notes
 
@@ -166,22 +179,22 @@ This board does NOT always auto-enter bootloader. If upload fails:
 - HTML pages use `const char page[] PROGMEM` (not `const char*`) to store in flash. Serving uses chunked `sendContent()` in 1KB chunks.
 - BLE library (v3.3.8) uses Arduino `String` type, not `std::string`.
 - User must be in `dialout` group for serial access (`/dev/ttyUSB0`).
+- String literal concatenation in Arduino: `"foo" + "bar"` fails (both are `const char[]`). Use `String("foo") + "bar"` or break into separate `json +=` statements.
 
 ## TODO
 
-- [x] Wire DHT11 sensor — reading temp + humidity (2026-05-09)
-- [x] Fix heap exhaustion — removed OLED, reduced forecast 7→2 days (2026-05-09)
+- [x] Wire DHT11 sensor (2026-05-09)
 - [x] Set static IP — hardcoded 192.168.12.240 (2026-04-30)
 - [x] Fix WiFi stability — setSleep(false), max TX power, post-connect config (2026-05-01)
 - [x] Fix BLE crash loop — timeout, backoff, client cleanup (2026-05-01)
 - [x] Fix Pi BLE adapter selection — hci1 over hci0 (2026-05-01)
-- [x] BLE resilience — read retry, lower backoff cap, /ble-reset endpoint, bleMiss debug field (2026-05-01, pending USB flash)
-- [x] Discovered OTA is broken with huge_app partition — no second OTA slot (2026-05-01)
+- [x] BLE resilience — read retry, lower backoff cap, /ble-reset endpoint, bleMiss debug field (2026-05-01)
 - [x] Fix piConn display bug — time-based check + JS shows data when available (2026-05-05)
-- [x] Custom dual-OTA partition — OTA now works wirelessly via /update (2026-05-08)
-- [x] Remove RSSI < -80 BLE skip guard — was causing unnecessary BLE disconnects (2026-05-08)
-- [x] Fix daily reboot time to 2:00 AM (was incorrectly set to 3 AM) (2026-05-08)
-- [x] Fix Pi connectable flag lost on reboot — btmgmt in ble-homestead.py startup (2026-05-08)
+- [x] Switch to min_spiffs partition — enables OTA wireless updates (2026-05-10)
+- [x] Fix web server blocking — HTTP timeouts on fetchWeather(), non-blocking WiFi reconnect (2026-05-10)
+- [x] Fix Pi BLE advertising flag — added btmgmt advertising on to ble-homestead.py startup (2026-05-10)
+- [x] 7-day forecast — expanded from 2-day, dynamic JS rendering (2026-05-10)
+- [x] Compact grid layout — 2-column CSS grid, no scrolling on phone (2026-05-10)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
@@ -189,4 +202,4 @@ This board does NOT always auto-enter bootloader. If upload fails:
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-09*
+*Created: 2026-04-26 | Updated: 2026-05-10*
