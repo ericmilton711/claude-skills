@@ -117,6 +117,15 @@ See `homestead-automation` skill for full watchdog script and systemd unit detai
 - **SSID:** DIEMILTONHAUS
 - **IP:** 192.168.12.240 (static — hardcoded in firmware)
 
+## Remote Access (Tailscale)
+
+- **Remote URL:** `http://100.70.179.60:8240` (from phone or any Tailscale device)
+- **Local URL:** `http://192.168.12.240` (on DIEMILTONHAUS WiFi)
+- **How:** Tailscale on ThinkCentre (100.70.179.60) + reverse proxy (`weather-proxy.service`) forwarding port 8240 to ESP32 port 80
+- **Tailscale account:** ericmilton711@gmail.com
+- **Phone:** Galaxy S23 with Tailscale app, IP 100.111.139.83
+- **Why not WireGuard:** T-Mobile CGNAT blocks inbound connections
+
 ## Flashing
 
 ### Via OTA (preferred — wireless)
@@ -199,6 +208,7 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [x] Horizontal 7-day forecast — 7-column grid instead of stacked rows, tighter spacing (2026-05-11)
 - [x] Weather API switched to HTTP — saves heap, avoids SSL issues on ESP32 (2026-05-11)
 - [x] DHT11 ground wire reconnected — was unplugged, causing "No Sensor" (2026-05-11)
+- [x] Remote access via Tailscale — proxy on ThinkCentre, phone accesses http://100.70.179.60:8240 (2026-05-11)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
