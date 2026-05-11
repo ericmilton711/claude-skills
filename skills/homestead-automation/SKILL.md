@@ -1,7 +1,9 @@
-# Homestead Automation — Raspberry Pi 3 A+ Controller
+# Homestead Automation — Raspberry Pi Controller
+
+> **STATUS (2026-05-11):** Pi 3 A+ is DEAD. Killed by 8.5V from Drok buck converter (max safe is 5.25V). SD card likely intact. Ordering 2x Pi 3 B (1GB, $33 each) as replacement. SD card should boot in Pi 3 B with zero changes (same generation). BLE MAC will change with new hardware; update ESP32 weather firmware accordingly.
 
 ## Project Overview
-Raspberry Pi 3 A+ controlling two things in the chicken run:
+Raspberry Pi 3 A+ ~~controlling~~ **was controlling** two things in the chicken run (replacement Pi 3 B on order):
 1. **Bug attraction lights** — UV (365nm) + Blue (460nm) LEDs to attract insects for chickens
 2. **Chicken water** — 12V solenoid valve off a rain barrel → chicken waterer
 
