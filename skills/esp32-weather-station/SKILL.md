@@ -213,6 +213,9 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
 - [ ] ESP32 needs heatsink + fan + case (runs warm with WiFi + BLE)
+- [ ] **Yard camera** — ESP32-CAM pointed at yard/garden/chicken coop, embed live stream in dashboard
+- [ ] **Outdoor sensor** — second ESP32 with DHT11/DHT22 outside, sends readings to dashboard via HTTP or BLE
+- [ ] **Soil moisture** — garden moisture sensor on Homestead Pi, display on dashboard (see `project_garden_moisture_sensor.md`)
 
 ---
 
