@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
 **Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor wired and reading. OLED removed (caused heap exhaustion). Gift for Rosemary.
-**Last Updated:** 2026-05-10
+**Last Updated:** 2026-05-11
 
 ## Hardware
 
@@ -50,10 +50,10 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 ## Features
 
 - **Live clock** — Eastern time (America/New_York) via NTP, 12-hour format, no seconds
-- **Current weather** — Open-Meteo API (free, no API key), Willow Street PA (lat 39.98, lon -76.28)
+- **Current weather** — Open-Meteo API via HTTP (free, no API key), Willow Street PA (lat 39.98, lon -76.28)
   - Temperature (°F), high/low, conditions with emoji, humidity, wind speed
 - **Sunrise/Sunset** — 12-hour AM/PM format
-- **7-day forecast** — day name, conditions with emoji, high/low temps, dynamically rendered
+- **7-day forecast** — horizontal 7-column grid, day name, conditions with emoji, high/low temps
 - **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
 - **Homestead Pi via BLE** — connects to Pi's GATT server every 30 seconds
   - LED state (ON/OFF), irrigation state (ON/OFF), CPU temp, uptime
@@ -74,6 +74,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - `WiFi.setAutoReconnect(true)` — auto-reconnect on drop
 - **Static IP set AFTER `WiFi.begin()` connects** — ESP32 Arduino Core 3.3.8 bug ignores `WiFi.config()` before `WiFi.begin()`
 - Non-blocking WiFi reconnect: calls `WiFi.disconnect(true)` + `WiFi.begin()` and moves on, checks result on next loop pass (does NOT block in a retry loop)
+- `fetchWeather()` uses plain HTTP (not HTTPS) to save ~40KB heap and avoid SSL cert issues
 - `fetchWeather()` has 5-second connect and read timeouts to prevent blocking the web server
 
 ## BLE Connection (critical — do not change)
@@ -195,6 +196,9 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [x] Fix Pi BLE advertising flag — added btmgmt advertising on to ble-homestead.py startup (2026-05-10)
 - [x] 7-day forecast — expanded from 2-day, dynamic JS rendering (2026-05-10)
 - [x] Compact grid layout — 2-column CSS grid, no scrolling on phone (2026-05-10)
+- [x] Horizontal 7-day forecast — 7-column grid instead of stacked rows, tighter spacing (2026-05-11)
+- [x] Weather API switched to HTTP — saves heap, avoids SSL issues on ESP32 (2026-05-11)
+- [x] DHT11 ground wire reconnected — was unplugged, causing "No Sensor" (2026-05-11)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
@@ -202,4 +206,4 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-10*
+*Created: 2026-04-26 | Updated: 2026-05-11*

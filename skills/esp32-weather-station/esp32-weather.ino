@@ -101,7 +101,7 @@ void fetchWeather() {
   HTTPClient http;
   http.setConnectTimeout(5000);
   http.setTimeout(5000);
-  http.begin("https://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=8");
+  http.begin("http://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=8");
   int code = http.GET();
 
   if (code == 200) {
@@ -278,7 +278,7 @@ const char page[] PROGMEM = R"rawliteral(
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 6px;
+      gap: 4px;
       max-width: 900px;
       margin: 0 auto;
       height: 100%;
@@ -293,7 +293,7 @@ const char page[] PROGMEM = R"rawliteral(
     .card {
       background: #16213e;
       border-radius: 8px;
-      padding: 6px 8px;
+      padding: 4px 6px;
       text-align: center;
       border: 1px solid #0f3460;
     }
@@ -307,21 +307,24 @@ const char page[] PROGMEM = R"rawliteral(
     .wind { color: #a8d8ea; }
     .sun { color: #f9d923; }
     .conditions { color: #ccc; }
-    .fc {
+    #fcList {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
       background: #16213e;
       border-radius: 8px;
       border: 1px solid #0f3460;
-      padding: 5px 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.85em;
+      padding: 4px;
+    }
+    .fc {
+      text-align: center;
+      font-size: 0.65em;
+      padding: 2px 0;
     }
     .fc .day { font-weight: bold; }
-    .fc .desc { color: #aaa; font-size: 0.85em; flex: 1; text-align: center; }
+    .fc .desc { color: #aaa; }
     .fc .hi { color: #e94560; font-weight: bold; }
-    .fc .lo { color: #888; margin-left: 6px; }
-    #fcList { display: flex; flex-direction: column; gap: 4px; }
+    .fc .lo { color: #888; }
     .pill {
       display: inline-block;
       padding: 3px 12px;
@@ -404,7 +407,7 @@ const char page[] PROGMEM = R"rawliteral(
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/New_York'});},1000)}());
-    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='No Sensor';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fl=document.getElementById('fcList');fl.innerHTML='';if(d.fc){d.fc.forEach(function(f){var r=document.createElement('div');r.className='fc';r.innerHTML='<div class="day">'+f.d+'</div><div class="desc">'+f.c+'</div><div><span class="hi">'+f.h+'</span>&deg; <span class="lo">'+f.l+'</span>&deg;</div>';fl.appendChild(r)})}var ps=document.getElementById('piStatus');var hasPiData=d.piLed&&d.piLed!=='--';if(d.piConn){ps.textContent='Connected';ps.className='pill ok'}else if(hasPiData){ps.textContent='Last Data';ps.className='pill ok'}else{ps.textContent='Not in Range';ps.className='pill'}if(hasPiData||d.piConn){document.getElementById('piLed').textContent=d.piLed;document.getElementById('piLed').className='value '+(d.piLed==='ON'?'pi-on':'pi-off');document.getElementById('piWater').textContent=d.piWater;document.getElementById('piWater').className='value '+(d.piWater==='ON'?'pi-on':'pi-off');document.getElementById('piTemp').textContent=d.piTemp;document.getElementById('piUp').textContent=d.piUp}else{document.getElementById('piLed').textContent='--';document.getElementById('piLed').className='value pi-off';document.getElementById('piWater').textContent='--';document.getElementById('piWater').className='value pi-off';document.getElementById('piTemp').textContent='--';document.getElementById('piUp').textContent='--'}}).catch(function(){document.getElementById('status').textContent='Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='No Sensor';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fl=document.getElementById('fcList');fl.innerHTML='';if(d.fc){d.fc.forEach(function(f){var r=document.createElement('div');r.className='fc';r.innerHTML='<div class="day">'+f.d+'</div><div class="desc">'+f.c+'</div><div><span class="hi">'+f.h+'</span>&deg;<br><span class="lo">'+f.l+'</span>&deg;</div>';fl.appendChild(r)})}var ps=document.getElementById('piStatus');var hasPiData=d.piLed&&d.piLed!=='--';if(d.piConn){ps.textContent='Connected';ps.className='pill ok'}else if(hasPiData){ps.textContent='Last Data';ps.className='pill ok'}else{ps.textContent='Not in Range';ps.className='pill'}if(hasPiData||d.piConn){document.getElementById('piLed').textContent=d.piLed;document.getElementById('piLed').className='value '+(d.piLed==='ON'?'pi-on':'pi-off');document.getElementById('piWater').textContent=d.piWater;document.getElementById('piWater').className='value '+(d.piWater==='ON'?'pi-on':'pi-off');document.getElementById('piTemp').textContent=d.piTemp;document.getElementById('piUp').textContent=d.piUp}else{document.getElementById('piLed').textContent='--';document.getElementById('piLed').className='value pi-off';document.getElementById('piWater').textContent='--';document.getElementById('piWater').className='value pi-off';document.getElementById('piTemp').textContent='--';document.getElementById('piUp').textContent='--'}}).catch(function(){document.getElementById('status').textContent='Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
   </script>
 </body>
 </html>
@@ -601,7 +604,8 @@ void loop() {
     lastSensorRead = millis();
   }
 
-  if (millis() - lastWeatherFetch > 600000) {
+  unsigned long weatherInterval = (outsideTemp == "--") ? 30000 : 600000;
+  if (millis() - lastWeatherFetch > weatherInterval) {
     fetchWeather();
     lastWeatherFetch = millis();
   }
