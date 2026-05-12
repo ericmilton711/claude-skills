@@ -147,6 +147,17 @@ Large multi-part RC plane project. G-code files at top level, source STL/STP fil
 
 ---
 
-**File location:** `C:\Users\ericm\Desktop\gcode files\`
+**File location:** `C:\Users\ericm\Desktop\Non-School stuff\gcode files\`
 **Total G-code files:** ~113
 **Subfolder:** `XP-53 Peregrine (RC Plane)/` contains STL/STP source files across 3 download sets
+
+---
+
+## STL Files (stored in this repo)
+
+All STL source files are committed to `stl/` in this skill folder on GitHub. Gcode files are too large for GitHub (1.3 GB total) but can always be re-sliced from these STLs using Cura or PrusaSlicer for the Ender 3 Pro.
+
+**XP-53 Peregrine RC Plane** — 33 STL files across 3 download sets:
+- `first set/` — full assembly reference (not for printing)
+- `second set/` — individual printable parts (aero lever, chassis, chute, elevator, fins, landing gear, nose cone, wings, etc.)
+- `third set/` — updated/final revisions (chassis rear, struts, wing, landing gear, extension cover)
