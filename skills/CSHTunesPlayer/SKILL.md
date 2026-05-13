@@ -1,7 +1,7 @@
 # CSHTunes Player
 
 ## Overview
-A web-based music audio player app for school-aged kids (6-12). Plays a curated selection of educational memorization coursework music. Designed to be simple, clean, and accessible from anywhere via the internet.
+A web-based music audio player app for **Catholic Schoolhouse (CSH)** memory work music. CSH is a Catholic homeschool/co-op curriculum. The app plays their memorization coursework music for school-aged kids (6-12). Designed to be simple, clean, and accessible from anywhere via the internet.
 
 ## Platform
 - **Type:** Web app (PWA — installable on any device)
@@ -18,7 +18,7 @@ A web-based music audio player app for school-aged kids (6-12). Plays a curated 
 - **Registrar recommendation:** Cloudflare Registrar (~$9-10/year, at-cost pricing)
 
 ## Music Collection
-- **Content:** Educational memory work coursework music for school-aged kids (6-12)
+- **Content:** Catholic Schoolhouse memory work music for school-aged kids (6-12)
 - **Structure:** 3 Tours, each with 4 Discs (one per quarter of the school year) = 12 discs total
   - Tour 1: Q1, Q2, Q3, Q4
   - Tour 2: Q1, Q2, Q3, Q4
@@ -69,6 +69,9 @@ Tour Select → Quarter/Disc Select → Track List → Player View
 7. Test on multiple devices (phone, tablet, laptop)
 8. Add music as more CDs are acquired
 
-## Reference Image
+## Reference Images
 - iTunes MiniPlayer layout used as design reference for the Now Playing view
-- Located at: ~/.claude/image-cache/4093ee83-8860-4d89-a134-6f0a4a209d6d/1.png
+  - Located at: ~/.claude/image-cache/4093ee83-8860-4d89-a134-6f0a4a209d6d/1.png
+- Catholic Schoolhouse disc cover art (Tour I, Quarter 1) — green tones, schoolhouse logo, "Memory Work" subtitle
+  - Each of the 12 discs has its own cover art in this style, used in both the library grid and the player view
+  - Located at: ~/.claude/image-cache/4093ee83-8860-4d89-a134-6f0a4a209d6d/2.png
