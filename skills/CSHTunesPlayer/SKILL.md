@@ -18,10 +18,14 @@ A web-based music audio player app for school-aged kids (6-12). Plays a curated 
 - **Registrar recommendation:** Cloudflare Registrar (~$9-10/year, at-cost pricing)
 
 ## Music Collection
-- **Size:** 10-30 albums (~300-500 tracks, ~3-6 GB as MP3)
-- **Content:** Educational memorization coursework for younger kids
+- **Content:** Educational memory work coursework music for school-aged kids (6-12)
+- **Structure:** 3 Tours, each with 4 Discs (one per quarter of the school year) = 12 discs total
+  - Tour 1: Q1, Q2, Q3, Q4
+  - Tour 2: Q1, Q2, Q3, Q4
+  - Tour 3: Q1, Q2, Q3, Q4
+- **How it works:** All grades listen to the same discs. Tours rotate on a 3-year cycle. Each year the school uses a different Tour's set of 4 discs. The 4 discs change each year.
 - **Source:** Ripped from CDs (some in hand, some still to acquire)
-- **Organization:** By album and/or subject area / grade level
+- **Size:** 12 discs total (~3-6 GB as MP3)
 
 ## Visual Design
 
@@ -44,11 +48,11 @@ A web-based music audio player app for school-aged kids (6-12). Plays a curated 
 
 ### Navigation Flow
 ```
-Album/Subject Grid → Track List → Player View
+Tour Select → Quarter/Disc Select → Track List → Player View
 ```
 
 ## Key Features (v1)
-- Browse by album or subject
+- Browse by Tour → Quarter (Disc)
 - Tap to play, simple queue
 - Now Playing screen with large album art
 - Works on phones, tablets, laptops
