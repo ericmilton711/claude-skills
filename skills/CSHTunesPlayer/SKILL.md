@@ -85,12 +85,19 @@ Tour Select → Quarter/Disc Select → Track List → Player View
 - Mobile: 2-column grid, vertical player (art on top, controls below)
 - To preview locally: `python3 -m http.server 8080` from the skills folder, open in browser
 
-### Permanent Hosted Mockup
+### Permanent Hosted Mockup (Live Dev URL)
 - **URL:** http://192.168.12.136:8080/mockup.html
 - **Hosted on:** ThinkCentre (.136) — accessible from any device on the MILTONHAUS network
 - **Files:** `/var/www/cshtunes/` (mockup.html + cshtunes-cover-t1q1.png)
 - **Service:** `cshtunes-mockup.service` (systemd) — auto-starts on boot, restarts on crash
 - **Port:** 8080 (firewall opened)
+
+### Development Workflow
+1. Edit files in this skills folder (`~/.claude/skills/CSHTunesPlayer/`)
+2. Run `./deploy.sh` to sync changes to the ThinkCentre — instantly live at the URL
+3. Commit and push to GitHub (`cd ~/claude-skills && git add -A && git commit -m "msg" && git push`)
+
+This is the **active working prototype** — add screens, interactions, and features here. Any device on the network can pull up the latest version at the URL above.
 
 ## Reference Images
 - iTunes MiniPlayer layout used as design reference for the Now Playing view
