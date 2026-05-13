@@ -69,9 +69,16 @@ Tour Select → Quarter/Disc Select → Track List → Player View
 7. Test on multiple devices (phone, tablet, laptop)
 8. Add music as more CDs are acquired
 
+## Mockup
+- **Working mockup:** `mockup.html` in this skills folder (responsive — works on desktop and mobile)
+- Desktop: 4-column grid (one row per Tour), horizontal player (art left, controls right)
+- Mobile: 2-column grid, vertical player (art on top, controls below)
+- To preview: `python3 -m http.server 8080` from the skills folder, open in browser
+
 ## Reference Images
 - iTunes MiniPlayer layout used as design reference for the Now Playing view
   - Located at: ~/.claude/image-cache/4093ee83-8860-4d89-a134-6f0a4a209d6d/1.png
 - Catholic Schoolhouse disc cover art (Tour I, Quarter 1) — green tones, schoolhouse logo, "Memory Work" subtitle
   - Each of the 12 discs has its own cover art in this style, used in both the library grid and the player view
-  - Located at: ~/.claude/image-cache/4093ee83-8860-4d89-a134-6f0a4a209d6d/2.png
+  - Located at: `cshtunes-cover-t1q1.png` in this skills folder
+  - Also cached at: ~/.claude/image-cache/4093ee83-8860-4d89-a134-6f0a4a209d6d/2.png

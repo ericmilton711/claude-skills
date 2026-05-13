@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSHTunes — Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: #f5f0eb;
+    color: #2d2d2d;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .app {
+    max-width: 900px;
+    width: 100%;
+    background: #ffffff;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  /* --- HEADER --- */
+  .header {
+    padding: 20px 24px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1a1a2e;
+    letter-spacing: -0.5px;
+  }
+  .header h1 span { color: #6c63ff; }
+  .header-subtitle {
+    font-size: 13px;
+    color: #999;
+    font-weight: 600;
+    padding: 0 24px 16px;
+  }
+
+  /* --- ALBUM GRID --- */
+  .album-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+    padding: 0 24px 24px;
+  }
+  .album-card {
+    background: #faf8f5;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .album-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  }
+  .album-art {
+    width: 100%;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    position: relative;
+    background-size: cover;
+    background-position: center;
+  }
+  .album-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .album-art-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+  }
+  .album-info {
+    padding: 10px 12px 12px;
+  }
+  .album-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+  }
+  .album-tracks {
+    font-size: 11px;
+    color: #999;
+    font-weight: 600;
+    margin-top: 3px;
+  }
+
+  /* Color themes per tour */
+  .tour1 { background: linear-gradient(135deg, #dce8f8, #c4d8f4); }
+  .tour2 { background: linear-gradient(135deg, #e0f0e0, #c8e6c8); }
+  .tour3 { background: linear-gradient(135deg, #f4e4d4, #edd5be); }
+
+  /* Quarter accent colors */
+  .q1 { border-left: 4px solid #5b9bd5; }
+  .q2 { border-left: 4px solid #70c070; }
+  .q3 { border-left: 4px solid #f0a050; }
+  .q4 { border-left: 4px solid #c77dba; }
+
+  /* --- DIVIDER --- */
+  .divider {
+    height: 1px;
+    background: #eee;
+    margin: 8px 24px 0;
+  }
+
+  /* --- NOW PLAYING (Player View) --- */
+  .player-section {
+    padding: 20px;
+  }
+  .player-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #6c63ff;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .player-card {
+    background: #1a1a2e;
+    border-radius: 20px;
+    padding: 24px 28px 24px;
+    color: white;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 0 32px;
+  }
+  .back-btn { grid-column: 1 / -1; }
+  .player-art {
+    width: 320px;
+    height: 320px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 80px;
+    position: relative;
+    overflow: hidden;
+    grid-row: 2;
+  }
+  .player-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    grid-row: 2;
+  }
+  .player-art img {
+    border-radius: 14px;
+  }
+  .player-track-info {
+    text-align: left;
+    margin-bottom: 24px;
+  }
+  .player-song {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .player-album {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    font-weight: 600;
+  }
+  .player-track-num {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* Progress bar */
+  .progress-container {
+    margin-bottom: 20px;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 4px;
+    position: relative;
+    margin-bottom: 8px;
+  }
+  .progress-fill {
+    width: 35%;
+    height: 100%;
+    background: #6c63ff;
+    border-radius: 4px;
+    position: relative;
+  }
+  .progress-knob {
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    right: -7px;
+    top: -5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  .progress-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 28px;
+  }
+  .btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease;
+  }
+  .btn:hover { transform: scale(1.1); }
+  .btn:active { transform: scale(0.95); }
+
+  .btn-skip svg {
+    width: 28px;
+    height: 28px;
+    fill: rgba(255,255,255,0.7);
+  }
+  .btn-play {
+    width: 64px;
+    height: 64px;
+    background: #6c63ff;
+    border-radius: 50%;
+    box-shadow: 0 4px 16px rgba(108,99,255,0.4);
+  }
+  .btn-play svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+    margin-left: 3px;
+  }
+
+  /* --- BACK BUTTON in player --- */
+  .back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 600;
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 16px;
+    padding: 0;
+    transition: color 0.2s;
+  }
+  .back-btn:hover { color: rgba(255,255,255,0.7); }
+  .back-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+  /* --- VIEW TOGGLE (for demo) --- */
+  .view-toggle {
+    display: flex;
+    justify-content: center;
+    padding: 16px 20px 20px;
+    gap: 8px;
+  }
+  .toggle-btn {
+    padding: 8px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Nunito', sans-serif;
+    border: 2px solid #eee;
+    background: white;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn.active {
+    background: #6c63ff;
+    color: white;
+    border-color: #6c63ff;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* --- MOBILE RESPONSIVE --- */
+  @media (max-width: 700px) {
+    body { padding: 0; }
+    .app {
+      max-width: 100%;
+      border-radius: 0;
+      min-height: 100vh;
+    }
+    .album-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 0 16px 20px;
+    }
+    .header-subtitle {
+      padding: 0 16px 12px;
+    }
+    .player-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .back-btn {
+      align-self: flex-start;
+    }
+    .player-art {
+      width: 100%;
+      max-width: 280px;
+      height: auto;
+      aspect-ratio: 1;
+      margin-bottom: 20px;
+      grid-row: unset;
+    }
+    .player-right {
+      width: 100%;
+      grid-row: unset;
+    }
+    .player-track-info {
+      text-align: center;
+    }
+    .player-song {
+      font-size: 20px;
+    }
+    .controls {
+      justify-content: center;
+    }
+    .player-section {
+      padding: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1><span>CSH</span>Tunes</h1>
+  </div>
+
+  <!-- VIEW TOGGLE (demo only) -->
+  <div class="view-toggle">
+    <button class="toggle-btn active" onclick="showView('library')">Library</button>
+    <button class="toggle-btn" onclick="showView('player')">Now Playing</button>
+  </div>
+
+  <!-- LIBRARY VIEW -->
+  <div id="library-view" class="view active">
+
+    <!-- TOUR 1 -->
+    <div class="header-subtitle">Tour 1</div>
+    <div class="album-grid">
+      <div class="album-card" onclick="showView('player')">
+        <div class="album-art"><img src="cshtunes-cover-t1q1.png" alt="Tour 1 Quarter 1"></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 1</div>
+          <div class="album-tracks">14 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q2">
+        <div class="album-art tour1"><span style="font-size:32px;font-weight:800;color:#3a6ea5;">Q2</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 2</div>
+          <div class="album-tracks">12 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q3">
+        <div class="album-art tour1"><span style="font-size:32px;font-weight:800;color:#3a6ea5;">Q3</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 3</div>
+          <div class="album-tracks">13 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q4">
+        <div class="album-art tour1"><span style="font-size:32px;font-weight:800;color:#3a6ea5;">Q4</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 4</div>
+          <div class="album-tracks">11 tracks</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOUR 2 -->
+    <div class="header-subtitle">Tour 2</div>
+    <div class="album-grid">
+      <div class="album-card q1">
+        <div class="album-art tour2"><span style="font-size:32px;font-weight:800;color:#3d7a3d;">Q1</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 1</div>
+          <div class="album-tracks">15 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q2">
+        <div class="album-art tour2"><span style="font-size:32px;font-weight:800;color:#3d7a3d;">Q2</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 2</div>
+          <div class="album-tracks">12 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q3">
+        <div class="album-art tour2"><span style="font-size:32px;font-weight:800;color:#3d7a3d;">Q3</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 3</div>
+          <div class="album-tracks">14 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q4">
+        <div class="album-art tour2"><span style="font-size:32px;font-weight:800;color:#3d7a3d;">Q4</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 4</div>
+          <div class="album-tracks">10 tracks</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOUR 3 -->
+    <div class="header-subtitle">Tour 3</div>
+    <div class="album-grid">
+      <div class="album-card q1">
+        <div class="album-art tour3"><span style="font-size:32px;font-weight:800;color:#8a5c2a;">Q1</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 1</div>
+          <div class="album-tracks">13 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q2">
+        <div class="album-art tour3"><span style="font-size:32px;font-weight:800;color:#8a5c2a;">Q2</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 2</div>
+          <div class="album-tracks">11 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q3">
+        <div class="album-art tour3"><span style="font-size:32px;font-weight:800;color:#8a5c2a;">Q3</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 3</div>
+          <div class="album-tracks">14 tracks</div>
+        </div>
+      </div>
+      <div class="album-card q4">
+        <div class="album-art tour3"><span style="font-size:32px;font-weight:800;color:#8a5c2a;">Q4</span></div>
+        <div class="album-info">
+          <div class="album-title">Quarter 4</div>
+          <div class="album-tracks">12 tracks</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PLAYER VIEW -->
+  <div id="player-view" class="view">
+    <div class="player-section">
+      <div class="player-card">
+        <button class="back-btn" onclick="showView('library')">
+          <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+          Library
+        </button>
+
+        <div class="player-art">
+          <img src="cshtunes-cover-t1q1.png" alt="Tour 1 Quarter 1" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+        </div>
+
+        <div class="player-right">
+          <div class="player-track-info">
+            <div class="player-song">History Sentence</div>
+            <div class="player-album">Tour 1 — Quarter 1</div>
+            <div class="player-track-num">Track 3 of 14</div>
+          </div>
+
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div class="progress-fill">
+                <div class="progress-knob"></div>
+              </div>
+            </div>
+            <div class="progress-times">
+              <span>1:06</span>
+              <span>-2:54</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn btn-skip">
+              <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" transform="scale(-1,1) translate(-24,0)"/></svg>
+            </button>
+            <button class="btn btn-play">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button class="btn btn-skip">
+              <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function showView(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(view + '-view').classList.add('active');
+    document.querySelector(`.toggle-btn[onclick="showView('${view}')"]`).classList.add('active');
+  }
+</script>
+
+</body>
+</html>
