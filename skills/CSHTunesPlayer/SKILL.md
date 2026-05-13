@@ -83,7 +83,14 @@ Tour Select → Quarter/Disc Select → Track List → Player View
 - **Working mockup:** `mockup.html` in this skills folder (responsive — works on desktop and mobile)
 - Desktop: 4-column grid (one row per Tour), horizontal player (art left, controls right)
 - Mobile: 2-column grid, vertical player (art on top, controls below)
-- To preview: `python3 -m http.server 8080` from the skills folder, open in browser
+- To preview locally: `python3 -m http.server 8080` from the skills folder, open in browser
+
+### Permanent Hosted Mockup
+- **URL:** http://192.168.12.136:8080/mockup.html
+- **Hosted on:** ThinkCentre (.136) — accessible from any device on the MILTONHAUS network
+- **Files:** `/var/www/cshtunes/` (mockup.html + cshtunes-cover-t1q1.png)
+- **Service:** `cshtunes-mockup.service` (systemd) — auto-starts on boot, restarts on crash
+- **Port:** 8080 (firewall opened)
 
 ## Reference Images
 - iTunes MiniPlayer layout used as design reference for the Now Playing view
