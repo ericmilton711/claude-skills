@@ -3,10 +3,17 @@
 ## Overview
 Tandoor Recipes is a self-hosted recipe management app running in Docker on the ThinkCentre (192.168.12.136). It provides recipe storage, meal planning, and shopping list generation accessible from any device on the MILTONHAUS network.
 
-## Access
+## Access — ThinkCentre Instance
 - **URL:** http://192.168.12.136:8090
+- **Username:** miltonhaus
+- **Password:** 645866
 - **Port:** 8090 (mapped to container port 80; port 80 was taken by Pi-hole)
 - **Network:** MILTONHAUS LAN only (no external access unless reverse proxy or WireGuard is configured)
+
+## Access — Lambert Instance
+- **URL:** http://192.168.0.104:8380 (via WireGuard Lambert tunnel)
+- **Credentials:** Unknown — need to get from the Lamberts
+- **Note:** SSH to 192.168.0.104 is closed; no admin access to this instance
 
 ## Server Location
 - **Host:** ThinkCentre (192.168.12.136), user `milton`
