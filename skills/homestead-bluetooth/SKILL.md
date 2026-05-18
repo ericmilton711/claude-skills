@@ -2,7 +2,7 @@
 
 Bluetooth Low Energy GATT service on the Homestead Pi (192.168.12.198) for WiFi-free status checks, LED control, and irrigation control. Works cross-platform (Linux, Windows, macOS) via the `bleak` Python library.
 
-> **Last verified working:** 2026-04-27 — BLE GATT tested working from Fedora laptop with `bleak`, including reconnects. All commands confirmed. Classic RFCOMM disabled in favor of BLE.
+> **Last verified working:** 2026-05-18 — BLE GATT working on replacement Pi 3 B. ESP32 weather dashboard + Windows bleak confirmed. IMPORTANT: Pi 3 B requires `ControllerMode = dual` (not `le`). LE-only mode breaks BLE advertising on the 3 B's BCM43438.
 
 ## Architecture
 
@@ -14,15 +14,17 @@ Bluetooth Low Energy GATT service on the Homestead Pi (192.168.12.198) for WiFi-
 
 **ALL of these are required for BLE to work reliably. Without them, client BlueZ stacks try BR/EDR and connections fail.**
 
-### 1. LE-Only Controller Mode
+### 1. Controller Mode — MUST BE DUAL on Pi 3 B
 
 **`/etc/bluetooth/main.conf`** — under `[General]`:
 ```ini
 DiscoverableTimeout = 0
 Class = 0x000100
 Name = homestead
-ControllerMode = le
+ControllerMode = dual
 ```
+
+> **WARNING:** The Pi 3 A+ worked with `ControllerMode = le`, but the Pi 3 B's BCM43438 cannot transmit BLE advertisements in LE-only mode. BLE receive (scanning) works but transmit is silently broken. Must use `dual` mode on the Pi 3 B. Requires full reboot after changing (service restart is not enough).
 
 ### 2. Disable Interfering Plugins
 
