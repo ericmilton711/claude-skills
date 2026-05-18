@@ -22,7 +22,7 @@ type: reference
 | 192.168.12.100 | 14-ac-60-70-69-99 | BRW14AC60706999.lan | Brother printer | Printer #1 |
 | 192.168.12.121 | — | — | iPad | Eric's iPad |
 | 192.168.12.141 | c2-28-63-78-4f-41 (random) | — | iPad | Kids/other iPad (private MAC) |
-| 192.168.12.114 | b8:27:eb:09:db:16 | homestead | Raspberry Pi 3 A+ | Homestead Pi — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
+| 192.168.12.198 | b8:27:eb:ea:98:e1 | homestead | Raspberry Pi 3 B | Homestead Pi — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.198` |
 | 192.168.12.162 | fc-3c-d7-62-b5-6c | wlan0.lan | Raspberry Pi | MILTONRP3 — secondary Pi-hole |
 | 192.168.12.163 | c8-2a-14-51-d5-4a | — | Mac Mini (Fedora) | Kids device — 3D printing files, schoolwork. SSH: `ssh mac@192.168.12.163` / pw: 645866 |
 | 192.168.12.165 | d0-03-4b-e8-0c-63 | Living-Room.lan | Apple TV | Living room — AirPlay ports 5000/7000 |
@@ -61,7 +61,7 @@ When Eric says "the server," "ssh into the server," etc., he means the ThinkCent
 
 | Device | IP | Role |
 |--------|----|------|
-| Homestead Pi 3 A+ | 192.168.12.114 | Automation controller — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.114` |
+| Homestead Pi 3 B | 192.168.12.198 | Automation controller — chicken lights + garden irrigation. SSH: `ssh -i ~/.ssh/id_ed25519 eric@192.168.12.198` |
 | Mac Mini (Fedora) | 192.168.12.163 | Kids device — 3D printing, schoolwork |
 | Eric's Windows PC | 192.168.12.220 | Eric's main PC — Windows 11, SSH: `ericm@192.168.12.220` / pw: 645866 (use pexpect). Pi-Tools app at `C:\Pi-Tools\` |
 | Raspberry Pi | 192.168.12.162 | Secondary Pi-hole |

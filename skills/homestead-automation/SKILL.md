@@ -1,9 +1,9 @@
 # Homestead Automation — Raspberry Pi Controller
 
-> **STATUS (2026-05-11):** Pi 3 A+ is DEAD. Killed by 8.5V from Drok buck converter (max safe is 5.25V). SD card likely intact. Ordering 2x Pi 3 B (1GB, $33 each) as replacement. SD card should boot in Pi 3 B with zero changes (same generation). BLE MAC will change with new hardware; update ESP32 weather firmware accordingly.
+> **STATUS (2026-05-18):** Replacement Pi 3 Model B running at 192.168.12.198. SD card booted clean from dead A+. ESP32 weather firmware flashed with new BLE MAC (B8:27:EB:EA:98:E1). Pi Tools app updated. Windows BT needs re-pairing.
 
 ## Project Overview
-Raspberry Pi 3 A+ ~~controlling~~ **was controlling** two things in the chicken run (replacement Pi 3 B on order):
+Raspberry Pi 3 B controlling two things in the chicken run:
 1. **Bug attraction lights** — UV (365nm) + Blue (460nm) LEDs to attract insects for chickens
 2. **Chicken water** — 12V solenoid valve off a rain barrel → chicken waterer
 
@@ -17,7 +17,7 @@ Pi runs completely **offline** (no WiFi needed in the field). Cron fires the Pyt
 
 | Item | Detail |
 |------|--------|
-| Pi 3 A+ | MILTONRP3, booting from 64GB microSD |
+| Pi 3 B | MILTONRP3, booting from 64GB microSD (swapped from dead A+) |
 | Battery | DieHard Marine 24M, 12V flooded, 500 CCA, 95 min reserve (~50Ah) — replaces DR.PREPARE LiFePO4 |
 | Solar panel | ECO-WORTHY 25W |
 | Charge controller | Renogy Wanderer 10A PWM (**set to flooded mode**) |
@@ -260,10 +260,10 @@ Flash to disk using elevated PowerShell script `raspi-flash.ps1`:
 - **Hostname**: homestead
 - **User**: eric
 - **Password**: 645866
-- **IP**: 192.168.12.114 (DHCP, confirmed 2026-04-12)
+- **IP**: 192.168.12.198 (DHCP, confirmed 2026-04-12)
 - **SSH key**: `~/.ssh/id_ed25519` (Eric's Windows PC)
-- **SSH from Eric's PC**: `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114`
-- **SSH from ThinkCentre**: `ssh -i /home/milton/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114` (requires nc proxy fix in ~/.ssh/config — see ThinkCentre skill)
+- **SSH from Eric's PC**: `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.198`
+- **SSH from ThinkCentre**: `ssh -i /home/milton/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.198` (requires nc proxy fix in ~/.ssh/config — see ThinkCentre skill)
 - **NEVER use sshpass** — use key auth only (see feedback_ssh_key_auth.md)
 - **Authorized keys on Pi**: Eric's Windows PC key + ThinkCentre's key (both in ~/.ssh/authorized_keys)
 - **Fans**: Two mini fans on pins 2/4 (5V) and 6/9 (GND) for cooling
@@ -272,7 +272,7 @@ Flash to disk using elevated PowerShell script `raspi-flash.ps1`:
 
 ```bash
 # On, off, on for 10s, off — full test sequence
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114 \
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.198 \
   "python3 /home/eric/homestead.py leds-on && sleep 2 && \
    python3 /home/eric/homestead.py leds-off && sleep 2 && \
    python3 /home/eric/homestead.py leds-on && sleep 10 && \
@@ -345,7 +345,7 @@ Zenity-based GUI at `/home/ericmilton/Pi-Tools/` on Eric's laptop. One-click acc
 
 ### Connectivity: SSH with Bluetooth Fallback
 All scripts use `pi-run.sh` — a shared helper that:
-1. Pings the Pi (192.168.12.114) with a 2-second timeout
+1. Pings the Pi (192.168.12.198) with a 2-second timeout
 2. If reachable → runs the command via SSH
 3. If unreachable → runs the command via Bluetooth (`~/homestead-bt.py`)
 

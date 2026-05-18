@@ -59,7 +59,9 @@ Central inventory of all electronic components Eric has in the house — install
 
 | Item | Spec | Status | Project / Notes |
 |------|------|--------|-----------------|
-| Raspberry Pi 3 A+ | MILTONRP3, 64GB microSD | installed | Homestead automation |
+| Raspberry Pi 3 B | MILTONRP3, 64GB microSD (from dead A+) | installed | Homestead automation — replacement Pi 3 B at .198 |
+| Raspberry Pi 3 B (spare) | | spare | Second unit from Amazon order 2026-05-11 |
+| Raspberry Pi 3 A+ | | dead | Killed by 8.5V overvoltage 2026-05-11, SD card salvaged |
 | ESP32 #1 | | installed | Closet LED lighting project |
 | ESP-WROOM-32 #1 | Hosyond, CP210x, WiFi+BT, dual core 2.4GHz | installed | Weather station at .240 (MAC: a4:f0:0f:74:11:74) |
 | ESP-WROOM-32 #2 | Hosyond, CP210x, WiFi+BT, dual core 2.4GHz | spare | Weather station spare (MAC: a4:f0:0f:76:70:0c) |

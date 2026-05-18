@@ -81,7 +81,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 
 The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service`):
 
-- **Pi BLE MAC:** `b8:27:eb:f6:24:e9` (built-in BCM, NOT Edimax dongle)
+- **Pi BLE MAC:** `b8:27:eb:ea:98:e1` (built-in BCM on replacement Pi 3 B, updated 2026-05-18)
 - **Service UUID:** `12345678-1234-5678-1234-56789abcdef0`
 - **Command characteristic:** `...def1` (write "status")
 - **Response characteristic:** `...def2` (read parsed result)

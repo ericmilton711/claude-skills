@@ -168,8 +168,8 @@ volatile bool bleResetRequested = false;
 
 void bleTask(void* param) {
   delay(15000);
-  BLEAddress piAddress("b8:27:eb:f6:24:e9");
-  Serial.println("BLE: direct connect to b8:27:eb:f6:24:e9");
+  BLEAddress piAddress("b8:27:eb:ea:98:e1");
+  Serial.println("BLE: direct connect to b8:27:eb:ea:98:e1");
   int backoffMs = 30000;
 
   while (true) {

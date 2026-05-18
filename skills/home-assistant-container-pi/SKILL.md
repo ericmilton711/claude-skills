@@ -339,8 +339,8 @@ sudo systemctl daemon-reload && sudo systemctl enable camera-stream && sudo syst
 ### Add to Home Assistant
 
 In HA: **Settings → Devices & Services → + Add Integration → Generic Camera**
-- Still Image URL: `http://192.168.12.114:8080/snapshot`
-- Stream Source URL: `http://192.168.12.114:8080/stream`
+- Still Image URL: `http://192.168.12.198:8080/snapshot`
+- Stream Source URL: `http://192.168.12.198:8080/stream`
 
 > **Note:** Camera stream is IN PROGRESS — still debugging image display in HA dashboard.
 > The snapshot endpoint works (returns valid JPEG) but HA dashboard shows blank.
@@ -363,6 +363,6 @@ In HA: **Settings → Devices & Services → + Add Integration → Generic Camer
 - Much lower RAM usage than HA OS — should run fine on 512MB Pi 3 A+
 - ESPHome devices auto-discover in HA via the ESPHome integration (add by IP)
 - Plant moisture sensors, closet lights, etc. all show up as devices in HA dashboard
-- Pi IP address: 192.168.12.114 (as of last session)
+- Pi IP address: 192.168.12.198 (as of last session)
 - SSH key auth set up — no password needed from Eric's PC
 - sudo NOPASSWD configured for pi user

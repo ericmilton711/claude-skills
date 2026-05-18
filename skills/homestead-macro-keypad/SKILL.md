@@ -7,7 +7,7 @@
 - **Features:** Red switches, RGB backlight, hot-swap sockets, USB-C cable
 - **USB Vendor ID:** 0x8808
 - **USB Product ID:** 0x6611
-- **Connected to:** Homestead Pi (Raspberry Pi 3 A+) via USB hub (Genesys Logic 05e3:0610)
+- **Connected to:** Homestead Pi (Raspberry Pi 3 B) via USB hub (Genesys Logic 05e3:0610)
 - **Config software:** key.itytsoft.com (Windows .exe, needed to program keys — ships with no default mapping)
 
 ---
@@ -80,13 +80,13 @@ The keypad enumerates as 4 HID interfaces:
 ### Test if keys send raw HID data:
 ```bash
 # Stop keypad daemon first
-ssh eric@192.168.12.114 "sudo systemctl stop keypad"
+ssh eric@192.168.12.198 "sudo systemctl stop keypad"
 
 # Read raw HID bytes — press keys and watch for output
-ssh eric@192.168.12.114 "sudo timeout 15 cat /dev/hidraw0 | od -A x -t x1"
+ssh eric@192.168.12.198 "sudo timeout 15 cat /dev/hidraw0 | od -A x -t x1"
 
 # Restart daemon after testing
-ssh eric@192.168.12.114 "sudo systemctl start keypad"
+ssh eric@192.168.12.198 "sudo systemctl start keypad"
 ```
 
 ### If no raw HID data appears:

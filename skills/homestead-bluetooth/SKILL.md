@@ -1,6 +1,6 @@
 # Homestead Bluetooth — Pi Remote Control via BLE GATT
 
-Bluetooth Low Energy GATT service on the Homestead Pi (192.168.12.114) for WiFi-free status checks, LED control, and irrigation control. Works cross-platform (Linux, Windows, macOS) via the `bleak` Python library.
+Bluetooth Low Energy GATT service on the Homestead Pi (192.168.12.198) for WiFi-free status checks, LED control, and irrigation control. Works cross-platform (Linux, Windows, macOS) via the `bleak` Python library.
 
 > **Last verified working:** 2026-04-27 — BLE GATT tested working from Fedora laptop with `bleak`, including reconnects. All commands confirmed. Classic RFCOMM disabled in favor of BLE.
 
@@ -196,10 +196,10 @@ The Pi-Tools GUI (`~/Pi-Tools/pi-tools-gui.py`) has BLE built in:
 ## Bluetooth Details
 
 - **Active Adapter:** Built-in BCM43438 (UART, hci0)
-- **Pi BD Address:** `B8:27:EB:F6:24:E9` (built-in BCM)
+- **Pi BD Address:** `B8:27:EB:EA:98:E1` (built-in BCM on replacement Pi 3 B, updated 2026-05-18)
 - **Protocol:** BLE only (ControllerMode = le)
 - **Advertising name:** `homestead`
-- **ESP32 connects by MAC** (`b8:27:eb:f6:24:e9`) via BLE direct connect every 30 seconds
+- **ESP32 connects by MAC** (`b8:27:eb:ea:98:e1`) via BLE direct connect every 30 seconds
 
 ### Edimax BT-8500 (RTL8761BU) — Plugged in but NOT in use
 
@@ -250,10 +250,10 @@ The laptop RFCOMM client is at `~/homestead-bt.py` on the Fedora laptop.
 
 ## Known Issue: BCM43438 Default BD Address
 
-The Pi 3 A+'s BCM43438 Bluetooth chip ships without a unique BD address. It uses a dummy address which most scanners ignore. The fix is a vendor-specific HCI command sent before each adapter startup:
+The Pi 3 A+'s BCM43438 Bluetooth chip shipped without a unique BD address and needed a vendor-specific HCI command to set one. The replacement Pi 3 B (as of 2026-05-18) has address `B8:27:EB:EA:98:E1` which may or may not need the same fix. If BLE stops advertising, check with `hciconfig hci0` and re-apply if needed:
 
 ```bash
-hcitool cmd 0x3F 0x001 0xE9 0x24 0xF6 0xEB 0x27 0xB8
+hcitool cmd 0x3F 0x001 0xE1 0x98 0xEA 0xEB 0x27 0xB8
 ```
 
-This programs the address `B8:27:EB:F6:24:E9`. The classic bt-homestead.service handled this in ExecStartPre. Since we're now using BLE-only, this address should already be set from initial bluetooth service startup.
+This programs the address `B8:27:EB:EA:98:E1`.

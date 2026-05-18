@@ -6,7 +6,7 @@ Add a hardware real-time clock to the Homestead Pi so it keeps accurate time thr
 ## Hardware
 - **Module:** DS3231 RTC (I2C, 3.3V/5V compatible)
 - **Battery:** CR2032 coin cell (keeps clock running when Pi is off)
-- **Pi:** Homestead Pi — `eric@192.168.12.114`
+- **Pi:** Homestead Pi — `eric@192.168.12.198`
 - **Connection:** 4 wires — VCC (3.3V), GND, SDA (GPIO 2), SCL (GPIO 3)
 
 ## Wiring (Pi 3 A+ GPIO Header) — CONFIRMED WORKING 2026-04-24

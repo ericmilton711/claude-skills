@@ -6,13 +6,13 @@ This skill is the source of truth for the Pi status check and LED blink test. Th
 Blink the LED on GPIO 17 (SSR #1) to test placement for the UV and Blue bug-attraction LEDs in the chicken run. Currently a green LED is in that position for testing purposes.
 
 ## Hardware
-- **Pi:** Homestead Pi — `eric@192.168.12.114`
+- **Pi:** Homestead Pi — `eric@192.168.12.198`
 - **GPIO Pin:** 17 (BCM) → SSR #1 → DROK buck (12V→3.2V) → LED circuit
 - **Current test LED:** Green (placeholder for 5x UV + 5x Blue LEDs)
 
 ## SSH Access
 ```bash
-ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114
+ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.198
 ```
 
 ## Current Test Pattern
@@ -23,7 +23,7 @@ ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114
 
 ## Blink Test Command
 ```bash
-timeout 90 ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114 'python3 -c "
+timeout 90 ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.198 'python3 -c "
 import RPi.GPIO as GPIO
 import time
 
@@ -50,7 +50,7 @@ print(f\"Test done — {cycle} cycles in 60 seconds\")
 ## Status Check Commands
 These are run before the LED test every time status is requested:
 ```bash
-timeout 60 ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.114 \
+timeout 60 ssh -T -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.198 \
   'uptime; echo "===LOG==="; cat /home/eric/homestead.log; echo "===MEM==="; free -h; echo "===DISK==="; df -h /; echo "===TEMP==="; vcgencmd measure_temp 2>/dev/null || cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo "n/a"'
 ```
 
