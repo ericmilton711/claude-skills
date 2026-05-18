@@ -154,7 +154,13 @@ Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of
 **Approach:** Everything allowed by default. Specific sites blocked via regex deny rules in group 7.
 
 **Blocked sites (regex deny, group 7):**
-- `(^|[.])google[.]com$` — Google search blocked
+- `(^|[.])google[.]com$` — Google search blocked (ID 216)
+- `(^|[.])spotify[.]com$` — Spotify blocked (ID 223, added 2026-05-17)
+- `(^|[.])scdn[.]co$` — Spotify CDN blocked (ID 224, added 2026-05-17)
+- `(^|[.])apple[.]com$` — Apple Music blocked (ID 225, added 2026-05-17)
+- `(^|[.])applemusic[.]com$` — Apple Music alt domain blocked (ID 226, added 2026-05-17)
+
+**Pending:** YTI Chromebook should be migrated to its own default-deny group (like groups 2/3) instead of sharing default-allow Group 7. Needs whitelist of approved sites from Eric.
 
 **Allowed via shared regex allows (group 7 added to existing rules):**
 - Gmail: mail.google.com, gmail.com, accounts.google.com, googleapis.com, gstatic.com, googleusercontent.com
