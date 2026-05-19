@@ -8,7 +8,7 @@ Eric's 3D printing file collection. Printer: **Creality Ender 3 Pro** (files pre
 
 **All 202 STL source files are stored in this skill's `stl/` folder on GitHub.**
 
-Gcode files are too large for GitHub (1.3 GB total, many over 50 MB) but can always be re-sliced from the STL source files using Cura or PrusaSlicer for the Ender 3 Pro.
+Gcode files are too large for GitHub (1.3 GB total, many over 50 MB) but can always be re-sliced from the STL source files using Cura or PrusaSlicer for the Ender 3 Pro. New gcode files are auto-saved to the local `gcode/` subfolder (gitignored).
 
 GitHub warnings: `WeeksB_Box.stl` (88 MB) and `WeeksB_HanSolo.stl` (59 MB) exceed the 50 MB recommended size but are under the 100 MB hard limit. If more large STLs are added in the future, consider Git LFS ($5/month for 50 GB).
 
@@ -182,6 +182,16 @@ Large multi-part RC plane project. G-code files at top level, source STL/STP fil
 
 ### Other Files in Folder
 - `Gianna submition.JPG` — photo (not gcode)
+
+---
+
+## Local Gcode Archive (`gcode/`)
+
+New gcode files created on this laptop are auto-saved here. These files are gitignored (too large for GitHub) and exist only on the local machine. A PostToolUse hook in Claude Code settings auto-copies any `.gcode` file written by Claude to this folder.
+
+| File | Date Added | Notes |
+|------|-----------|-------|
+| `Garden-Stakes1.gcode` | 2026-05-19 | 3D printed garden stakes |
 
 ---
 

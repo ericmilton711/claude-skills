@@ -37,6 +37,9 @@
 !skills/**/*.scad
 !skills/**/*.ino
 
+# Gcode files (too large for GitHub, kept local only)
+*.gcode
+
 # Temporary files
 *.tmp
 *.bak
