@@ -37,8 +37,9 @@
 !skills/**/*.scad
 !skills/**/*.ino
 
-# Gcode files (too large for GitHub, kept local only)
+# Gcode files ignored globally, but allowed in skills archive
 *.gcode
+!skills/gcode-files/gcode/*.gcode
 
 # Temporary files
 *.tmp
