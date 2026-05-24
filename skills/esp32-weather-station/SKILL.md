@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
-**Status:** Deployed and working at 192.168.12.240. BLE connected to Homestead Pi. DHT11 sensor wired and reading. OLED removed (caused heap exhaustion). Gift for Rosemary.
-**Last Updated:** 2026-05-11
+**Status:** Deployed in basement at 192.168.12.240 for seed starting temp/humidity monitoring. Standalone WiFi only. Pi BLE scrapped (Pi can't reach WiFi or BLE from its location). DHT11 sensor wired and reading. OLED removed (caused heap exhaustion). Gift for Rosemary.
+**Last Updated:** 2026-05-24
 
 ## Hardware
 
@@ -55,10 +55,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - **Sunrise/Sunset** — 12-hour AM/PM format
 - **7-day forecast** — horizontal 7-column grid, day name, conditions with emoji, high/low temps
 - **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
-- **Homestead Pi via BLE** — connects to Pi's GATT server every 30 seconds
-  - LED state (ON/OFF), irrigation state (ON/OFF), CPU temp, uptime
-  - Shows "Not in Range" when Pi is unreachable
-  - BLE task runs on core 0, web server on core 1 (FreeRTOS dual-core)
+- **~~Homestead Pi via BLE~~** — **SCRAPPED 2026-05-24.** Pi can't reach ESP32 (no WiFi/BLE range from basement). Code still in firmware but unused. Dashboard shows "Not in Range" permanently.
 - **Web dashboard** — served at `http://192.168.12.240/` on port 80, auto-refreshes every 5 seconds
   - Compact 2-column CSS grid layout, fits on phone without scrolling
   - `overflow: hidden` on body to prevent scroll
@@ -77,40 +74,25 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - `fetchWeather()` uses plain HTTP (not HTTPS) to save ~40KB heap and avoid SSL cert issues
 - `fetchWeather()` has 5-second connect and read timeouts to prevent blocking the web server
 
-## BLE Connection (critical — do not change)
+## BLE Connection — SCRAPPED 2026-05-24
 
-The ESP32 connects to the Homestead Pi's BLE GATT server (`ble-homestead.service`):
+Pi-to-ESP32 BLE communication has been permanently scrapped. The ESP32 was moved to the basement for seed starting, and the Pi cannot reach it via WiFi or Bluetooth.
 
-- **Pi BLE MAC:** `b8:27:eb:ea:98:e1` (built-in BCM on replacement Pi 3 B, updated 2026-05-18)
+The BLE code is still compiled into the firmware but will perpetually show "Not in Range" on the dashboard. If the firmware is ever updated, the BLE task and related code can be removed to free up resources.
+
+<details>
+<summary>Historical BLE details (for reference only)</summary>
+
+- **Pi BLE MAC:** `b8:27:eb:ea:98:e1`
 - **Service UUID:** `12345678-1234-5678-1234-56789abcdef0`
 - **Command characteristic:** `...def1` (write "status")
 - **Response characteristic:** `...def2` (read parsed result)
-- **Poll interval:** 30 seconds — **NEVER reduce below 30s** (10s causes WiFi drops due to shared radio)
-- **Connect timeout:** 5 seconds
-- **Address type:** `BLE_ADDR_TYPE_PUBLIC` (Pi uses public BCM address)
-- **Backoff:** 30s → 60s on repeated failures (10s increments), resets to 30s on success
-- **Read retry:** retries readValue() up to 3 times (500ms apart) if empty response
-- **Miss recovery:** successful connection decrements bleMissCount even if read is empty
-- **Manual reset:** `GET /ble-reset` forces immediate retry and clears backoff
-- **Client cleanup:** new `BLEClient` per attempt, `delete client` after each attempt (prevents heap leak)
-- **try/catch:** around `connect()` to prevent crash loops from exceptions
-- **Thread safety:** FreeRTOS mutex protects shared Pi data between BLE task (core 0) and web server (core 1)
-- **Known issue:** Pi BCM handles only 1 BLE connection at a time. If another client (laptop, phone) connects to Pi, ESP32 fails until that client disconnects. Restarting `ble-homestead.service` on Pi clears stuck state.
-- **piConn bug: FIXED (2026-05-05).** `piConn` now uses `lastSuccessfulBleMillis` -- true if a successful BLE response was received within the last 90 seconds. Dashboard JS also updated: shows Pi data whenever it exists (not just when piConn is true), with status pill showing "Connected" / "Last Data" / "Not in Range".
+- **Poll interval:** 30 seconds
+- **BLE task ran on core 0, web server on core 1 (FreeRTOS dual-core)**
+- **piConn** used `lastSuccessfulBleMillis` (true if BLE response within 90s)
+- Pi side had a BLE watchdog (`ble-watchdog.timer`) and startup flags fix
 
-### Pi BLE Startup Flags (fixed 2026-05-10)
-
-`ble-homestead.py` now sets BOTH `btmgmt connectable on` AND `btmgmt advertising on` at startup. Previously only set `connectable`, causing the Pi to be invisible to the ESP32 after reboots/service restarts. Both flags are required for BLE LE connections.
-
-### BLE Watchdog (added 2026-05-02)
-
-The Pi side has a self-healing watchdog to recover from BlueZ/hci0 wedges (common on Pi 3 where BLE and WiFi share the BCM43455 chip):
-
-1. **Heartbeat:** `ble-homestead.py` writes a timestamp to `/tmp/ble-heartbeat` on every BLE command received
-2. **Watchdog script:** `/home/eric/ble-watchdog.sh` — checks heartbeat age, if >5 min stale: power-cycles hci0 and restarts ble-homestead.service
-3. **Systemd timer:** `ble-watchdog.timer` — runs the watchdog every 2 minutes
-
-See `homestead-automation` skill for full watchdog script and systemd unit details.
+</details>
 
 ## WiFi
 
@@ -179,9 +161,9 @@ This board does NOT always auto-enter bootloader. If upload fails:
 }
 ```
 
-## Pi BLE Service Fix (2026-05-01)
+## Pi BLE Service Fix (2026-05-01) — OBSOLETE
 
-The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken BLE) instead of hci1 (built-in BCM, working). Fixed by changing `adapters.sort()` to `adapters.sort(reverse=True)` so hci1 is preferred. Note: as of 2026-05-10 only hci0 exists (Edimax removed), and it IS the built-in BCM.
+Historical: The Pi's `ble-homestead.py` adapter selection fix. No longer relevant since Pi-ESP32 BLE is scrapped.
 
 ## Build Notes
 
@@ -212,11 +194,12 @@ The Pi's `ble-homestead.py` `find_adapter()` was selecting hci0 (Edimax, broken 
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
-- [ ] ESP32 needs heatsink + fan + case (runs warm with WiFi + BLE)
+- [ ] ESP32 needs heatsink + fan + case (runs warm with WiFi)
 - [ ] **Yard camera** — ESP32-CAM pointed at yard/garden/chicken coop, embed live stream in dashboard
 - [ ] **Outdoor sensor** — second ESP32 with DHT11/DHT22 outside, sends readings to dashboard via HTTP or BLE
 - [ ] **Soil moisture** — garden moisture sensor on Homestead Pi, display on dashboard (see `project_garden_moisture_sensor.md`)
+- [ ] Strip out BLE code from firmware (free up resources now that Pi connection is scrapped)
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-11*
+*Created: 2026-04-26 | Updated: 2026-05-24*
