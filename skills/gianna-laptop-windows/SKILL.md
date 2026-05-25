@@ -1,7 +1,7 @@
-# Gianna's Laptop — Windows Reinstall
+# Gianna's Laptop — Acer Aspire A515-46
 
-**Last Updated:** 2026-04-04
-**Status:** ⬜ Blocked — needs repair shop to clear BIOS password
+**Last Updated:** 2026-05-24
+**Status:** ⬜ BIOS still locked — needs CH341A reflash. Running Fedora. Pi-hole DNS configured 2026-05-24.
 
 ---
 
@@ -12,7 +12,80 @@
 - **Current OS:** Fedora Linux
 - **Target OS:** Windows (original OS)
 - **Network IP:** 192.168.12.226
+- **WiFi Interface:** wlp2s0
+- **WiFi Connection:** DIEMILTONHAUS
+- **Hostname:** fedora
 - **Boot Media:** Windows Media Install on mini SD card
+
+---
+
+## Login
+
+- **Username:** gianna
+- **Password:** wisdom22!!
+- **SSH:** Port open but key auth NOT set up. Password auth was rejected over SSH (works locally). Needs investigation.
+
+---
+
+## Fedora Network/DNS Config (2026-05-24)
+
+DNS was completely broken out of the box. Required four fixes:
+
+### 1. Firewall — DNS service was missing
+Fedora's firewalld was blocking outbound DNS (UDP port 53). Fixed permanently:
+```bash
+sudo firewall-cmd --add-service=dns --permanent
+sudo firewall-cmd --reload
+```
+
+### 2. nmcli — Point DNS at Pi-hole
+```bash
+sudo nmcli con modify DIEMILTONHAUS ipv4.dns "192.168.12.136"
+sudo nmcli con modify DIEMILTONHAUS ipv4.ignore-auto-dns yes
+sudo nmcli con down DIEMILTONHAUS && sudo nmcli con up DIEMILTONHAUS
+```
+
+### 3. resolv.conf — Bypass broken systemd-resolved stub
+systemd-resolved's stub listener (127.0.0.53) was not forwarding queries even though it showed the correct upstream DNS. Overwrote resolv.conf directly:
+```bash
+echo "nameserver 192.168.12.136" | sudo tee /etc/resolv.conf
+```
+**Warning:** systemd-resolved may overwrite this on reboot/reconnect. If DNS breaks again, check this file first.
+
+### 4. nsswitch.conf — Remove broken resolve module
+glibc was using the `resolve` NSS module (systemd-resolved D-Bus) before falling through to `dns` (resolv.conf). The resolve module was broken/timing out. Removed it:
+```bash
+sudo sed -i '/^hosts:/c\hosts: files myhostname mdns4_minimal [NOTFOUND=return] dns' /etc/nsswitch.conf
+```
+Original line was: `hosts: files myhostname mdns4_minimal [NOTFOUND=return] resolve [!UNAVAIL=return] dns`
+
+### Firefox DoH Policy — NOT YET APPLIED
+Attempted to create `/etc/firefox/policies/policies.json` but the directory creation failed (mkdir ran without leading `/`). Needs to be redone:
+```bash
+sudo mkdir -p /etc/firefox/policies
+echo '{"policies":{"DNSOverHTTPS":{"Enabled":false,"Locked":true}}}' | sudo tee /etc/firefox/policies/policies.json
+```
+
+---
+
+## Pi-hole Status
+
+- **Pi-hole client ID:** 12
+- **Default state:** In Default group (group 0) — blocked by `.*` regex deny like all unregistered devices
+- **Temporary unrestrict:** Remove from all groups (no group = no rules = full access). Re-add to group 0 to restore blocking.
+
+### To temporarily unrestrict:
+```bash
+ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 12;"
+docker exec pihole pihole reloaddns
+```
+
+### To restore restrictions:
+```bash
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 0);"
+docker exec pihole pihole reloaddns
+```
 
 ---
 

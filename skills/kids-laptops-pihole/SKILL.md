@@ -1,7 +1,7 @@
 # Kids Laptops — Pi-hole Parental Controls
 
-**Last Updated:** 2026-04-17
-**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ Tower of Gondor (Kids Research) ✅ complete. Gianna's Fedora laptop and Ev's Chromebook pending.
+**Last Updated:** 2026-05-24
+**Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ Tower of Gondor (Kids Research) ✅ Gianna ✅ complete. Ev's Chromebook pending.
 
 ---
 
@@ -46,6 +46,7 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
 | 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail + Britannica |
 | 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
+| 0 | Default | Gianna's Fedora laptop | 192.168.12.226 | network-wide block-all (no custom whitelist yet) |
 
 ---
 
@@ -336,11 +337,44 @@ docker exec pihole pihole reloaddns
 
 ---
 
-## Gianna's Laptop — Fedora
+## Gianna's Laptop — Fedora (Acer Aspire A515-46)
 
-**Status: ⬜ Pending**
+**Status: ✅ Complete (2026-05-24)**
 
-- IP: 192.168.12.226 (per miltonhaus-devices skill)
+- IP: 192.168.12.226
+- Username: gianna
+- Password: wisdom22!!
+- WiFi interface: wlp2s0
+- Pi-hole client ID: 12
+- Pi-hole group: Default (Group ID: 0) — uses the network-wide `.*` block-all regex
+- SSH: port open, key auth NOT set up, password auth rejected over SSH (works locally only)
+
+### DNS Setup (Fedora-specific)
+Fedora required four fixes (systemd-resolved was broken). Full details in `skills/gianna-laptop-windows/SKILL.md`.
+1. **firewalld** — added `dns` service (was blocking UDP 53)
+2. **nmcli** — set Pi-hole as DNS, ignore-auto-dns on DIEMILTONHAUS connection
+3. **/etc/resolv.conf** — overwritten to `nameserver 192.168.12.136` (bypasses broken stub resolver)
+4. **/etc/nsswitch.conf** — removed `resolve [!UNAVAIL=return]` from hosts line so glibc uses `dns` directly
+
+### Firefox DoH
+**NOT YET APPLIED** — `/etc/firefox/policies/policies.json` failed to create (directory issue). Needs to be redone next time SSH or local access is available.
+
+### Temporary Unrestrict Procedure
+Remove from all groups (no group = no rules = full access):
+```bash
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 12;"
+docker exec pihole pihole reloaddns
+```
+Restore restrictions:
+```bash
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 0);"
+docker exec pihole pihole reloaddns
+```
+
+### Important Notes
+- **resolv.conf may revert on reboot** — systemd-resolved or NetworkManager can overwrite it. If DNS breaks, check `/etc/resolv.conf` first.
+- No dedicated Pi-hole group — uses Default group which already has the `.*` deny. Whitelist TBD if needed.
+- Unlike Windows laptops, IPv6 bypass hasn't been checked yet on this Fedora install.
 
 ---
 
