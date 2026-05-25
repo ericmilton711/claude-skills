@@ -1,7 +1,7 @@
 # Gianna's Laptop — Acer Aspire A515-46
 
-**Last Updated:** 2026-05-24
-**Status:** ⬜ BIOS still locked — needs CH341A reflash. Running Fedora. Pi-hole DNS configured 2026-05-24.
+**Last Updated:** 2026-05-25
+**Status:** BIOS still locked — needs CH341A reflash. Running Fedora. DNS and Pi-hole fully configured.
 
 ---
 
@@ -23,16 +23,15 @@
 
 - **Username:** gianna
 - **Password:** wisdom22!!
-- **SSH:** Port open but key auth NOT set up. Password auth was rejected over SSH (works locally). Needs investigation.
+- **SSH:** Key auth working (ed25519 key from Eric's Windows laptop). Password auth also enabled.
 
 ---
 
-## Fedora Network/DNS Config (2026-05-24)
+## Fedora Network/DNS Config
 
-DNS was completely broken out of the box. Required four fixes:
+DNS was completely broken out of the box (2026-05-24). Permanently fixed 2026-05-25.
 
-### 1. Firewall — DNS service was missing
-Fedora's firewalld was blocking outbound DNS (UDP port 53). Fixed permanently:
+### 1. Firewall — DNS service added permanently
 ```bash
 sudo firewall-cmd --add-service=dns --permanent
 sudo firewall-cmd --reload
@@ -45,35 +44,69 @@ sudo nmcli con modify DIEMILTONHAUS ipv4.ignore-auto-dns yes
 sudo nmcli con down DIEMILTONHAUS && sudo nmcli con up DIEMILTONHAUS
 ```
 
-### 3. resolv.conf — Bypass broken systemd-resolved stub
-systemd-resolved's stub listener (127.0.0.53) was not forwarding queries even though it showed the correct upstream DNS. Overwrote resolv.conf directly:
+### 3. systemd-resolved — Disabled and masked
+systemd-resolved's stub listener (127.0.0.53) was broken and kept overwriting resolv.conf on reboot. Permanently killed:
 ```bash
-echo "nameserver 192.168.12.136" | sudo tee /etc/resolv.conf
+sudo systemctl disable --now systemd-resolved
+sudo systemctl mask systemd-resolved systemd-resolved-varlink.socket systemd-resolved-monitor.socket
 ```
-**Warning:** systemd-resolved may overwrite this on reboot/reconnect. If DNS breaks again, check this file first.
 
-### 4. nsswitch.conf — Remove broken resolve module
-glibc was using the `resolve` NSS module (systemd-resolved D-Bus) before falling through to `dns` (resolv.conf). The resolve module was broken/timing out. Removed it:
+### 4. NetworkManager DNS mode — Set to direct
+Without this, NetworkManager tries to push DNS through systemd-resolved even when it's disabled:
 ```bash
-sudo sed -i '/^hosts:/c\hosts: files myhostname mdns4_minimal [NOTFOUND=return] dns' /etc/nsswitch.conf
+# /etc/NetworkManager/conf.d/dns.conf
+[main]
+dns=default
 ```
-Original line was: `hosts: files myhostname mdns4_minimal [NOTFOUND=return] resolve [!UNAVAIL=return] dns`
 
-### Firefox DoH Policy — NOT YET APPLIED
-Attempted to create `/etc/firefox/policies/policies.json` but the directory creation failed (mkdir ran without leading `/`). Needs to be redone:
+### 5. resolv.conf — Locked
+NetworkManager writes the correct DNS from nmcli settings. File is locked immutable so nothing overwrites it:
 ```bash
-sudo mkdir -p /etc/firefox/policies
-echo '{"policies":{"DNSOverHTTPS":{"Enabled":false,"Locked":true}}}' | sudo tee /etc/firefox/policies/policies.json
+# Contents: nameserver 192.168.12.136
+sudo chattr +i /etc/resolv.conf
 ```
+To modify: `sudo chattr -i /etc/resolv.conf` first, make changes, then re-lock.
+
+### 6. nsswitch.conf — Broken resolve module removed
+```bash
+# Current working line:
+hosts: files myhostname mdns4_minimal [NOTFOUND=return] dns
+```
+
+### 7. Firefox DoH Policy — Applied
+```bash
+# /etc/firefox/policies/policies.json
+{"policies":{"DNSOverHTTPS":{"Enabled":false,"Locked":true}}}
+```
+
+### If DNS breaks after reboot
+1. Check `cat /etc/resolv.conf` — should say `nameserver 192.168.12.136`
+2. If wrong: `sudo chattr -i /etc/resolv.conf && sudo nmcli con down DIEMILTONHAUS && sudo nmcli con up DIEMILTONHAUS && sudo chattr +i /etc/resolv.conf`
+3. Verify systemd-resolved is still masked: `systemctl is-enabled systemd-resolved` should say `masked`
 
 ---
 
 ## Pi-hole Status
 
 - **Pi-hole client ID:** 12
-- **Pi-hole group:** `kids2` (Group ID: 3) — same restrictions as Benedict's laptop
-- **Allowed:** Gmail, Google Chat, Britannica, Zoom, Homeschool Connections, Teaching Textbooks, Duolingo, Kiddle, Rhymezone, and supporting CDN domains
-- **Blocked:** Everything else (Google Search, YouTube, social media, etc.)
+- **Pi-hole group:** `kids2` (Group ID: 3)
+- **Allowed sites:**
+  - Gmail, Google Chat, Google Accounts
+  - Duolingo
+  - Typing.com
+  - Bulk Apothecary (bulkapothecary.com)
+  - LEO Dictionary (leo.org)
+  - Sally's Baking Addiction (sallysbakingaddiction.com)
+  - AccuWeather (accuweather.com)
+  - USCCB Catechism (usccb.cld.bz, pages.cld.bz)
+  - Suno (suno.com)
+  - KWeather app (api.met.no, geonames.org)
+  - Britannica, Kiddle, Rhymezone
+  - Zoom, Homeschool Connections, Teaching Textbooks
+  - Supporting CDNs (cloudfront, amazonaws, gstatic, googleapis)
+  - Firefox captive portal (detectportal.firefox.com)
+  - Fedora system (fedoraproject.org, fedora.pool.ntp.org)
+- **Blocked:** Everything else (Google Search, YouTube, social media, Amazon, etc.)
 
 ### To temporarily unrestrict:
 ```bash
@@ -137,15 +170,6 @@ The CH341A connects to a PC via USB and reflashes the chip, wiping the password.
 2. Power on, tap **F12** immediately → select SD card from boot menu
 3. Follow Windows setup wizard
 4. After Windows is installed, set up Pi-hole and WireGuard (see `skills/kids-laptops-pihole/SKILL.md`)
-
----
-
-## Pi-hole Setup (after Windows install)
-
-- Pi-hole group pending for Gianna's laptop
-- IP: 192.168.12.226
-- Follow the same pattern as Kids1/Kids2 in `skills/kids-laptops-pihole/SKILL.md`
-- Determine whitelist needs (may differ from Kids1/Kids2)
 
 ---
 
