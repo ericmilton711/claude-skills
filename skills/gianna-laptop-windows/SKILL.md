@@ -71,8 +71,9 @@ echo '{"policies":{"DNSOverHTTPS":{"Enabled":false,"Locked":true}}}' | sudo tee 
 ## Pi-hole Status
 
 - **Pi-hole client ID:** 12
-- **Default state:** In Default group (group 0) — blocked by `.*` regex deny like all unregistered devices
-- **Temporary unrestrict:** Remove from all groups (no group = no rules = full access). Re-add to group 0 to restore blocking.
+- **Pi-hole group:** `kids2` (Group ID: 3) — same restrictions as Benedict's laptop
+- **Allowed:** Gmail, Google Chat, Britannica, Zoom, Homeschool Connections, Teaching Textbooks, Duolingo, Kiddle, Rhymezone, and supporting CDN domains
+- **Blocked:** Everything else (Google Search, YouTube, social media, etc.)
 
 ### To temporarily unrestrict:
 ```bash
@@ -81,9 +82,9 @@ docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client
 docker exec pihole pihole reloaddns
 ```
 
-### To restore restrictions:
+### To restore restrictions (back to kids2):
 ```bash
-docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 0);"
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 3);"
 docker exec pihole pihole reloaddns
 ```
 
