@@ -1,7 +1,7 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <WebServer.h>
 #include <HTTPClient.h>
-#include <BLEDevice.h>
 #include <Update.h>
 #include <DHT.h>
 #include <ArduinoJson.h>
@@ -9,6 +9,7 @@
 
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
+#define FORECAST_DAYS 7
 
 const char* ssid = "DIEMILTONHAUS";
 const char* password = "wisdom22!!";
@@ -32,111 +33,177 @@ String windSpeed = "--";
 String weatherDesc = "Loading...";
 String sunrise = "--:--";
 String sunset = "--:--";
-String fcDay[7], fcDesc[7], fcHi[7], fcLo[7];
+String forecastDay[FORECAST_DAYS];
+String forecastHigh[FORECAST_DAYS];
+String forecastLow[FORECAST_DAYS];
+String forecastDesc[FORECAST_DAYS];
 
-SemaphoreHandle_t piMutex;
-String piLedState = "--";
-String piIrrigationState = "--";
-String piCpuTemp = "--";
-String piUptime = "--";
-bool piConnected = false;
-unsigned long lastSuccessfulBleMillis = 0;
-int bleMissCount = 0;
 volatile bool otaInProgress = false;
 
-static BLEUUID piServiceUUID("12345678-1234-5678-1234-56789abcdef0");
-static BLEUUID piCmdUUID("12345678-1234-5678-1234-56789abcdef1");
-static BLEUUID piRespUUID("12345678-1234-5678-1234-56789abcdef2");
 
-String weatherCodeToDesc(int code) {
-  if (code == 0) return "Clear";
-  if (code <= 3) return "Partly Cloudy";
-  if (code <= 49) return "Foggy";
-  if (code <= 59) return "Drizzle";
-  if (code <= 69) return "Rain";
-  if (code <= 79) return "Snow";
-  if (code <= 82) return "Rain Showers";
-  if (code <= 86) return "Snow Showers";
-  if (code >= 95) return "Thunderstorm";
-  return "Unknown";
+
+String nwsDescToEmoji(const String& desc) {
+  String d = desc;
+  d.toLowerCase();
+  if (d.indexOf("thunder") >= 0) return "&#9889;";
+  if (d.indexOf("snow") >= 0 || d.indexOf("blizzard") >= 0) return "&#127784;&#65039;";
+  if (d.indexOf("rain") >= 0 || d.indexOf("shower") >= 0 || d.indexOf("drizzle") >= 0) return "&#127783;&#65039;";
+  if (d.indexOf("fog") >= 0 || d.indexOf("mist") >= 0 || d.indexOf("haze") >= 0) return "&#127787;&#65039;";
+  if (d.indexOf("cloud") >= 0 || d.indexOf("overcast") >= 0) return "&#9925;";
+  if (d.indexOf("partly") >= 0) return "&#9925;";
+  if (d.indexOf("sunny") >= 0 || d.indexOf("clear") >= 0) return "&#9728;&#65039;";
+  return "&#127780;&#65039;";
 }
 
-String weatherCodeToEmoji(int code) {
-  if (code == 0) return "&#9728;&#65039;";
-  if (code <= 3) return "&#9925;";
-  if (code <= 49) return "&#127787;&#65039;";
-  if (code <= 59) return "&#127782;&#65039;";
-  if (code <= 69) return "&#127783;&#65039;";
-  if (code <= 79) return "&#127784;&#65039;";
-  if (code <= 82) return "&#127783;&#65039;";
-  if (code <= 86) return "&#127784;&#65039;";
-  if (code >= 95) return "&#9889;";
-  return "?";
+bool nwsFetch(const char* url, JsonDocument& doc) {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, url);
+  http.addHeader("User-Agent", "(miltonhaus-weather, ericmilton711@gmail.com)");
+  http.addHeader("Accept", "application/geo+json");
+  http.setConnectTimeout(10000);
+  http.setTimeout(10000);
+  int code = http.GET();
+  bool ok = false;
+  if (code == 200) {
+    String payload = http.getString();
+    DeserializationError err = deserializeJson(doc, payload);
+    if (!err) ok = true;
+    else Serial.printf("NWS JSON error: %s\n", err.c_str());
+  } else {
+    Serial.printf("NWS fetch failed (%s): %d\n", url, code);
+  }
+  http.end();
+  return ok;
 }
 
-String getDayName(const char* dateStr) {
-  struct tm tm = {};
-  sscanf(dateStr, "%d-%d-%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday);
-  tm.tm_year -= 1900;
-  tm.tm_mon -= 1;
-  mktime(&tm);
-  const char* days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-  return String(days[tm.tm_wday]);
+void fetchCurrentObs() {
+  JsonDocument doc;
+  if (!nwsFetch("https://api.weather.gov/stations/KLNS/observations/latest", doc)) return;
+
+  JsonObject props = doc["properties"];
+
+  float tempCVal = props["temperature"]["value"].as<float>();
+  float tempFVal = tempCVal * 9.0 / 5.0 + 32.0;
+  outsideTemp = String(tempFVal, 1);
+
+  float rh = props["relativeHumidity"]["value"].as<float>();
+  outsideHumidity = String((int)rh);
+
+  float windKmh = props["windSpeed"]["value"].as<float>();
+  float windMph = windKmh * 0.621371;
+  windSpeed = String(windMph, 1);
+
+  const char* desc = props["textDescription"];
+  if (desc) {
+    weatherDesc = nwsDescToEmoji(String(desc)) + " " + String(desc);
+  }
+
+  Serial.println("NWS current observations updated");
 }
 
-String extractTime(const String& isoTime) {
-  int tPos = isoTime.indexOf('T');
-  if (tPos < 0) return isoTime;
-  int h = isoTime.substring(tPos + 1, tPos + 3).toInt();
-  String m = isoTime.substring(tPos + 4, tPos + 6);
-  String ampm = (h >= 12) ? "PM" : "AM";
-  if (h == 0) h = 12;
-  else if (h > 12) h -= 12;
-  return String(h) + ":" + m + " " + ampm;
+void fetchForecast() {
+  JsonDocument doc;
+  if (!nwsFetch("https://api.weather.gov/gridpoints/CTP/128,27/forecast", doc)) return;
+
+  JsonArray periods = doc["properties"]["periods"];
+
+  int dayIdx = 0;
+  bool todayHighSet = false;
+  bool todayLowSet = false;
+
+  for (JsonObject p : periods) {
+    bool daytime = p["isDaytime"].as<bool>();
+    int temp = p["temperature"].as<int>();
+    const char* name = p["name"];
+    const char* shortFc = p["shortForecast"];
+
+    if (!todayHighSet && daytime) {
+      outsideHigh = String(temp);
+      todayHighSet = true;
+      continue;
+    }
+    if (!todayLowSet && !daytime) {
+      outsideLow = String(temp);
+      todayLowSet = true;
+      if (!todayHighSet) {
+        todayHighSet = true;
+        outsideHigh = "--";
+      }
+      continue;
+    }
+
+    if (daytime && dayIdx < FORECAST_DAYS) {
+      forecastDay[dayIdx] = String(name).substring(0, 3);
+      forecastHigh[dayIdx] = String(temp);
+      forecastDesc[dayIdx] = nwsDescToEmoji(String(shortFc)) + " " + String(shortFc);
+    }
+    if (!daytime && dayIdx < FORECAST_DAYS) {
+      forecastLow[dayIdx] = String(temp);
+      dayIdx++;
+    }
+  }
+
+  Serial.println("NWS forecast updated");
+}
+
+void fetchSunriseSunset() {
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
+  http.begin(client, "https://api.sunrise-sunset.org/json?lat=39.98&lng=-76.28&formatted=0");
+  http.setConnectTimeout(5000);
+  http.setTimeout(5000);
+  int code = http.GET();
+  if (code == 200) {
+    String payload = http.getString();
+    JsonDocument doc;
+    if (!deserializeJson(doc, payload)) {
+      String sr = doc["results"]["sunrise"].as<String>();
+      String ss = doc["results"]["sunset"].as<String>();
+      auto utcIsoToLocal = [](const String& iso) -> String {
+        int y, mo, d, h, mi, s;
+        sscanf(iso.c_str(), "%d-%d-%dT%d:%d:%d", &y, &mo, &d, &h, &mi, &s);
+        struct tm t = {};
+        t.tm_year = y - 1900;
+        t.tm_mon = mo - 1;
+        t.tm_mday = d;
+        t.tm_hour = h;
+        t.tm_min = mi;
+        t.tm_sec = s;
+        // Temporarily set TZ to UTC so mktime treats input as UTC
+        setenv("TZ", "UTC0", 1);
+        tzset();
+        time_t epoch = mktime(&t);
+        setenv("TZ", "EST5EDT,M3.2.0,M11.1.0", 1);
+        tzset();
+        struct tm lt;
+        localtime_r(&epoch, &lt);
+        int lh = lt.tm_hour;
+        char buf[12];
+        const char* ampm = (lh >= 12) ? "PM" : "AM";
+        if (lh == 0) lh = 12;
+        else if (lh > 12) lh -= 12;
+        snprintf(buf, sizeof(buf), "%d:%02d %s", lh, lt.tm_min, ampm);
+        return String(buf);
+      };
+
+      sunrise = utcIsoToLocal(sr);
+      sunset = utcIsoToLocal(ss);
+      Serial.printf("Sunrise: %s  Sunset: %s\n", sunrise.c_str(), sunset.c_str());
+    }
+  } else {
+    Serial.printf("Sunrise API failed: %d\n", code);
+  }
+  http.end();
 }
 
 void fetchWeather() {
   if (WiFi.status() != WL_CONNECTED) return;
-
-  HTTPClient http;
-  http.setConnectTimeout(5000);
-  http.setTimeout(5000);
-  http.begin("http://api.open-meteo.com/v1/forecast?latitude=39.98&longitude=-76.28&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise,sunset&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America/New_York&forecast_days=8");
-  int code = http.GET();
-
-  if (code == 200) {
-    String payload = http.getString();
-    JsonDocument doc;
-    DeserializationError err = deserializeJson(doc, payload);
-
-    if (!err) {
-      outsideTemp = String(doc["current"]["temperature_2m"].as<float>(), 1);
-      outsideHumidity = String(doc["current"]["relative_humidity_2m"].as<int>());
-      windSpeed = String(doc["current"]["wind_speed_10m"].as<float>(), 1);
-      int wc = doc["current"]["weather_code"].as<int>();
-      weatherDesc = weatherCodeToEmoji(wc) + " " + weatherCodeToDesc(wc);
-
-      outsideHigh = String(doc["daily"]["temperature_2m_max"][0].as<float>(), 0);
-      outsideLow = String(doc["daily"]["temperature_2m_min"][0].as<float>(), 0);
-
-      sunrise = extractTime(doc["daily"]["sunrise"][0].as<String>());
-      sunset = extractTime(doc["daily"]["sunset"][0].as<String>());
-
-      for (int i = 0; i < 7; i++) {
-        const char* dd = doc["daily"]["time"][i + 1];
-        fcDay[i] = getDayName(dd);
-        fcHi[i] = String(doc["daily"]["temperature_2m_max"][i + 1].as<float>(), 0);
-        fcLo[i] = String(doc["daily"]["temperature_2m_min"][i + 1].as<float>(), 0);
-        int fwc = doc["daily"]["weather_code"][i + 1].as<int>();
-        fcDesc[i] = weatherCodeToEmoji(fwc) + " " + weatherCodeToDesc(fwc);
-      }
-
-      Serial.println("Weather updated successfully");
-    }
-  } else {
-    Serial.printf("Weather fetch failed: %d\n", code);
-  }
-  http.end();
+  fetchCurrentObs();
+  fetchForecast();
+  fetchSunriseSunset();
 }
 
 void readSensors() {
@@ -153,108 +220,6 @@ void readSensors() {
   }
 }
 
-String extractField(const String& text, const String& key) {
-  int idx = text.indexOf(key);
-  if (idx < 0) return "--";
-  int start = idx + key.length();
-  int end = text.indexOf('\n', start);
-  if (end < 0) end = text.length();
-  String val = text.substring(start, end);
-  val.trim();
-  return val;
-}
-
-volatile bool bleResetRequested = false;
-
-void bleTask(void* param) {
-  delay(15000);
-  BLEAddress piAddress("b8:27:eb:ea:98:e1");
-  Serial.println("BLE: direct connect to b8:27:eb:ea:98:e1");
-  int backoffMs = 30000;
-
-  while (true) {
-    if (otaInProgress) {
-      delay(1000);
-      continue;
-    }
-
-    if (bleResetRequested) {
-      bleResetRequested = false;
-      backoffMs = 30000;
-      bleMissCount = 0;
-      Serial.println("BLE: manual reset, retrying now");
-    }
-
-    if (WiFi.status() != WL_CONNECTED || WiFi.RSSI() == 0 || WiFi.RSSI() < -80) {
-      Serial.printf("BLE: skipping, WiFi weak (status=%d RSSI=%d)\n", WiFi.status(), WiFi.RSSI());
-      delay(30000);
-      continue;
-    }
-
-    Serial.printf("BLE: connecting (heap: %d, WiFi: %d, RSSI: %d)\n", ESP.getFreeHeap(), WiFi.status(), WiFi.RSSI());
-    BLEClient* client = BLEDevice::createClient();
-    bool ok = false;
-
-    try {
-      ok = client->connect(piAddress, BLE_ADDR_TYPE_PUBLIC, 5000);
-    } catch (...) {
-      Serial.println("BLE: connect exception");
-      ok = false;
-    }
-
-    if (ok) {
-      BLERemoteService* svc = client->getService(piServiceUUID);
-      if (svc) {
-        BLERemoteCharacteristic* cmdChar = svc->getCharacteristic(piCmdUUID);
-        BLERemoteCharacteristic* respChar = svc->getCharacteristic(piRespUUID);
-        if (cmdChar && respChar) {
-          cmdChar->writeValue(String("status"), true);
-
-          String resp;
-          for (int attempt = 0; attempt < 3; attempt++) {
-            delay(500);
-            resp = respChar->readValue();
-            if (resp.length() > 0) break;
-            Serial.printf("BLE: empty read, retry %d/3\n", attempt + 1);
-          }
-
-          if (resp.length() > 0) {
-            String response = resp;
-            if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
-              piLedState = extractField(response, "LEDs: ");
-              piIrrigationState = extractField(response, "Irrigation: ");
-              piUptime = extractField(response, "Uptime: ");
-              piCpuTemp = extractField(response, "CPU Temp: ");
-              piConnected = true;
-              lastSuccessfulBleMillis = millis();
-              bleMissCount = 0;
-              xSemaphoreGive(piMutex);
-            }
-            Serial.println("Pi status updated via BLE");
-          } else {
-            Serial.println("BLE: connected but got empty response");
-          }
-        }
-      }
-      client->disconnect();
-      delete client;
-      backoffMs = 30000;
-      if (bleMissCount > 0) bleMissCount--;
-    } else {
-      bleMissCount++;
-      if (bleMissCount >= 3 && xSemaphoreTake(piMutex, pdMS_TO_TICKS(200))) {
-        piConnected = false;
-        xSemaphoreGive(piMutex);
-      }
-      client->disconnect();
-      delete client;
-      Serial.printf("BLE connect failed (miss %d, retry in %ds)\n", bleMissCount, backoffMs / 1000);
-      if (backoffMs < 60000) backoffMs += 10000;
-    }
-
-    delay(backoffMs);
-  }
-}
 
 const char page[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -269,145 +234,198 @@ const char page[] PROGMEM = R"rawliteral(
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Comfortaa', sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      height: 100vh;
-      overflow: hidden;
-      padding: 8px 10px;
+      background: #d2c6a5;
+      color: #3b3225;
+      min-height: 100vh;
+      padding: 20px 16px;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      max-width: 900px;
-      margin: 0 auto;
-      height: 100%;
-      align-content: start;
-    }
-    .span2 { grid-column: span 2; }
-    .header { text-align: center; padding: 2px 0; }
-    .header h1 { color: #e94560; font-size: 1.1em; margin: 0; display: inline; }
-    .header .time { font-size: 1.4em; font-weight: bold; color: #fff; }
-    .header .date { font-size: 0.75em; color: #888; }
-    .section { color: #e94560; font-size: 0.65em; text-transform: uppercase; letter-spacing: 2px; padding: 4px 0 0; }
+    .container { max-width: 100%; margin: 0 auto; }
+    @media (min-width: 768px) { .container { max-width: 70%; } }
+    h1 { color: #8b5e3c; text-align: center; font-size: 1.3em; margin-bottom: 4px; }
+    .clock { text-align: center; margin-bottom: 8px; }
+    .clock .time { font-size: 2.2em; font-weight: bold; color: #3b3225; }
+    .clock .date { font-size: 1em; color: #7a6f5f; margin-top: 2px; }
+    .section { color: #8b5e3c; font-size: 0.75em; text-transform: uppercase; letter-spacing: 2px; margin: 14px 0 6px; }
+    .row { display: flex; gap: 8px; margin-bottom: 8px; }
     .card {
-      background: #16213e;
-      border-radius: 8px;
-      padding: 4px 6px;
+      flex: 1;
+      background: #e8dcc8;
+      border-radius: 12px;
+      padding: 12px;
       text-align: center;
-      border: 1px solid #0f3460;
+      border: 1px solid #c4b494;
     }
-    .card .label { font-size: 0.6em; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-    .card .value { font-size: 1.4em; font-weight: bold; margin: 1px 0; }
-    .card .unit { font-size: 0.55em; color: #888; }
-    .card .sub { font-size: 0.65em; color: #aaa; }
-    .big .value { font-size: 1.8em; }
-    .temp { color: #e94560; }
-    .hum { color: #4ecca3; }
-    .wind { color: #a8d8ea; }
-    .sun { color: #f9d923; }
-    .conditions { color: #ccc; }
-    #fcList {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 3px;
-      background: #16213e;
-      border-radius: 8px;
-      border: 1px solid #0f3460;
-      padding: 4px;
+    .card .label { font-size: 0.75em; color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
+    .card .value { font-size: 1.8em; font-weight: 700; margin: 3px 0; -webkit-text-stroke: 1px currentColor; }
+    .card .unit { font-size: 0.6em; color: #7a6f5f; }
+    .card .sub { font-size: 0.75em; color: #6b6050; margin-top: 3px; }
+    .big .value { font-size: 2.4em; }
+    .temp { color: #e81e00; }
+    .hum { color: #00b35a; }
+    .wind { color: #0090cc; }
+    .sun { color: #e8a000; }
+    .conditions { color: #5a4e3c; }
+    .forecast-row {
+      background: #e8dcc8;
+      border-radius: 12px;
+      border: 1px solid #c4b494;
+      padding: 12px 18px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1em;
     }
-    .fc {
-      text-align: center;
-      font-size: 0.65em;
-      padding: 2px 0;
-    }
-    .fc .day { font-weight: bold; }
-    .fc .desc { color: #aaa; }
-    .fc .hi { color: #e94560; font-weight: bold; }
-    .fc .lo { color: #888; }
+    .forecast-row .day { font-weight: bold; min-width: 44px; }
+    .forecast-row .desc { color: #6b6050; font-size: 0.85em; flex: 1; text-align: center; }
+    .forecast-row .hi { color: #e81e00; font-weight: 700; -webkit-text-stroke: 1px currentColor; }
+    .forecast-row .lo { color: #7a6f5f; margin-left: 8px; }
+    .status-pill { text-align: center; margin-bottom: 8px; }
     .pill {
       display: inline-block;
-      padding: 3px 12px;
-      border-radius: 14px;
-      font-size: 0.7em;
-      color: #0f3460;
-      background: #e94560;
+      padding: 5px 16px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      color: #fff;
+      background: #a0522d;
     }
-    .pill.ok { background: #4ecca3; }
-    .pi-on { color: #4ecca3; }
-    .pi-off { color: #888; }
-    .footer { text-align: center; color: #555; font-size: 0.6em; padding: 2px 0; }
+    .pill.ok { background: #2e7d5b; }
+    .footer { text-align: center; margin-top: 20px; color: #9a8d7a; font-size: 0.75em; }
+    .grid { display: block; }
+    .clickable { cursor: pointer; }
+    .clickable:active { transform: scale(0.97); }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #d2c6a5;
+      z-index: 100;
+      overflow-y: auto;
+      padding: 20px 16px;
+    }
+    .overlay.open { display: block; }
+    .overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .overlay-header h2 { color: #8b5e3c; font-size: 1.1em; margin: 0; }
+    .close-btn {
+      background: #8b5e3c;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-family: inherit;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+    .hourly-row {
+      background: #e8dcc8;
+      border-radius: 12px;
+      border: 1px solid #c4b494;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.95em;
+    }
+    .hourly-row .hr-time { font-weight: bold; min-width: 70px; }
+    .hourly-row .hr-desc { color: #6b6050; font-size: 0.85em; flex: 1; text-align: center; }
+    .hourly-row .hr-temp { color: #e81e00; font-weight: 700; -webkit-text-stroke: 1px currentColor; }
+    .hourly-row .hr-wind { color: #0090cc; font-size: 0.85em; min-width: 60px; text-align: right; }
+    .overlay-loading { text-align: center; color: #7a6f5f; padding: 40px; }
   </style>
 </head>
 <body>
-  <div class="grid">
-    <div class="span2 header">
-      <h1>MILTONHAUS</h1>
+  <div class="container">
+    <h1>MILTONHAUS Weather</h1>
+    <div class="clock">
       <div class="time" id="clock">--:--</div>
       <div class="date" id="date">Loading...</div>
     </div>
-
-    <div class="card big">
-      <div class="label">Temperature</div>
-      <div class="value temp" id="oTemp">--</div>
-      <div class="unit">&deg;F</div>
-      <div class="sub" id="oHL">H: -- / L: --</div>
-    </div>
-    <div class="card">
-      <div class="label">Conditions</div>
-      <div class="value conditions" id="oDesc" style="font-size:0.9em;">...</div>
-      <div style="font-size:0.65em; color:#888; margin-top:2px;">
-        <span class="hum" id="oHum">--</span>% hum &bull;
-        <span class="wind" id="oWind">--</span> mph
+    <div class="grid">
+      <div>
+        <div class="section">Willow Street, PA</div>
+        <div class="row">
+          <div class="card big">
+            <div class="label">Temperature</div>
+            <div class="value temp" id="oTemp">--</div>
+            <div class="unit">&deg;F</div>
+            <div class="sub" id="oHL">H: -- / L: --</div>
+          </div>
+          <div class="card clickable" id="condCard" onclick="showHourly()">
+            <div class="label">Conditions</div>
+            <div class="value conditions" id="oDesc" style="font-size:1.1em;">...</div>
+            <div class="sub" style="color:#8b5e3c;">Tap for hourly</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="card">
+            <div class="label">Humidity</div>
+            <div class="value hum" id="oHum">--</div>
+            <div class="unit">%</div>
+          </div>
+          <div class="card">
+            <div class="label">Wind</div>
+            <div class="value wind" id="oWind">--</div>
+            <div class="unit">mph</div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="card">
+            <div class="label">Sunrise</div>
+            <div class="value sun" style="font-size:1.3em;" id="sunrise">--:--</div>
+          </div>
+          <div class="card">
+            <div class="label">Sunset</div>
+            <div class="value sun" style="font-size:1.3em;" id="sunset">--:--</div>
+          </div>
+        </div>
+        <div class="section">Indoor Sensor</div>
+        <div class="status-pill"><div class="pill" id="status">Loading...</div></div>
+        <div class="row">
+          <div class="card">
+            <div class="label">Temp</div>
+            <div class="value temp" id="tempF">--</div>
+            <div class="unit">&deg;F</div>
+          </div>
+          <div class="card">
+            <div class="label">Temp</div>
+            <div class="value temp" id="tempC">--</div>
+            <div class="unit">&deg;C</div>
+          </div>
+          <div class="card">
+            <div class="label">Humidity</div>
+            <div class="value hum" id="dhtH">--</div>
+            <div class="unit">%</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section">7-Day Forecast</div>
+        <div id="forecast"></div>
       </div>
     </div>
-
-    <div class="card">
-      <div class="label">Sunrise</div>
-      <div class="value sun" style="font-size:1.1em;" id="sunrise">--:--</div>
+    <div class="footer">NWS Weather every 10 min &bull; <a href="/update" style="color:#8b5e3c;">OTA Update</a></div>
+  </div>
+  <div class="overlay" id="hourlyOverlay">
+    <div class="container">
+      <div class="overlay-header">
+        <h2>Hourly Forecast</h2>
+        <button class="close-btn" onclick="closeHourly()">Back</button>
+      </div>
+      <div id="hourlyList"><div class="overlay-loading">Loading...</div></div>
     </div>
-    <div class="card">
-      <div class="label">Sunset</div>
-      <div class="value sun" style="font-size:1.1em;" id="sunset">--:--</div>
-    </div>
-
-    <div id="fcList" class="span2"></div>
-
-    <div class="span2 section">Homestead Pi <span class="pill" id="piStatus">Scanning...</span></div>
-    <div class="card">
-      <div class="label">LEDs</div>
-      <div class="value pi-off" id="piLed" style="font-size:1.1em;">--</div>
-    </div>
-    <div class="card">
-      <div class="label">Irrigation</div>
-      <div class="value pi-off" id="piWater" style="font-size:1.1em;">--</div>
-    </div>
-    <div class="card">
-      <div class="label">CPU Temp</div>
-      <div class="value temp" id="piTemp" style="font-size:1.1em;">--</div>
-    </div>
-    <div class="card">
-      <div class="label">Uptime</div>
-      <div class="value" id="piUp" style="font-size:0.75em; color:#a8d8ea;">--</div>
-    </div>
-
-    <div class="span2 section">Indoor <span class="pill" id="status">Loading...</span></div>
-    <div class="card">
-      <div class="label">Temp</div>
-      <div class="value temp" id="tempF" style="font-size:1.1em;">--</div>
-      <div class="unit">&deg;F / <span id="tempC">--</span>&deg;C</div>
-    </div>
-    <div class="card">
-      <div class="label">Humidity</div>
-      <div class="value hum" id="dhtH" style="font-size:1.1em;">--</div>
-      <div class="unit">%</div>
-    </div>
-
-    <div class="span2 footer"><a href="/update" style="color:#e94560;">OTA Update</a></div>
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/New_York'});},1000)}());
-    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='No Sensor';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fl=document.getElementById('fcList');fl.innerHTML='';if(d.fc){d.fc.forEach(function(f){var r=document.createElement('div');r.className='fc';r.innerHTML='<div class="day">'+f.d+'</div><div class="desc">'+f.c+'</div><div><span class="hi">'+f.h+'</span>&deg;<br><span class="lo">'+f.l+'</span>&deg;</div>';fl.appendChild(r)})}var ps=document.getElementById('piStatus');var hasPiData=d.piLed&&d.piLed!=='--';if(d.piConn){ps.textContent='Connected';ps.className='pill ok'}else if(hasPiData){ps.textContent='Last Data';ps.className='pill ok'}else{ps.textContent='Not in Range';ps.className='pill'}if(hasPiData||d.piConn){document.getElementById('piLed').textContent=d.piLed;document.getElementById('piLed').className='value '+(d.piLed==='ON'?'pi-on':'pi-off');document.getElementById('piWater').textContent=d.piWater;document.getElementById('piWater').className='value '+(d.piWater==='ON'?'pi-on':'pi-off');document.getElementById('piTemp').textContent=d.piTemp;document.getElementById('piUp').textContent=d.piUp}else{document.getElementById('piLed').textContent='--';document.getElementById('piLed').className='value pi-off';document.getElementById('piWater').textContent='--';document.getElementById('piWater').className='value pi-off';document.getElementById('piTemp').textContent='--';document.getElementById('piUp').textContent='--'}}).catch(function(){document.getElementById('status').textContent='Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fc=document.getElementById('forecast');var h='';for(var i=0;i<d.forecast.length;i++){var f=d.forecast[i];h+='<div class="forecast-row"><div class="day">'+f.day+'</div><div class="desc">'+f.desc+'</div><div><span class="hi">'+f.hi+'</span>° <span class="lo">'+f.lo+'</span>°</div></div>'}fc.innerHTML=h}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+  function descEmoji(d){d=d.toLowerCase();if(d.indexOf('thunder')>=0)return'⚡';if(d.indexOf('snow')>=0||d.indexOf('blizzard')>=0)return'\u{1F328}️';if(d.indexOf('rain')>=0||d.indexOf('shower')>=0||d.indexOf('drizzle')>=0)return'\u{1F327}️';if(d.indexOf('fog')>=0||d.indexOf('mist')>=0)return'\u{1F32B}️';if(d.indexOf('cloud')>=0||d.indexOf('overcast')>=0)return'⛅';if(d.indexOf('sunny')>=0||d.indexOf('clear')>=0)return'☀️';return'\u{1F324}️';}
+  function showHourly(){document.getElementById('hourlyOverlay').className='overlay open';document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast/hourly',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json()}).then(function(d){var p=d.properties.periods;var h='';var count=Math.min(p.length,24);for(var i=0;i<count;i++){var t=new Date(p[i].startTime);var hr=t.getHours();var ampm=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var timeStr=hr+':00 '+ampm;var e=descEmoji(p[i].shortForecast);h+='<div class="hourly-row"><div class="hr-time">'+timeStr+'</div><div class="hr-desc">'+e+' '+p[i].shortForecast+'</div><div class="hr-temp">'+p[i].temperature+'&deg;</div><div class="hr-wind">'+p[i].windSpeed+'</div></div>'}document.getElementById('hourlyList').innerHTML=h}).catch(function(){document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Failed to load hourly forecast</div>'});}
+  function closeHourly(){document.getElementById('hourlyOverlay').className='overlay';}
   </script>
 </body>
 </html>
@@ -422,12 +440,12 @@ const char otaPage[] PROGMEM = R"rawliteral(
   <title>MILTONHAUS OTA Update</title>
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Comfortaa', sans-serif; background: #1a1a2e; color: #eee; padding: 40px; text-align: center; }
-    h2 { color: #e94560; margin-bottom: 20px; }
+    body { font-family: 'Comfortaa', sans-serif; background: #d2c6a5; color: #3b3225; padding: 40px; text-align: center; }
+    h2 { color: #8b5e3c; margin-bottom: 20px; }
     input[type=file] { margin: 20px; }
-    input[type=submit] { padding: 12px 24px; background: #e94560; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 1em; }
-    input[type=submit]:hover { background: #c73650; }
-    a { color: #4ecca3; }
+    input[type=submit] { padding: 12px 24px; background: #8b5e3c; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 1em; }
+    input[type=submit]:hover { background: #6d4a2e; }
+    a { color: #2e7d5b; }
   </style>
 </head>
 <body>
@@ -457,45 +475,22 @@ void handleRoot() {
 }
 
 void handleData() {
-  String pLed, pWater, pTemp, pUp;
-  bool pConn;
-  if (xSemaphoreTake(piMutex, pdMS_TO_TICKS(100))) {
-    pLed = piLedState;
-    pWater = piIrrigationState;
-    pTemp = piCpuTemp;
-    pUp = piUptime;
-    pConn = (lastSuccessfulBleMillis > 0 && (millis() - lastSuccessfulBleMillis < 90000));
-    xSemaphoreGive(piMutex);
-  } else {
-    pLed = "--"; pWater = "--"; pTemp = "--"; pUp = "--";
-    pConn = false;
+  static char buf[4096];
+  int pos = snprintf(buf, sizeof(buf),
+    "{\"tempC\":%.1f,\"tempF\":%.1f,\"dhtH\":%.1f,\"sensor\":%s,"
+    "\"oTemp\":\"%s\",\"oHigh\":\"%s\",\"oLow\":\"%s\","
+    "\"oHum\":\"%s\",\"oWind\":\"%s\",\"oDesc\":\"%s\","
+    "\"sunrise\":\"%s\",\"sunset\":\"%s\",\"forecast\":[",
+    tempC, tempF, dhtHumidity, sensorConnected ? "true" : "false",
+    outsideTemp.c_str(), outsideHigh.c_str(), outsideLow.c_str(),
+    outsideHumidity.c_str(), windSpeed.c_str(), weatherDesc.c_str(),
+    sunrise.c_str(), sunset.c_str());
+  for (int i = 0; i < FORECAST_DAYS; i++) {
+    pos += snprintf(buf + pos, sizeof(buf) - pos, "%s{\"day\":\"%s\",\"desc\":\"%s\",\"hi\":\"%s\",\"lo\":\"%s\"}",
+      i > 0 ? "," : "", forecastDay[i].c_str(), forecastDesc[i].c_str(), forecastHigh[i].c_str(), forecastLow[i].c_str());
   }
-
-  String json = "{\"tempC\":" + String(tempC, 1) +
-                ",\"tempF\":" + String(tempF, 1) +
-                ",\"dhtH\":" + String(dhtHumidity, 1) +
-                ",\"sensor\":" + (sensorConnected ? "true" : "false") +
-                ",\"oTemp\":\"" + outsideTemp + "\"" +
-                ",\"oHigh\":\"" + outsideHigh + "\"" +
-                ",\"oLow\":\"" + outsideLow + "\"" +
-                ",\"oHum\":\"" + outsideHumidity + "\"" +
-                ",\"oWind\":\"" + windSpeed + "\"" +
-                ",\"oDesc\":\"" + weatherDesc + "\"" +
-                ",\"sunrise\":\"" + sunrise + "\"" +
-                ",\"sunset\":\"" + sunset + "\"" +
-                ",\"fc\":[";
-  for (int i = 0; i < 7; i++) {
-    if (i > 0) json += ",";
-    json += "{\"d\":\"" + fcDay[i] + "\",\"c\":\"" + fcDesc[i] + "\",\"h\":\"" + fcHi[i] + "\",\"l\":\"" + fcLo[i] + "\"}";
-  }
-  json += "]";
-  json += ",\"piConn\":" + String(pConn ? "true" : "false") +
-                ",\"piLed\":\"" + pLed + "\"" +
-                ",\"piWater\":\"" + pWater + "\"" +
-                ",\"piTemp\":\"" + pTemp + "\"" +
-                ",\"piUp\":\"" + pUp + "\"" +
-                ",\"bleMiss\":" + String(bleMissCount) + "}";
-  server.send(200, "application/json", json);
+  snprintf(buf + pos, sizeof(buf) - pos, "]}");
+  server.send(200, "application/json", buf);
 }
 
 void setup() {
@@ -528,8 +523,18 @@ void setup() {
     Serial.println(WiFi.localIP());
     Serial.printf("RSSI: %d dBm | TX Power: max\n", WiFi.RSSI());
 
-    configTzTime("EST5EDT,M3.2.0,M11.1.0", ntpServer);
+    setenv("TZ", "EST5EDT,M3.2.0,M11.1.0", 1);
+    tzset();
+    configTime(0, 0, ntpServer);
     Serial.println("NTP time sync started (Eastern)");
+    struct tm ti;
+    for (int i = 0; i < 10; i++) {
+      if (getLocalTime(&ti, 1000)) {
+        Serial.printf("NTP synced: %02d:%02d:%02d\n", ti.tm_hour, ti.tm_min, ti.tm_sec);
+        break;
+      }
+      delay(500);
+    }
 
     fetchWeather();
   } else {
@@ -538,11 +543,6 @@ void setup() {
 
   server.on("/", handleRoot);
   server.on("/data", handleData);
-
-  server.on("/ble-reset", []() {
-    bleResetRequested = true;
-    server.send(200, "text/plain", "BLE reset requested — will retry on next cycle");
-  });
 
   server.on("/update", HTTP_GET, []() {
     size_t totalLen = strlen(otaPage);
@@ -566,8 +566,7 @@ void setup() {
     HTTPUpload& upload = server.upload();
     if (upload.status == UPLOAD_FILE_START) {
       otaInProgress = true;
-      BLEDevice::deinit(false);
-      Serial.printf("OTA update: %s (BLE paused)\n", upload.filename.c_str());
+      Serial.printf("OTA update: %s\n", upload.filename.c_str());
       if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {
         Update.printError(Serial);
       }
@@ -587,64 +586,57 @@ void setup() {
   server.begin();
   Serial.println("Web server started");
 
-  piMutex = xSemaphoreCreateMutex();
-
-  BLEDevice::init("miltonhaus-weather");
-  Serial.println("BLE initialized");
-
-  xTaskCreatePinnedToCore(bleTask, "bleTask", 16384, NULL, 1, NULL, 0);
-  Serial.println("BLE task started on core 0");
 }
 
 void loop() {
   server.handleClient();
+
 
   if (millis() - lastSensorRead > 2000) {
     readSensors();
     lastSensorRead = millis();
   }
 
-  unsigned long weatherInterval = (outsideTemp == "--") ? 30000 : 600000;
-  if (millis() - lastWeatherFetch > weatherInterval) {
+  if (millis() - lastWeatherFetch > 600000) {
     fetchWeather();
     lastWeatherFetch = millis();
   }
 
-  if (WiFi.status() != WL_CONNECTED && millis() - lastWifiCheck > 30000) {
+  bool wifiDead = (WiFi.status() != WL_CONNECTED);
+  if (wifiDead && millis() - lastWifiCheck > 30000) {
     lastWifiCheck = millis();
-    wifiFailCount++;
-    Serial.printf("WiFi lost (status=%d RSSI=%d fail=%d) - reconnecting...\n", WiFi.status(), WiFi.RSSI(), wifiFailCount);
+    Serial.printf("WiFi lost (status=%d RSSI=%d) - reconnecting...\n", WiFi.status(), WiFi.RSSI());
     WiFi.disconnect(true);
-    delay(100);
+    delay(500);
+    WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
-    if (wifiFailCount >= 10) {
-      Serial.println("WATCHDOG: WiFi failed 10x, rebooting");
-      delay(100);
-      ESP.restart();
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+      delay(500);
+      attempts++;
+    }
+    if (WiFi.status() == WL_CONNECTED) {
+      IPAddress staticIP(192, 168, 12, 240);
+      IPAddress gateway(192, 168, 12, 1);
+      IPAddress subnet(255, 255, 255, 0);
+      IPAddress dns(192, 168, 12, 1);
+      WiFi.config(staticIP, gateway, subnet, dns);
+      Serial.print("WiFi reconnected! IP: ");
+      Serial.println(WiFi.localIP());
+      wifiFailCount = 0;
+      fetchWeather();
+    } else {
+      wifiFailCount++;
+      Serial.printf("WiFi reconnect failed (%d)\n", wifiFailCount);
     }
   }
 
-  if (WiFi.status() == WL_CONNECTED && wifiFailCount > 0) {
-    IPAddress staticIP(192, 168, 12, 240);
-    IPAddress gateway(192, 168, 12, 1);
-    IPAddress subnet(255, 255, 255, 0);
-    IPAddress dns(192, 168, 12, 1);
-    WiFi.config(staticIP, gateway, subnet, dns);
-    Serial.print("WiFi reconnected! IP: ");
-    Serial.println(WiFi.localIP());
-    wifiFailCount = 0;
-  }
-
-  // Heap watchdog: reboot if free heap drops below 8KB
   if (ESP.getFreeHeap() < 8192) {
-    Serial.println("WATCHDOG: heap critical, rebooting");
-    delay(100);
-    ESP.restart();
+    Serial.printf("WATCHDOG: heap low (%d bytes)\n", ESP.getFreeHeap());
   }
 
-  // Daily reboot at 3:00 AM to clear heap fragmentation
   struct tm timeinfo;
-  if (getLocalTime(&timeinfo) && timeinfo.tm_hour == 3 && timeinfo.tm_min == 0 && timeinfo.tm_sec < 3) {
+  if (getLocalTime(&timeinfo) && timeinfo.tm_hour == 2 && timeinfo.tm_min == 0 && timeinfo.tm_sec < 3) {
     Serial.println("Scheduled daily reboot");
     delay(100);
     ESP.restart();

@@ -1,7 +1,7 @@
 # ESP32 Weather Station
 
-**Status:** Deployed in basement at 192.168.12.240 for seed starting temp/humidity monitoring. Standalone WiFi only. Pi BLE scrapped (Pi can't reach WiFi or BLE from its location). DHT11 sensor wired and reading. OLED removed (caused heap exhaustion). Gift for Rosemary.
-**Last Updated:** 2026-05-24
+**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
+**Last Updated:** 2026-05-27
 
 ## Hardware
 
@@ -38,7 +38,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - **arduino-cli** 1.5.0 at `~/.local/bin/arduino-cli` (Linux) or `%USERPROFILE%\.local\bin\arduino-cli.exe` (Windows)
 - **Board package:** esp32:esp32 3.3.8 (FQBN: `esp32:esp32:esp32`)
 - **Partition scheme:** `min_spiffs` (1.9MB app x2 with OTA, 192KB SPIFFS) — sketch uses 93% of partition
-- **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, BLE (built-in)
+- **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, WiFiClientSecure (built-in)
 - **esptool** 5.2.0 via pip
 - **CRITICAL: Do NOT use PlatformIO.** PlatformIO's framework-arduinoespressif32 3.3.7 breaks BLE connectivity. The ESP32 can connect to WiFi but BLE fails silently (connect() returns false, Pi never receives any commands). Only use arduino-cli with esp32:esp32 3.3.8. Learned the hard way 2026-05-05.
 
@@ -50,19 +50,19 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 ## Features
 
 - **Live clock** — Eastern time (America/New_York) via NTP, 12-hour format, no seconds
-- **Current weather** — Open-Meteo API via HTTP (free, no API key), Willow Street PA (lat 39.98, lon -76.28)
+- **Current weather** — NWS (api.weather.gov) via HTTPS, station KLNS (Lancaster Airport), grid CTP/128,27
   - Temperature (°F), high/low, conditions with emoji, humidity, wind speed
-- **Sunrise/Sunset** — 12-hour AM/PM format
-- **7-day forecast** — horizontal 7-column grid, day name, conditions with emoji, high/low temps
+  - Uses real observation station data — much more accurate than Open-Meteo's model data
+- **Sunrise/Sunset** — sunrise-sunset.org API via HTTPS, UTC→Eastern conversion, 12-hour AM/PM format
+- **7-day forecast** — NWS forecast periods, day name, conditions with emoji, high/low temps
+- **Hourly forecast** — tap Conditions card to open full-screen overlay with next 24 hours (fetched client-side from NWS)
 - **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
-- **~~Homestead Pi via BLE~~** — **SCRAPPED 2026-05-24.** Pi can't reach ESP32 (no WiFi/BLE range from basement). Code still in firmware but unused. Dashboard shows "Not in Range" permanently.
+- **~~Homestead Pi via BLE~~** — **REMOVED 2026-05-27.** BLE code stripped from firmware.
 - **Web dashboard** — served at `http://192.168.12.240/` on port 80, auto-refreshes every 5 seconds
-  - Compact 2-column CSS grid layout, fits on phone without scrolling
-  - `overflow: hidden` on body to prevent scroll
+  - Comfortaa font, warm earth-tone theme (#d2c6a5 background, #8b5e3c accents)
+  - Responsive layout — 70% max-width on desktop, full-width on mobile
 - **OTA firmware updates** — browse to `/update` to upload .bin files wirelessly
-- **Weather updates** every 10 minutes from Open-Meteo
-- **Font:** Comfortaa (Google Fonts)
-- **Theme:** Dark (#1a1a2e background), red (#e94560) accents, teal (#4ecca3) humidity
+- **Weather updates** every 10 minutes
 
 ## WiFi Hardening (critical — do not change)
 
@@ -71,8 +71,10 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - `WiFi.setAutoReconnect(true)` — auto-reconnect on drop
 - **Static IP set AFTER `WiFi.begin()` connects** — ESP32 Arduino Core 3.3.8 bug ignores `WiFi.config()` before `WiFi.begin()`
 - Non-blocking WiFi reconnect: calls `WiFi.disconnect(true)` + `WiFi.begin()` and moves on, checks result on next loop pass (does NOT block in a retry loop)
-- `fetchWeather()` uses plain HTTP (not HTTPS) to save ~40KB heap and avoid SSL cert issues
-- `fetchWeather()` has 5-second connect and read timeouts to prevent blocking the web server
+- `fetchWeather()` uses HTTPS for NWS and sunrise-sunset.org (`WiFiClientSecure` with `setInsecure()`)
+- NWS API calls have 10-second connect and read timeouts
+- Sunrise-sunset.org has 5-second timeouts
+- Heap is fine with HTTPS now that BLE and OLED are removed (~56% flash, 16% RAM)
 
 ## BLE Connection — SCRAPPED 2026-05-24
 
@@ -191,6 +193,10 @@ Historical: The Pi's `ble-homestead.py` adapter selection fix. No longer relevan
 - [x] Weather API switched to HTTP — saves heap, avoids SSL issues on ESP32 (2026-05-11)
 - [x] DHT11 ground wire reconnected — was unplugged, causing "No Sensor" (2026-05-11)
 - [x] Remote access via Tailscale — proxy on ThinkCentre, phone accesses http://100.70.179.60:8240 (2026-05-11)
+- [x] Switched from Open-Meteo to NWS (api.weather.gov) — real station observations, much more accurate conditions (2026-05-27)
+- [x] Sunrise/sunset via sunrise-sunset.org API with UTC→Eastern conversion (2026-05-27)
+- [x] Hourly forecast overlay — tap Conditions card, fetched client-side from NWS (2026-05-27)
+- [x] BLE code removed — dashboard simplification (2026-05-27)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
@@ -202,4 +208,4 @@ Historical: The Pi's `ble-homestead.py` adapter selection fix. No longer relevan
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-24*
+*Created: 2026-04-26 | Updated: 2026-05-27*
