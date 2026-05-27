@@ -9,7 +9,7 @@
 
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
-#define FORECAST_DAYS 7
+#define FORECAST_DAYS 6
 
 const char* ssid = "DIEMILTONHAUS";
 const char* password = "wisdom22!!";
@@ -405,7 +405,7 @@ const char page[] PROGMEM = R"rawliteral(
         </div>
       </div>
       <div>
-        <div class="section">7-Day Forecast</div>
+        <div class="section">6-Day Forecast</div>
         <div id="forecast"></div>
       </div>
     </div>
