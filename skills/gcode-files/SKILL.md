@@ -191,6 +191,7 @@ New gcode files created on this laptop are auto-saved here. These files are giti
 
 | File | Date Added | Notes |
 |------|-----------|-------|
+| `breadboardbox_v2.gcode` | 2026-05-30 | Auto-archived from Desktop |
 | `Garden-Stakes1.gcode` | 2026-05-19 | 3D printed garden stakes |
 
 ---
