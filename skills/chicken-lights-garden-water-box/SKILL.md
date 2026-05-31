@@ -145,6 +145,7 @@ Located at: `C:\Users\ericm\Desktop\led_timer\led_timer.ino`
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <avr/wdt.h>
 
 #define DS3231_ADDR 0x68
 #define LED_PIN 9
@@ -171,22 +172,46 @@ long readVcc() {
 bool ledsOn = false;
 
 void setup() {
+  wdt_enable(WDTO_8S);
   Wire.begin();
+  Wire.setWireTimeout(3000, true);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
   display.display();
+  wdt_reset();
 }
 
 void loop() {
+  wdt_reset();
+
   Wire.beginTransmission(DS3231_ADDR);
   Wire.write(0x01);
-  Wire.endTransmission();
-  Wire.requestFrom(DS3231_ADDR, 2);
+  byte err = Wire.endTransmission();
 
-  byte minutes = bcdToDec(Wire.read());
-  byte hours = bcdToDec(Wire.read() & 0x3F);
+  byte minutes = 0;
+  byte hours = 0;
+  bool rtcOk = false;
+
+  if (err == 0) {
+    byte count = Wire.requestFrom(DS3231_ADDR, 2);
+    if (count == 2) {
+      minutes = bcdToDec(Wire.read());
+      hours = bcdToDec(Wire.read() & 0x3F);
+      if (hours <= 23 && minutes <= 59) {
+        rtcOk = true;
+      }
+    }
+  }
+
+  // Fail-safe: RTC error means LEDs OFF
+  if (!rtcOk) {
+    digitalWrite(LED_PIN, LOW);
+    ledsOn = false;
+    delay(5000);
+    return;
+  }
 
   // Schedule: 5:00-6:59 ON, 7:00-13:59 OFF, 14:00-23:58 ON, 23:59-4:59 OFF
   if ((hours >= 5 && hours < 7) || (hours >= 14 && (hours < 23 || (hours == 23 && minutes <= 58)))) {
@@ -227,6 +252,7 @@ void loop() {
   display.print("V");
 
   display.display();
+  wdt_reset();
   delay(30000);
 }
 ```
@@ -267,6 +293,7 @@ Install via: `arduino-cli lib install "Adafruit SSD1306" "Adafruit GFX Library"`
 | Date | Event |
 |------|-------|
 | 2026-05-30 | Built and deployed Nano + DS3231 + IRLB8721 + OLED timer. All LEDs on and working. |
+| 2026-05-31 | LEDs stuck ON overnight (likely I2C bus lockup froze Nano mid-ON). Battery drained. Added watchdog timer (8s auto-reset), I2C bus timeout, RTC read validation with fail-safe LEDs OFF. Re-flashed. |
 
 ---
 
