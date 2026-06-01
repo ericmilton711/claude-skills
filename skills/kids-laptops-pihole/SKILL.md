@@ -348,7 +348,7 @@ docker exec pihole pihole reloaddns
 - WiFi interface: wlp2s0
 - Pi-hole client ID: 12
 - Pi-hole group: `gianna-laptop` (Group ID: 8) — **default-allow, blocks Google + YouTube only**
-- SSH: port open, key auth NOT set up, password auth rejected over SSH (works locally only)
+- SSH: key auth working (ed25519 key added 2026-05-25)
 
 ### Pi-hole Rules (Group 8)
 **Approach:** Default-allow. Everything works except Google and YouTube. Music (Spotify, Apple Music) is allowed.
@@ -361,13 +361,18 @@ docker exec pihole pihole reloaddns
 - `(^|[.])googlevideo[.]com$` — YouTube video streams
 - `(^|[.])yt3[.]ggpht[.]com$` — YouTube channel avatars
 
-**Allowed through (regex allow in group 8, so Gmail still works despite google.com deny):**
+**Allowed through (regex allow in group 8, so Gmail/Docs/Chat still work despite google.com deny):**
 - `(^|[.])mail[.]google[.]com$`
 - `(^|[.])gmail[.]com$`
 - `(^|[.])accounts[.]google[.]com$`
 - `(^|[.])googleapis[.]com$`
 - `(^|[.])gstatic[.]com$`
 - `(^|[.])googleusercontent[.]com$`
+- `(^|[.])docs[.]google[.]com$`
+- `(^|[.])drive[.]google[.]com$`
+- `(^|[.])chat[.]google[.]com$`
+- `(^|[.])ssl[.]gstatic[.]com$`
+- `(^|[.])lh3[.]googleusercontent[.]com$`
 
 ### DNS Setup (Fedora-specific)
 Fedora required four fixes (systemd-resolved was broken). Full details in `skills/gianna-laptop-windows/SKILL.md`.
@@ -375,6 +380,13 @@ Fedora required four fixes (systemd-resolved was broken). Full details in `skill
 2. **nmcli** — set Pi-hole as DNS, ignore-auto-dns on DIEMILTONHAUS connection
 3. **/etc/resolv.conf** — overwritten to `nameserver 192.168.12.136`, locked with `chattr +i`
 4. **/etc/nsswitch.conf** — removed `resolve [!UNAVAIL=return]` from hosts line so glibc uses `dns` directly
+
+### WireGuard Setup
+- Config: `/etc/wireguard/lambert.conf` (uses direct IP `174.54.51.209:51820`)
+- WireGuard IP: 192.168.2.2
+- Service: `wg-quick@lambert` — enabled, auto-starts on boot
+- **DNS line removed from config** (2026-06-01) — systemd-resolved is masked, so `resolvconf` fails. DNS is already handled by Pi-hole via resolv.conf.
+- Milton Home Page: `http://192.168.0.100:5006` (works via WireGuard)
 
 ### Firefox DoH
 **NOT YET APPLIED** — `/etc/firefox/policies/policies.json` failed to create (directory issue). Needs to be redone next time SSH or local access is available.
