@@ -1,6 +1,6 @@
 # Kids Laptops — Pi-hole Parental Controls
 
-**Last Updated:** 2026-05-24
+**Last Updated:** 2026-06-01
 **Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ Tower of Gondor (Kids Research) ✅ Gianna ✅ complete. Ev's Chromebook pending.
 
 ---
@@ -46,7 +46,8 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
 | 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail + Britannica |
 | 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
-| 3 | kids2 | Gianna's Fedora laptop | 192.168.12.226 | same as Benedict (standard kids + Gmail + Britannica) |
+| 7 | tower-of-gondor | Tower of Gondor + YTI Chromebook | 192.168.12.160, .219 | default-allow, blocks Google/Spotify/Apple Music |
+| 8 | gianna-laptop | Gianna's Fedora laptop | 192.168.12.226 | **default-allow** — blocks Google + YouTube only, Gmail allowed |
 
 ---
 
@@ -346,14 +347,33 @@ docker exec pihole pihole reloaddns
 - Password: wisdom22!!
 - WiFi interface: wlp2s0
 - Pi-hole client ID: 12
-- Pi-hole group: `kids2` (Group ID: 3) — same restrictions as Benedict's laptop
+- Pi-hole group: `gianna-laptop` (Group ID: 8) — **default-allow, blocks Google + YouTube only**
 - SSH: port open, key auth NOT set up, password auth rejected over SSH (works locally only)
+
+### Pi-hole Rules (Group 8)
+**Approach:** Default-allow. Everything works except Google and YouTube. Music (Spotify, Apple Music) is allowed.
+
+**Blocked (regex deny in group 8):**
+- `(^|[.])google[.]com$` — Google search
+- `(^|[.])youtube[.]com$` — YouTube
+- `(^|[.])youtu[.]be$` — YouTube short links
+- `(^|[.])ytimg[.]com$` — YouTube thumbnails
+- `(^|[.])googlevideo[.]com$` — YouTube video streams
+- `(^|[.])yt3[.]ggpht[.]com$` — YouTube channel avatars
+
+**Allowed through (regex allow in group 8, so Gmail still works despite google.com deny):**
+- `(^|[.])mail[.]google[.]com$`
+- `(^|[.])gmail[.]com$`
+- `(^|[.])accounts[.]google[.]com$`
+- `(^|[.])googleapis[.]com$`
+- `(^|[.])gstatic[.]com$`
+- `(^|[.])googleusercontent[.]com$`
 
 ### DNS Setup (Fedora-specific)
 Fedora required four fixes (systemd-resolved was broken). Full details in `skills/gianna-laptop-windows/SKILL.md`.
 1. **firewalld** — added `dns` service (was blocking UDP 53)
 2. **nmcli** — set Pi-hole as DNS, ignore-auto-dns on DIEMILTONHAUS connection
-3. **/etc/resolv.conf** — overwritten to `nameserver 192.168.12.136` (bypasses broken stub resolver)
+3. **/etc/resolv.conf** — overwritten to `nameserver 192.168.12.136`, locked with `chattr +i`
 4. **/etc/nsswitch.conf** — removed `resolve [!UNAVAIL=return]` from hosts line so glibc uses `dns` directly
 
 ### Firefox DoH
@@ -365,16 +385,17 @@ Remove from all groups (no group = no rules = full access):
 docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 12;"
 docker exec pihole pihole reloaddns
 ```
-Restore restrictions (back to kids2):
+Restore restrictions (back to gianna-laptop group):
 ```bash
-docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 3);"
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 8);"
 docker exec pihole pihole reloaddns
 ```
 
 ### Important Notes
-- **resolv.conf may revert on reboot** — systemd-resolved or NetworkManager can overwrite it. If DNS breaks, check `/etc/resolv.conf` first.
-- Shares kids2 group with Benedict — any whitelist changes to group 3 affect both devices.
+- **resolv.conf is locked with `chattr +i`** — if DNS breaks, unlock with `sudo chattr -i /etc/resolv.conf`, fix, then re-lock.
+- **Off-network = no internet** — resolv.conf is hardcoded to Pi-hole IP, unreachable outside MILTONHAUS.
 - Unlike Windows laptops, IPv6 bypass hasn't been checked yet on this Fedora install.
+- Changed from group 3 (kids2, default-deny) to group 8 (gianna-laptop, default-allow) on 2026-06-01.
 
 ---
 
