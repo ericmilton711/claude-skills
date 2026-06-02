@@ -141,7 +141,7 @@ Regex deny `.*` applies to groups: 0, 1, 2, 3, 5 — blocks ALL domains unless e
 Group 4 (yti-chromebook) was removed from the deny-all rule on 2026-05-04 — legacy group, no longer actively used.
 Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of deny-all (see below).
 
-**YTI Chromebook (Patrick's Chromebook)** was moved to group 7 on 2026-05-05. Same restrictions as Tower of Gondor: Google search blocked, Gmail works. DNS manually set to 192.168.12.136 on the Chromebook, and Secure DNS (DoH) disabled in `chrome://settings/security`.
+**YTI Chromebook (Patrick's Chromebook)** was moved to group 7 on 2026-05-05. Google search blocked. Gmail temporarily blocked as of 2026-06-02. DNS manually set to 192.168.12.136 on the Chromebook, and Secure DNS (DoH) disabled in `chrome://settings/security`.
 
 ---
 
@@ -154,7 +154,8 @@ Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of
 **Approach:** Everything allowed by default. Specific sites blocked via regex deny rules in group 7.
 
 **Blocked sites (regex deny, group 7):**
-- `(^|[.])google[.]com$` — Google search blocked (ID 216)
+- `(^|[.])google[.]com$` — All google.com subdomains: search, Chat, Meet, Drive, accounts (ID 216)
+- `(^|[.])gmail[.]com$` — Gmail blocked (ID 265, added 2026-06-02, **TEMPORARY**)
 - `(^|[.])spotify[.]com$` — Spotify blocked (ID 223, added 2026-05-17)
 - `(^|[.])scdn[.]co$` — Spotify CDN blocked (ID 224, added 2026-05-17)
 - `(^|[.])apple[.]com$` — Apple Music blocked (ID 225, added 2026-05-17)
@@ -163,10 +164,22 @@ Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of
 **Pending:** YTI Chromebook should be migrated to its own default-deny group (like groups 2/3) instead of sharing default-allow Group 7. Needs whitelist of approved sites from Eric.
 
 **Allowed via shared regex allows (group 7 added to existing rules):**
-- Gmail: mail.google.com, gmail.com, accounts.google.com, googleapis.com, gstatic.com, googleusercontent.com
 - Firefox: firefox.com, mozilla.com, mozilla.net, mozilla.org, ipv4only.arpa
 
-**Important:** Do NOT add `google.com` as a regex allow for group 7 — it overrides the deny and re-enables Google search. Gmail works without it because mail.google.com, gmail.com, etc. are allowed individually.
+**Important:** Do NOT add `google.com` as a regex allow for group 7 — it overrides the deny and re-enables Google search.
+
+**To restore Gmail when the temporary block is lifted:**
+```bash
+ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136
+docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "
+  INSERT OR IGNORE INTO domainlist_by_group (domainlist_id, group_id) VALUES (44, 7);
+  INSERT OR IGNORE INTO domainlist_by_group (domainlist_id, group_id) VALUES (42, 7);
+  INSERT OR IGNORE INTO domainlist_by_group (domainlist_id, group_id) VALUES (202, 7);
+  DELETE FROM domainlist_by_group WHERE domainlist_id = 265 AND group_id = 7;
+"
+docker exec pihole pihole reloaddns
+```
+(Restores: gmail.com ID 44, mail.google.com ID 42, accounts.google.com ID 202 back to Group 7; removes gmail.com deny ID 265)
 
 ---
 
