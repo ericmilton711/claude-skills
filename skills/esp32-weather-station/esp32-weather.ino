@@ -55,20 +55,24 @@ String nwsDescToEmoji(const String& desc) {
   return "&#127780;&#65039;";
 }
 
-bool nwsFetch(const char* url, JsonDocument& doc) {
+bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr) {
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
   http.begin(client, url);
   http.addHeader("User-Agent", "(miltonhaus-weather, ericmilton711@gmail.com)");
   http.addHeader("Accept", "application/geo+json");
-  http.setConnectTimeout(10000);
-  http.setTimeout(10000);
+  http.setConnectTimeout(8000);
+  http.setTimeout(8000);
   int code = http.GET();
   bool ok = false;
   if (code == 200) {
     String payload = http.getString();
-    DeserializationError err = deserializeJson(doc, payload);
+    // Filtered parse: keep only the few fields we use so the JsonDocument
+    // stays tiny (NWS payloads are 50-100KB; full parse exhausts heap).
+    DeserializationError err = filter
+      ? deserializeJson(doc, payload, DeserializationOption::Filter(*filter))
+      : deserializeJson(doc, payload);
     if (!err) ok = true;
     else Serial.printf("NWS JSON error: %s\n", err.c_str());
   } else {
@@ -79,8 +83,14 @@ bool nwsFetch(const char* url, JsonDocument& doc) {
 }
 
 void fetchCurrentObs() {
+  JsonDocument filter;
+  filter["properties"]["temperature"]["value"] = true;
+  filter["properties"]["relativeHumidity"]["value"] = true;
+  filter["properties"]["windSpeed"]["value"] = true;
+  filter["properties"]["textDescription"] = true;
+
   JsonDocument doc;
-  if (!nwsFetch("https://api.weather.gov/stations/KLNS/observations/latest", doc)) return;
+  if (!nwsFetch("https://api.weather.gov/stations/KLNS/observations/latest", doc, &filter)) return;
 
   JsonObject props = doc["properties"];
 
@@ -104,8 +114,15 @@ void fetchCurrentObs() {
 }
 
 void fetchForecast() {
+  JsonDocument filter;
+  JsonObject pf = filter["properties"]["periods"].add<JsonObject>();
+  pf["isDaytime"] = true;
+  pf["temperature"] = true;
+  pf["name"] = true;
+  pf["shortForecast"] = true;
+
   JsonDocument doc;
-  if (!nwsFetch("https://api.weather.gov/gridpoints/CTP/128,27/forecast", doc)) return;
+  if (!nwsFetch("https://api.weather.gov/gridpoints/CTP/128,27/forecast", doc, &filter)) return;
 
   JsonArray periods = doc["properties"]["periods"];
 
@@ -237,194 +254,176 @@ const char page[] PROGMEM = R"rawliteral(
       background: #d2c6a5;
       color: #3b3225;
       min-height: 100vh;
-      padding: 20px 16px;
     }
-    .container { max-width: 100%; margin: 0 auto; }
-    @media (min-width: 768px) { .container { max-width: 70%; } }
-    h1 { color: #8b5e3c; text-align: center; font-size: 1.3em; margin-bottom: 4px; }
-    .clock { text-align: center; margin-bottom: 8px; }
-    .clock .time { font-size: 2.2em; font-weight: bold; color: #3b3225; }
-    .clock .date { font-size: 1em; color: #7a6f5f; margin-top: 2px; }
-    .section { color: #8b5e3c; font-size: 0.75em; text-transform: uppercase; letter-spacing: 2px; margin: 14px 0 6px; }
-    .row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .topbar {
+      background: linear-gradient(90deg, #8b5e3c, #6d4a2e);
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .tb-title { font-weight: 700; font-size: 1.05em; letter-spacing: 1px; color: #fff; }
+    .tb-clock { font-size: 0.95em; color: #f0e6d2; text-align: right; }
+    .tb-clock .t { font-weight: 700; }
+    .tb-clock .d { font-size: 0.72em; color: #d8c9a8; display: block; }
+    .wrap { padding: 16px; max-width: 1100px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 760px) {
+      .grid { grid-template-columns: 2fr 1fr; }
+      .weather-main { grid-column: 1; }
+      .gauge-card { grid-column: 2; }
+      .stats { grid-column: 1 / -1; }
+    }
     .card {
-      flex: 1;
       background: #e8dcc8;
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
       border: 1px solid #c4b494;
+      border-radius: 16px;
+      padding: 16px;
     }
-    .card .label { font-size: 0.75em; color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
-    .card .value { font-size: 1.8em; font-weight: 700; margin: 3px 0; -webkit-text-stroke: 1px currentColor; }
-    .card .unit { font-size: 0.6em; color: #7a6f5f; }
-    .card .sub { font-size: 0.75em; color: #6b6050; margin-top: 3px; }
-    .big .value { font-size: 2.4em; }
-    .temp { color: #e81e00; }
+    .clickable { cursor: pointer; }
+    .clickable:active { transform: scale(0.99); }
+    /* Weather main card */
+    .wm-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .wm-left { display: flex; align-items: center; gap: 14px; }
+    .wm-icon { font-size: 3.4em; line-height: 1; }
+    .wm-cond { font-size: 1.5em; font-weight: 700; }
+    .wm-loc { font-size: 0.85em; color: #7a6f5f; margin-top: 2px; }
+    .wm-right { text-align: right; }
+    .wm-temp { font-size: 3.2em; font-weight: 700; line-height: 1; color: #3b3225; }
+    .wm-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
+    .wm-hl { font-size: 0.9em; color: #7a6f5f; margin-top: 4px; }
+    .fc-strip { display: flex; gap: 6px; margin-top: 18px; border-top: 1px solid #c4b494; padding-top: 14px; }
+    .fc-item { flex: 1; text-align: center; }
+    .fc-day { font-size: 0.8em; color: #7a6f5f; margin-bottom: 6px; }
+    .fc-icon { font-size: 1.5em; margin-bottom: 6px; }
+    .fc-hi { font-weight: 700; color: #e81e00; }
+    .fc-lo { font-size: 0.85em; color: #7a6f5f; }
+    /* Indoor gauge */
+    .gauge-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-title { align-self: flex-start; font-size: 0.75em; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .gauge { position: relative; width: 200px; height: 200px; }
+    .gauge-ring {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: conic-gradient(from 225deg,
+        #e8a000 0deg, #e81e00 var(--deg, 0deg),
+        #cdbf9f var(--deg, 0deg), #cdbf9f 270deg,
+        transparent 270deg);
+      -webkit-mask: radial-gradient(transparent 62%, #000 63%);
+      mask: radial-gradient(transparent 62%, #000 63%);
+      transition: --deg 0.6s ease;
+    }
+    .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-temp { font-size: 2.6em; font-weight: 700; color: #3b3225; }
+    .gauge-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
+    .gauge-sub { font-size: 0.8em; color: #7a6f5f; margin-top: 2px; }
+    .gauge-hum { font-size: 0.9em; color: #00b35a; margin-top: 4px; }
+    .status { margin-top: 12px; }
+    .pill { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.8em; color: #fff; background: #a0522d; }
+    .pill.ok { background: #2e7d5b; }
+    /* Stats strip */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media (max-width: 480px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    .stat { text-align: center; }
+    .stat .slabel { font-size: 0.72em; color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
+    .stat .sval { font-size: 1.5em; font-weight: 700; margin: 4px 0; }
+    .stat .sunit { font-size: 0.6em; color: #7a6f5f; }
     .hum { color: #00b35a; }
     .wind { color: #0090cc; }
     .sun { color: #e8a000; }
-    .conditions { color: #5a4e3c; }
-    .forecast-row {
-      background: #e8dcc8;
-      border-radius: 12px;
-      border: 1px solid #c4b494;
-      padding: 12px 18px;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 1em;
-    }
-    .forecast-row .day { font-weight: bold; min-width: 44px; }
-    .forecast-row .desc { color: #6b6050; font-size: 0.85em; flex: 1; text-align: center; }
-    .forecast-row .hi { color: #e81e00; font-weight: 700; -webkit-text-stroke: 1px currentColor; }
-    .forecast-row .lo { color: #7a6f5f; margin-left: 8px; }
-    .status-pill { text-align: center; margin-bottom: 8px; }
-    .pill {
-      display: inline-block;
-      padding: 5px 16px;
-      border-radius: 20px;
-      font-size: 0.85em;
-      color: #fff;
-      background: #a0522d;
-    }
-    .pill.ok { background: #2e7d5b; }
-    .footer { text-align: center; margin-top: 20px; color: #9a8d7a; font-size: 0.75em; }
-    .grid { display: block; }
-    .clickable { cursor: pointer; }
-    .clickable:active { transform: scale(0.97); }
+    .footer { text-align: center; margin-top: 18px; color: #9a8d7a; font-size: 0.75em; }
+    .footer a { color: #8b5e3c; }
+    /* Hourly overlay */
     .overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: #d2c6a5;
-      z-index: 100;
-      overflow-y: auto;
-      padding: 20px 16px;
+      display: none; position: fixed; inset: 0;
+      background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 16px;
     }
     .overlay.open { display: block; }
-    .overlay-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .overlay-header h2 { color: #8b5e3c; font-size: 1.1em; margin: 0; }
-    .close-btn {
-      background: #8b5e3c;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 16px;
-      font-family: inherit;
-      font-size: 0.9em;
-      cursor: pointer;
-    }
+    .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; max-width: 1100px; margin-left: auto; margin-right: auto; }
+    .overlay-header h2 { color: #8b5e3c; font-size: 1.1em; }
+    .close-btn { background: #8b5e3c; color: #fff; border: none; border-radius: 10px; padding: 9px 18px; font-family: inherit; font-size: 0.9em; cursor: pointer; }
+    .overlay-body { max-width: 1100px; margin: 0 auto; }
     .hourly-row {
-      background: #e8dcc8;
-      border-radius: 12px;
-      border: 1px solid #c4b494;
-      padding: 10px 14px;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.95em;
+      background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px;
+      padding: 10px 14px; margin-bottom: 6px;
+      display: flex; justify-content: space-between; align-items: center; font-size: 0.95em;
     }
-    .hourly-row .hr-time { font-weight: bold; min-width: 70px; }
+    .hourly-row .hr-time { font-weight: 700; min-width: 70px; }
     .hourly-row .hr-desc { color: #6b6050; font-size: 0.85em; flex: 1; text-align: center; }
-    .hourly-row .hr-temp { color: #e81e00; font-weight: 700; -webkit-text-stroke: 1px currentColor; }
+    .hourly-row .hr-temp { color: #e81e00; font-weight: 700; }
     .hourly-row .hr-wind { color: #0090cc; font-size: 0.85em; min-width: 60px; text-align: right; }
     .overlay-loading { text-align: center; color: #7a6f5f; padding: 40px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>MILTONHAUS Weather</h1>
-    <div class="clock">
-      <div class="time" id="clock">--:--</div>
-      <div class="date" id="date">Loading...</div>
-    </div>
+  <div class="topbar">
+    <div class="tb-title">&#127968; MILTONHAUS Weather</div>
+    <div class="tb-clock"><span class="t" id="clock">--:--</span><span class="d" id="date">Loading...</span></div>
+  </div>
+  <div class="wrap">
     <div class="grid">
-      <div>
-        <div class="section">Willow Street, PA</div>
-        <div class="row">
-          <div class="card big">
-            <div class="label">Temperature</div>
-            <div class="value temp" id="oTemp">--</div>
-            <div class="unit">&deg;F</div>
-            <div class="sub" id="oHL">H: -- / L: --</div>
+      <div class="card weather-main clickable" onclick="showHourly()">
+        <div class="wm-top">
+          <div class="wm-left">
+            <div class="wm-icon" id="oIcon">&#127780;&#65039;</div>
+            <div>
+              <div class="wm-cond" id="oCond">Loading...</div>
+              <div class="wm-loc">Willow Street, PA &middot; tap for hourly</div>
+            </div>
           </div>
-          <div class="card clickable" id="condCard" onclick="showHourly()">
-            <div class="label">Conditions</div>
-            <div class="value conditions" id="oDesc" style="font-size:1.1em;">...</div>
-            <div class="sub" style="color:#8b5e3c;">Tap for hourly</div>
-          </div>
-        </div>
-        <div class="row">
-          <div class="card">
-            <div class="label">Humidity</div>
-            <div class="value hum" id="oHum">--</div>
-            <div class="unit">%</div>
-          </div>
-          <div class="card">
-            <div class="label">Wind</div>
-            <div class="value wind" id="oWind">--</div>
-            <div class="unit">mph</div>
+          <div class="wm-right">
+            <div class="wm-temp"><span id="oTemp">--</span><span class="u">&deg;F</span></div>
+            <div class="wm-hl" id="oHL">H: -- / L: --</div>
           </div>
         </div>
-        <div class="row">
-          <div class="card">
-            <div class="label">Sunrise</div>
-            <div class="value sun" style="font-size:1.3em;" id="sunrise">--:--</div>
-          </div>
-          <div class="card">
-            <div class="label">Sunset</div>
-            <div class="value sun" style="font-size:1.3em;" id="sunset">--:--</div>
-          </div>
-        </div>
-        <div class="section">Indoor Sensor</div>
-        <div class="status-pill"><div class="pill" id="status">Loading...</div></div>
-        <div class="row">
-          <div class="card">
-            <div class="label">Temp</div>
-            <div class="value temp" id="tempF">--</div>
-            <div class="unit">&deg;F</div>
-          </div>
-          <div class="card">
-            <div class="label">Temp</div>
-            <div class="value temp" id="tempC">--</div>
-            <div class="unit">&deg;C</div>
-          </div>
-          <div class="card">
-            <div class="label">Humidity</div>
-            <div class="value hum" id="dhtH">--</div>
-            <div class="unit">%</div>
-          </div>
-        </div>
+        <div class="fc-strip" id="forecast"></div>
       </div>
-      <div>
-        <div class="section">6-Day Forecast</div>
-        <div id="forecast"></div>
+      <div class="card gauge-card">
+        <div class="gauge-title">Indoor</div>
+        <div class="gauge">
+          <div class="gauge-ring" id="gaugeRing"></div>
+          <div class="gauge-center">
+            <div class="gauge-temp"><span id="tempF">--</span><span class="u">&deg;F</span></div>
+            <div class="gauge-sub"><span id="tempC">--</span>&deg;C</div>
+            <div class="gauge-hum"><span id="dhtH">--</span>% humidity</div>
+          </div>
+        </div>
+        <div class="status"><span class="pill" id="status">Loading...</span></div>
+      </div>
+      <div class="card stats">
+        <div class="stat">
+          <div class="slabel">Humidity</div>
+          <div class="sval hum"><span id="oHum">--</span></div>
+          <div class="sunit">%</div>
+        </div>
+        <div class="stat">
+          <div class="slabel">Wind</div>
+          <div class="sval wind"><span id="oWind">--</span></div>
+          <div class="sunit">mph</div>
+        </div>
+        <div class="stat">
+          <div class="slabel">Sunrise</div>
+          <div class="sval sun" style="font-size:1.2em;" id="sunrise">--:--</div>
+        </div>
+        <div class="stat">
+          <div class="slabel">Sunset</div>
+          <div class="sval sun" style="font-size:1.2em;" id="sunset">--:--</div>
+        </div>
       </div>
     </div>
-    <div class="footer">NWS Weather every 10 min &bull; <a href="/update" style="color:#8b5e3c;">OTA Update</a></div>
+    <div class="footer">NWS Weather every 10 min &bull; <a href="/update">OTA Update</a></div>
   </div>
   <div class="overlay" id="hourlyOverlay">
-    <div class="container">
-      <div class="overlay-header">
-        <h2>Hourly Forecast</h2>
-        <button class="close-btn" onclick="closeHourly()">Back</button>
-      </div>
-      <div id="hourlyList"><div class="overlay-loading">Loading...</div></div>
+    <div class="overlay-header">
+      <h2>Hourly Forecast</h2>
+      <button class="close-btn" onclick="closeHourly()">Back</button>
     </div>
+    <div class="overlay-body" id="hourlyList"><div class="overlay-loading">Loading...</div></div>
   </div>
   <script>
-    void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'America/New_York'});},1000)}());
-    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(1)}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--'}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;document.getElementById('oDesc').innerHTML=d.oDesc;document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fc=document.getElementById('forecast');var h='';for(var i=0;i<d.forecast.length;i++){var f=d.forecast[i];h+='<div class="forecast-row"><div class="day">'+f.day+'</div><div class="desc">'+f.desc+'</div><div><span class="hi">'+f.hi+'</span>° <span class="lo">'+f.lo+'</span>°</div></div>'}fc.innerHTML=h}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+    void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});},1000)}());
+    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(0);var fr=Math.max(0,Math.min(1,(d.tempF-40)/50));document.getElementById('gaugeRing').style.setProperty('--deg',(fr*270)+'deg')}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--';document.getElementById('gaugeRing').style.setProperty('--deg','0deg')}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;var parts=d.oDesc.split(' ');document.getElementById('oIcon').innerHTML=parts.shift();document.getElementById('oCond').textContent=parts.join(' ');document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fc=document.getElementById('forecast');var h='';for(var i=0;i<d.forecast.length;i++){var f=d.forecast[i];var ic=f.desc.split(' ')[0];h+='<div class="fc-item"><div class="fc-day">'+f.day+'</div><div class="fc-icon">'+ic+'</div><div class="fc-hi">'+f.hi+'°</div><div class="fc-lo">'+f.lo+'°</div></div>'}fc.innerHTML=h}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
   function descEmoji(d){d=d.toLowerCase();if(d.indexOf('thunder')>=0)return'⚡';if(d.indexOf('snow')>=0||d.indexOf('blizzard')>=0)return'\u{1F328}️';if(d.indexOf('rain')>=0||d.indexOf('shower')>=0||d.indexOf('drizzle')>=0)return'\u{1F327}️';if(d.indexOf('fog')>=0||d.indexOf('mist')>=0)return'\u{1F32B}️';if(d.indexOf('cloud')>=0||d.indexOf('overcast')>=0)return'⛅';if(d.indexOf('sunny')>=0||d.indexOf('clear')>=0)return'☀️';return'\u{1F324}️';}
-  function showHourly(){document.getElementById('hourlyOverlay').className='overlay open';document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast/hourly',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json()}).then(function(d){var p=d.properties.periods;var h='';var count=Math.min(p.length,24);for(var i=0;i<count;i++){var t=new Date(p[i].startTime);var hr=t.getHours();var ampm=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var timeStr=hr+':00 '+ampm;var e=descEmoji(p[i].shortForecast);h+='<div class="hourly-row"><div class="hr-time">'+timeStr+'</div><div class="hr-desc">'+e+' '+p[i].shortForecast+'</div><div class="hr-temp">'+p[i].temperature+'&deg;</div><div class="hr-wind">'+p[i].windSpeed+'</div></div>'}document.getElementById('hourlyList').innerHTML=h}).catch(function(){document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Failed to load hourly forecast</div>'});}
+  function showHourly(){document.getElementById('hourlyOverlay').className='overlay open';document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast/hourly',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json()}).then(function(d){var p=d.properties.periods;var h='';var count=Math.min(p.length,24);for(var i=0;i<count;i++){var t=new Date(p[i].startTime);var hr=t.getHours();var ampm=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var timeStr=hr+':00 '+ampm;var e=descEmoji(p[i].shortForecast);h+='<div class="hourly-row"><div class="hr-time">'+timeStr+'</div><div class="hr-desc">'+e+' '+p[i].shortForecast+'</div><div class="hr-temp">'+p[i].temperature+'°</div><div class="hr-wind">'+p[i].windSpeed+'</div></div>'}document.getElementById('hourlyList').innerHTML=h}).catch(function(){document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Failed to load hourly forecast</div>'});}
   function closeHourly(){document.getElementById('hourlyOverlay').className='overlay';}
   </script>
 </body>
@@ -631,8 +630,12 @@ void loop() {
     }
   }
 
-  if (ESP.getFreeHeap() < 8192) {
-    Serial.printf("WATCHDOG: heap low (%d bytes)\n", ESP.getFreeHeap());
+  // Heap watchdog: if we drop critically low, reboot cleanly before a
+  // fragmented-alloc failure hard-crashes the web server.
+  if (!otaInProgress && ESP.getFreeHeap() < 10000) {
+    Serial.printf("WATCHDOG: heap critical (%d bytes) - rebooting\n", ESP.getFreeHeap());
+    delay(100);
+    ESP.restart();
   }
 
   struct tm timeinfo;

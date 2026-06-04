@@ -1,7 +1,8 @@
 # ESP32 Weather Station
 
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
-**Last Updated:** 2026-05-27
+**Last Updated:** 2026-06-04
+**PENDING FLASH (2026-06-04):** Dashboard redesigned + crash fixes applied to local sketch, compiled clean (57% flash / 16% RAM), but NOT YET flashed to the device. Flash via OTA at http://192.168.12.240/update. See "Dashboard Redesign 2026-06-04" below.
 
 ## Hardware
 
@@ -75,6 +76,33 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - NWS API calls have 10-second connect and read timeouts
 - Sunrise-sunset.org has 5-second timeouts
 - Heap is fine with HTTPS now that BLE and OLED are removed (~56% flash, 16% RAM)
+
+## Dashboard Redesign 2026-06-04 (PENDING FLASH)
+
+Eric wanted the dashboard to match the **layout** of a Home Assistant wall-tablet photo (NOT the dark theme — he explicitly only wanted the layout). Kept the warm earth-tone palette (Rosemary's gift colors). Target display: **Amazon Fire HD 10** in landscape (1280×800), so the layout is a two-column grid that fills the screen with no scrolling.
+
+**New layout (top → bottom):**
+1. **Top bar** — brown gradient strip with "🏠 MILTONHAUS Weather" title + live clock (replaces old centered h1/clock)
+2. **Weather card (left, 2fr)** — condition icon + text centered on top, **big centered current temp (6em)**, H/L below. A large **orange-gradient "⏱ Hourly »" button** in the card header opens the touch hourly overlay.
+3. **Indoor dial (right, 1fr)** — circular CSS conic-gradient gauge (thermostat-style, repurposed from the HA photo's thermostat). Shows indoor temp °F in center, °C + humidity below. Arc fills proportionally: `--deg = clamp((tempF-40)/50,0,1) * 270deg`. Sensor status pill underneath.
+4. **6-Day Forecast (full width)** — own labeled card, each day a tile (day / icon / hi in red / lo in gray)
+5. **Stats tiles (full width)** — Humidity, Wind, Sunrise, Sunset
+
+**Buttons:** Hourly + overlay Back button both use an orange gradient (`linear-gradient(135deg,#ff9d2e,#e8590c)`), big (1.5em, 18px padding, rounded pill, shadow). Eric iterated these bigger several times — keep them large.
+
+**Preview workflow:** `~/esp32-weather/preview.html` is a standalone static mockup (sample data, functional hourly overlay) opened with `setsid xdg-open` so Eric can review the look in a browser BEFORE flashing. Skills copy: `preview.html` in this dir. Always preview design changes this way before OTA — Eric reviews visually.
+
+**CSS notes:** grid `2fr 1fr` at min-width 760px; gauge uses `conic-gradient(from 225deg, ...)` masked with `radial-gradient(transparent 62%, #000 63%)` to make a ring; gap at bottom (270° arc).
+
+## Crash / Reliability Fixes 2026-06-04 (PENDING FLASH)
+
+Eric reported the ESP32 periodically becoming unreachable (page won't load on any device) until manual restart. Root cause: heap exhaustion — `fetchCurrentObs`/`fetchForecast` parsed the **entire** NWS JSON (50–100KB) into a JsonDocument on top of the payload String, fragmenting/exhausting heap over time. Fixes applied to the sketch:
+
+1. **ArduinoJson filters** — `nwsFetch()` now takes an optional `JsonDocument* filter`; `fetchCurrentObs` and `fetchForecast` pass filters so only the ~4–6 fields actually used get parsed. Keeps the JsonDocument tiny. (Kept `getString()` because it correctly de-chunks NWS's chunked transfer encoding — raw `getStream()` would break on chunk markers.)
+2. **NWS timeouts** 10s → 8s (connect + read).
+3. **Heap watchdog now reboots** — was only logging at <8192 bytes; now `ESP.restart()` at <10000 bytes (guarded by `!otaInProgress`), so it self-recovers before a fragmented alloc hard-crashes the web server.
+
+Still single-threaded (fetch in `loop()`). If the ~once-per-10-min fetch stall is still noticeable after this, next step is moving the fetch to a background FreeRTOS task on core 0 with a mutex around the shared weather Strings.
 
 ## BLE Connection — SCRAPPED 2026-05-24
 
