@@ -262,46 +262,48 @@ const char page[] PROGMEM = R"rawliteral(
       justify-content: space-between;
       align-items: center;
     }
-    .tb-title { font-weight: 700; font-size: 1.05em; letter-spacing: 1px; color: #fff; }
-    .tb-clock { font-size: 0.95em; color: #f0e6d2; text-align: right; }
+    .tb-title { font-weight: 700; font-size: 1.15em; letter-spacing: 1px; color: #fff; }
+    .tb-clock { font-size: 1em; color: #f0e6d2; text-align: right; }
     .tb-clock .t { font-weight: 700; }
     .tb-clock .d { font-size: 0.72em; color: #d8c9a8; display: block; }
-    .wrap { padding: 16px; max-width: 1100px; margin: 0 auto; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .wrap { padding: 18px; max-width: 1200px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
     @media (min-width: 760px) {
       .grid { grid-template-columns: 2fr 1fr; }
       .weather-main { grid-column: 1; }
       .gauge-card { grid-column: 2; }
+      .forecast-card { grid-column: 1 / -1; }
       .stats { grid-column: 1 / -1; }
     }
     .card {
       background: #e8dcc8;
       border: 1px solid #c4b494;
       border-radius: 16px;
-      padding: 16px;
+      padding: 18px;
     }
-    .clickable { cursor: pointer; }
-    .clickable:active { transform: scale(0.99); }
+    .section { font-size: 0.78em; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; font-weight: 700; }
     /* Weather main card */
-    .wm-top { display: flex; justify-content: space-between; align-items: flex-start; }
-    .wm-left { display: flex; align-items: center; gap: 14px; }
-    .wm-icon { font-size: 3.4em; line-height: 1; }
-    .wm-cond { font-size: 1.5em; font-weight: 700; }
-    .wm-loc { font-size: 0.85em; color: #7a6f5f; margin-top: 2px; }
-    .wm-right { text-align: right; }
-    .wm-temp { font-size: 3.2em; font-weight: 700; line-height: 1; color: #3b3225; }
-    .wm-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
-    .wm-hl { font-size: 0.9em; color: #7a6f5f; margin-top: 4px; }
-    .fc-strip { display: flex; gap: 6px; margin-top: 18px; border-top: 1px solid #c4b494; padding-top: 14px; }
-    .fc-item { flex: 1; text-align: center; }
-    .fc-day { font-size: 0.8em; color: #7a6f5f; margin-bottom: 6px; }
-    .fc-icon { font-size: 1.5em; margin-bottom: 6px; }
-    .fc-hi { font-weight: 700; color: #e81e00; }
-    .fc-lo { font-size: 0.85em; color: #7a6f5f; }
+    .wm-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .hourly-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: 18px 42px; font-family: inherit; font-size: 1.5em; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); }
+    .hourly-btn:active { transform: scale(0.96); }
+    .wm-top { text-align: center; padding: 6px 0; }
+    .wm-cond-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; }
+    .wm-icon { font-size: 2.6em; line-height: 1; }
+    .wm-cond { font-size: 1.8em; font-weight: 700; }
+    .wm-temp { font-size: 6em; font-weight: 700; line-height: 1; color: #3b3225; margin: 6px 0; }
+    .wm-temp .u { font-size: 0.3em; color: #7a6f5f; vertical-align: super; }
+    .wm-hl { font-size: 1.15em; color: #7a6f5f; margin-top: 4px; }
+    /* 6-day forecast */
+    .fc-strip { display: flex; gap: 8px; }
+    .fc-item { flex: 1; text-align: center; background: #ddcdb2; border-radius: 12px; padding: 12px 6px; }
+    .fc-day { font-size: 0.85em; color: #7a6f5f; margin-bottom: 8px; font-weight: 700; }
+    .fc-icon { font-size: 1.9em; margin-bottom: 8px; }
+    .fc-hi { font-weight: 700; color: #e81e00; font-size: 1.1em; }
+    .fc-lo { font-size: 0.9em; color: #7a6f5f; }
     /* Indoor gauge */
     .gauge-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-title { align-self: flex-start; font-size: 0.75em; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
-    .gauge { position: relative; width: 200px; height: 200px; }
+    .gauge-title { align-self: flex-start; font-size: 0.78em; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; font-weight: 700; }
+    .gauge { position: relative; width: 210px; height: 210px; }
     .gauge-ring {
       width: 100%; height: 100%; border-radius: 50%;
       background: conic-gradient(from 225deg,
@@ -313,44 +315,65 @@ const char page[] PROGMEM = R"rawliteral(
       transition: --deg 0.6s ease;
     }
     .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-temp { font-size: 2.6em; font-weight: 700; color: #3b3225; }
+    .gauge-temp { font-size: 2.8em; font-weight: 700; color: #3b3225; }
     .gauge-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
-    .gauge-sub { font-size: 0.8em; color: #7a6f5f; margin-top: 2px; }
-    .gauge-hum { font-size: 0.9em; color: #00b35a; margin-top: 4px; }
-    .status { margin-top: 12px; }
-    .pill { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.8em; color: #fff; background: #a0522d; }
+    .gauge-sub { font-size: 0.85em; color: #7a6f5f; margin-top: 2px; }
+    .gauge-hum { font-size: 0.95em; color: #00b35a; margin-top: 6px; }
+    .status { margin-top: 14px; }
+    .pill { display: inline-block; padding: 5px 16px; border-radius: 20px; font-size: 0.82em; color: #fff; background: #a0522d; }
     .pill.ok { background: #2e7d5b; }
     /* Stats strip */
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     @media (max-width: 480px) { .stats { grid-template-columns: repeat(2, 1fr); } }
     .stat { text-align: center; }
-    .stat .slabel { font-size: 0.72em; color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
-    .stat .sval { font-size: 1.5em; font-weight: 700; margin: 4px 0; }
+    .stat .slabel { font-size: 0.75em; color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
+    .stat .sval { font-size: 1.7em; font-weight: 700; margin: 4px 0; }
     .stat .sunit { font-size: 0.6em; color: #7a6f5f; }
     .hum { color: #00b35a; }
     .wind { color: #0090cc; }
     .sun { color: #e8a000; }
-    .footer { text-align: center; margin-top: 18px; color: #9a8d7a; font-size: 0.75em; }
+    .footer { text-align: center; margin-top: 20px; color: #9a8d7a; font-size: 0.78em; }
     .footer a { color: #8b5e3c; }
+    /* Phone layout */
+    @media (max-width: 600px) {
+      .wrap { padding: 12px; }
+      .grid { gap: 12px; }
+      .card { padding: 14px; }
+      .tb-title { font-size: 1em; }
+      .wm-head { flex-direction: column; gap: 10px; align-items: stretch; }
+      .hourly-btn { width: 100%; font-size: 1.2em; padding: 14px; }
+      .wm-icon { font-size: 2em; }
+      .wm-cond { font-size: 1.4em; }
+      .wm-temp { font-size: 4em; }
+      .wm-hl { font-size: 1em; }
+      .fc-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .fc-icon { font-size: 1.6em; }
+      .gauge { width: 180px; height: 180px; }
+      .gauge-temp { font-size: 2.3em; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .close-btn { font-size: 1.2em; padding: 14px 30px; }
+      .overlay-header h2 { font-size: 1em; }
+    }
     /* Hourly overlay */
     .overlay {
       display: none; position: fixed; inset: 0;
-      background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 16px;
+      background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px;
     }
     .overlay.open { display: block; }
-    .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; max-width: 1100px; margin-left: auto; margin-right: auto; }
-    .overlay-header h2 { color: #8b5e3c; font-size: 1.1em; }
-    .close-btn { background: #8b5e3c; color: #fff; border: none; border-radius: 10px; padding: 9px 18px; font-family: inherit; font-size: 0.9em; cursor: pointer; }
-    .overlay-body { max-width: 1100px; margin: 0 auto; }
+    .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; max-width: 1200px; margin-left: auto; margin-right: auto; }
+    .overlay-header h2 { color: #8b5e3c; font-size: 1.2em; }
+    .close-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: 18px 48px; font-family: inherit; font-size: 1.5em; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); }
+    .close-btn:active { transform: scale(0.96); }
+    .overlay-body { max-width: 1200px; margin: 0 auto; }
     .hourly-row {
       background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px;
-      padding: 10px 14px; margin-bottom: 6px;
-      display: flex; justify-content: space-between; align-items: center; font-size: 0.95em;
+      padding: 11px 16px; margin-bottom: 7px;
+      display: flex; justify-content: space-between; align-items: center; font-size: 1em;
     }
-    .hourly-row .hr-time { font-weight: 700; min-width: 70px; }
-    .hourly-row .hr-desc { color: #6b6050; font-size: 0.85em; flex: 1; text-align: center; }
+    .hourly-row .hr-time { font-weight: 700; min-width: 80px; }
+    .hourly-row .hr-desc { color: #6b6050; font-size: 0.88em; flex: 1; text-align: center; }
     .hourly-row .hr-temp { color: #e81e00; font-weight: 700; }
-    .hourly-row .hr-wind { color: #0090cc; font-size: 0.85em; min-width: 60px; text-align: right; }
+    .hourly-row .hr-wind { color: #0090cc; font-size: 0.88em; min-width: 70px; text-align: right; }
     .overlay-loading { text-align: center; color: #7a6f5f; padding: 40px; }
   </style>
 </head>
@@ -361,21 +384,16 @@ const char page[] PROGMEM = R"rawliteral(
   </div>
   <div class="wrap">
     <div class="grid">
-      <div class="card weather-main clickable" onclick="showHourly()">
-        <div class="wm-top">
-          <div class="wm-left">
-            <div class="wm-icon" id="oIcon">&#127780;&#65039;</div>
-            <div>
-              <div class="wm-cond" id="oCond">Loading...</div>
-              <div class="wm-loc">Willow Street, PA &middot; tap for hourly</div>
-            </div>
-          </div>
-          <div class="wm-right">
-            <div class="wm-temp"><span id="oTemp">--</span><span class="u">&deg;F</span></div>
-            <div class="wm-hl" id="oHL">H: -- / L: --</div>
-          </div>
+      <div class="card weather-main">
+        <div class="wm-head">
+          <div class="section" style="margin:0;">Willow Street, PA</div>
+          <button class="hourly-btn" onclick="showHourly()">&#9201; Hourly &raquo;</button>
         </div>
-        <div class="fc-strip" id="forecast"></div>
+        <div class="wm-top">
+          <div class="wm-cond-row"><span class="wm-icon" id="oIcon">&#127780;&#65039;</span><span class="wm-cond" id="oCond">Loading...</span></div>
+          <div class="wm-temp"><span id="oTemp">--</span><span class="u">&deg;F</span></div>
+          <div class="wm-hl" id="oHL">H: -- / L: --</div>
+        </div>
       </div>
       <div class="card gauge-card">
         <div class="gauge-title">Indoor</div>
@@ -388,6 +406,10 @@ const char page[] PROGMEM = R"rawliteral(
           </div>
         </div>
         <div class="status"><span class="pill" id="status">Loading...</span></div>
+      </div>
+      <div class="card forecast-card">
+        <div class="section">6-Day Forecast</div>
+        <div class="fc-strip" id="forecast"></div>
       </div>
       <div class="card stats">
         <div class="stat">
@@ -414,7 +436,7 @@ const char page[] PROGMEM = R"rawliteral(
   </div>
   <div class="overlay" id="hourlyOverlay">
     <div class="overlay-header">
-      <h2>Hourly Forecast</h2>
+      <h2>Hourly Forecast &mdash; Next 24 Hours</h2>
       <button class="close-btn" onclick="closeHourly()">Back</button>
     </div>
     <div class="overlay-body" id="hourlyList"><div class="overlay-loading">Loading...</div></div>

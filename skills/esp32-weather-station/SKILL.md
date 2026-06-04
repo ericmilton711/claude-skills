@@ -2,7 +2,7 @@
 
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
 **Last Updated:** 2026-06-04
-**PENDING FLASH (2026-06-04):** Dashboard redesigned + crash fixes applied to local sketch, compiled clean (57% flash / 16% RAM), but NOT YET flashed to the device. Flash via OTA at http://192.168.12.240/update. See "Dashboard Redesign 2026-06-04" below.
+**DEPLOYED 2026-06-04:** Dashboard redesigned (Fire HD 10 landscape layout + phone-responsive) and crash fixes flashed to the device via OTA. Verified live (Firefox headless screenshot at 1280×800 against http://192.168.12.240/). 57% flash / 16% RAM. See "Dashboard Redesign 2026-06-04" below.
 
 ## Hardware
 
@@ -77,7 +77,7 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - Sunrise-sunset.org has 5-second timeouts
 - Heap is fine with HTTPS now that BLE and OLED are removed (~56% flash, 16% RAM)
 
-## Dashboard Redesign 2026-06-04 (PENDING FLASH)
+## Dashboard Redesign 2026-06-04 (DEPLOYED)
 
 Eric wanted the dashboard to match the **layout** of a Home Assistant wall-tablet photo (NOT the dark theme — he explicitly only wanted the layout). Kept the warm earth-tone palette (Rosemary's gift colors). Target display: **Amazon Fire HD 10** in landscape (1280×800), so the layout is a two-column grid that fills the screen with no scrolling.
 
@@ -90,11 +90,22 @@ Eric wanted the dashboard to match the **layout** of a Home Assistant wall-table
 
 **Buttons:** Hourly + overlay Back button both use an orange gradient (`linear-gradient(135deg,#ff9d2e,#e8590c)`), big (1.5em, 18px padding, rounded pill, shadow). Eric iterated these bigger several times — keep them large.
 
+**Phone responsive (≤600px media query):** Fire HD 10 landscape (~1280×800) is above the breakpoint so it gets the full landscape layout. On phones the layout adapts: Hourly button goes full-width below the location label, temp scales 6em→4em, 6-day forecast becomes a 3-across grid (two rows), stats go 2-across, gauge shrinks to 180px. Eric tested on his phone (Galaxy S23) and confirmed.
+
 **Preview workflow:** `~/esp32-weather/preview.html` is a standalone static mockup (sample data, functional hourly overlay) opened with `setsid xdg-open` so Eric can review the look in a browser BEFORE flashing. Skills copy: `preview.html` in this dir. Always preview design changes this way before OTA — Eric reviews visually.
+
+**Verify at a specific device size (Fire HD 10, phone, etc.):** use Firefox headless to screenshot at an exact resolution, then Read the PNG. Firefox is at `/usr/bin/firefox` (no chromium installed). Must use a separate profile or it conflicts with a running instance:
+```bash
+firefox --headless --new-instance --profile /tmp/ffprof --window-size=1280,800 \
+  --screenshot /tmp/shot.png "http://192.168.12.240/"
+```
+Works against the live device URL (shows real data) or a local `file://` preview. Clock will show "Loading..." in headless grabs (JS clock hasn't ticked) — harmless.
 
 **CSS notes:** grid `2fr 1fr` at min-width 760px; gauge uses `conic-gradient(from 225deg, ...)` masked with `radial-gradient(transparent 62%, #000 63%)` to make a ring; gap at bottom (270° arc).
 
-## Crash / Reliability Fixes 2026-06-04 (PENDING FLASH)
+**IMPORTANT lesson learned:** the redesign was iterated on `preview.html` for several rounds (big orange buttons, separate forecast card, centered 6em temp) but those changes were NOT mirrored back into `esp32-weather.ino` — so the first OTA flash shipped a stale draft. ALWAYS sync preview changes into the sketch before compiling/flashing, and verify the live page after flashing (grep for new markers or screenshot it).
+
+## Crash / Reliability Fixes 2026-06-04 (DEPLOYED)
 
 Eric reported the ESP32 periodically becoming unreachable (page won't load on any device) until manual restart. Root cause: heap exhaustion — `fetchCurrentObs`/`fetchForecast` parsed the **entire** NWS JSON (50–100KB) into a JsonDocument on top of the payload String, fragmenting/exhausting heap over time. Fixes applied to the sketch:
 

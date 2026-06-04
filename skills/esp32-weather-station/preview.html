@@ -57,6 +57,25 @@
     .sun { color: #e8a000; }
     .footer { text-align: center; margin-top: 20px; color: #9a8d7a; font-size: 0.78em; }
     .footer a { color: #8b5e3c; }
+    @media (max-width: 600px) {
+      .wrap { padding: 12px; }
+      .grid { gap: 12px; }
+      .card { padding: 14px; }
+      .tb-title { font-size: 1em; }
+      .wm-head { flex-direction: column; gap: 10px; align-items: stretch; }
+      .hourly-btn { width: 100%; font-size: 1.2em; padding: 14px; }
+      .wm-icon { font-size: 2em; }
+      .wm-cond { font-size: 1.4em; }
+      .wm-temp { font-size: 4em; }
+      .wm-hl { font-size: 1em; }
+      .fc-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .fc-icon { font-size: 1.6em; }
+      .gauge { width: 180px; height: 180px; }
+      .gauge-temp { font-size: 2.3em; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .close-btn { font-size: 1.2em; padding: 14px 30px; }
+      .overlay-header h2 { font-size: 1em; }
+    }
     .overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
     .overlay.open { display: block; }
     .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; max-width: 1200px; margin-left: auto; margin-right: auto; }
