@@ -86,6 +86,8 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 5 | ev-chromebook | Ev's Chromebook |
 | 6 | ev-temp-unrestricted | Ev's Chromebook - temp full access |
 | 7 | tower-of-gondor | Tower of Gondor (ThinkCentre M900) — DEFAULT-ALLOW with specific blocks |
+| 8 | gianna-laptop | Gianna's Fedora laptop |
+| 9 | eva-laptop | Eva's Windows laptop (.202) — default-deny; Gmail allowed, Chat/Search/YouTube blocked |
 
 ## Client Assignments
 
@@ -100,6 +102,8 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 192.168.12.164 | (unidentified) | 1 (mac-mini) |
 | 192.168.12.194 | Ev Chromebook | 6 (ev-temp-unrestricted) |
 | 192.168.12.160 | Tower of Gondor (M900) | 7 (tower-of-gondor) |
+| 192.168.12.226 | Gianna Fedora laptop | 8 (gianna-laptop) |
+| 192.168.12.202 | Eva Windows laptop | 9 (eva-laptop) |
 
 ---
 
@@ -180,6 +184,86 @@ docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "
 docker exec pihole pihole reloaddns
 ```
 (Restores: gmail.com ID 44, mail.google.com ID 42, accounts.google.com ID 202 back to Group 7; removes gmail.com deny ID 265)
+
+---
+
+## CRITICAL: Rule precedence & domainlist type enum
+
+**Allow ALWAYS beats deny.** FTL evaluation order: (1) exact allow → (2) regex allow → (3) exact deny → (4) regex deny → (5) gravity. The first match wins. So a domain matched by ANY allow rule for the client's group is permitted even if a deny rule also matches it. Corollary: to block something, do NOT rely on adding a deny if a broad allow already covers it — you must narrow/remove the allow. Adding a deny only helps for domains that fall through to the `.*` catch-all.
+
+**`domainlist.type` enum:** `0`=allow-exact, `1`=deny-exact, `2`=allow-regex (whitelist), `3`=deny-regex (blacklist). The default-deny `.*` rule is type 3. A google.com "allow" for kids is type 2; a google.com search "block" is type 3.
+
+**Stale-cache gotcha:** After ANY rule change you MUST `docker exec pihole pihole reloaddns` (reloads lists AND flushes the DNS cache). A domain allowed for one group (e.g. group 0/localhost from your own `dig` tests, or another kid's group) gets cached and can appear to "resolve" for a default-deny client until the cache is flushed. Always reload, then verify with a FRESH query. On Windows clients also run `ipconfig /flushdns`, and remember **Firefox caches DNS separately** — a stuck tab needs Ctrl+R / Firefox restart.
+
+**Verify from the actual device** (queries Pi-hole as that client's group): Windows `nslookup <domain>. 192.168.12.136` (trailing dot avoids the `.lan` suffix). Blocked = `0.0.0.0` / `::`. For TLS/HTTP issues use `curl.exe -sSIL <https-url>` over SSH.
+
+---
+
+## Playbook: Allow Gmail while keeping Google Search/YouTube blocked
+
+Gmail and Search live on different hostnames, so this IS possible under default-deny. Allow these (type 2 regex) for the device's group — none of them re-enable Search:
+
+```
+(^|[.])mail[.]google[.]com$        Gmail inbox
+(^|[.])gmail[.]com$                gmail.com entry
+(^|[.])accounts[.]google[.]com$    Google sign-in
+(^|[.])workspace[.]google[.]com$   *** Gmail landing page — gmail.com redirects a logged-OUT browser here; if blocked => "Server not found" ***
+(^|[.])apis[.]google[.]com$        gapi (Gmail web app)
+(^|[.])ogs[.]google[.]com$         One Google account bar
+(^|[.])play[.]google[.]com$        push/FCM
+(^|[.])googleapis[.]com$           backend APIs
+(^|[.])gstatic[.]com$              static assets (incl. ssl./fonts.)
+(^|[.])googleusercontent[.]com$    avatars/attachments
+(^|[.])pki[.]goog$                 *** Google cert OCSP/CRL — if blocked, TLS revocation check fails => "Server not found" with NO cert warning. ALWAYS allow when allowing any Google HTTPS service ***
+```
+
+Stays BLOCKED (no allow added → `.*` catches them): `www.google.com` / `google.com` (Search), `youtube.com`.
+
+**Two non-obvious breakers that look like a DNS outage ("Server not found"), diagnosed on Eva's laptop 2026-06-08:**
+1. **`pki.goog` blocked** → `curl.exe` shows `(35) schannel CRYPT_E_REVOCATION_OFFLINE`. Cert revocation can't be checked → handshake aborts. Allow `pki.goog`.
+2. **`workspace.google.com` blocked** → typing `gmail.com` in a logged-out browser redirects to `workspace.google.com/intl/en-US/gmail` (the landing page) which dies. (curl with no cookies skips this hop and goes straight to the sign-in chain, so it only reproduces in a real browser.) Allow `workspace.google.com`.
+
+**Do NOT** broadly allow `clients[0-9]+.google.com` to "fix" Gmail contacts — it re-enables the Chat signaler (allow beats deny). Gmail email works fine without it.
+
+**Possible next snag:** sign-in reCAPTCHA may load from the blocked `www.google.com`. If login itself stalls at a captcha, add `(^|[.])recaptcha[.]net$` for the group.
+
+**Verified-working chain:** `gmail.com → mail.google.com → accounts.google.com → 200` (never touches www.google.com, so Search stays blocked).
+
+---
+
+## Playbook: Ban Google Chat (keep Gmail email working)
+
+Google Chat is a separate product on its own hosts. Add these **deny-regex (type 3)** to the device's group:
+
+```
+(^|[.])chat[.]google[.]com$              Chat web UI + the in-Gmail Chat iframe
+(^|[.])chat[.]usercontent[.]google[.]com$ Chat file content
+dynamite.*[.]clients6[.]google[.]com$    Chat ("Dynamite" codename) real-time signaler
+(^|[.])hangouts[.]google[.]com$          legacy Hangouts/Chat
+```
+
+Plus ensure `signaler-pa.clients6.google.com` is NOT allowed (don't add a broad clients6 allow). Result: Gmail email works fully; the Chat/Spaces panel inside Gmail fails to load. Verify: `nslookup chat.google.com. 192.168.12.136` → `0.0.0.0`.
+
+---
+
+## Group 9 (eva-laptop, .202) — current full Google rule set
+
+ALLOW (type 2): accounts, mail, gmail, workspace, apis, ogs, play, googleapis, gstatic (+ssl/fonts), googleusercontent, lh3.googleusercontent, pki.goog, firefox/mozilla, windows update/microsoft, homeschoolconnections (covers caravel.homeschoolconnections.com via wildcard), caravel.software, teachingtextbooks(+app), duolingo, vimeo(+cdn), zoom.us, cloudfront, amazonaws, kiddle, britannica, detectportal.firefox.com.
+DENY (type 3): chat.google.com, chat.usercontent.google.com, dynamite*signaler, hangouts.google.com — plus `.*` default-deny (so Search/YouTube/everything-else blocked).
+
+---
+
+## Helper: add an allow/deny rule scoped to a group (direct DB)
+
+```bash
+ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136
+DB=/etc/pihole/gravity.db
+# TYPE: 2=allow-regex, 3=deny-regex ; GROUP: target group id
+docker exec pihole pihole-FTL sqlite3 "$DB" "INSERT OR IGNORE INTO domainlist (type,domain,enabled,comment) VALUES (2,'(^|[.])example[.]com$',1,'reason');"
+ID=$(docker exec pihole pihole-FTL sqlite3 "$DB" "SELECT id FROM domainlist WHERE type=2 AND domain='(^|[.])example[.]com$';")
+docker exec pihole pihole-FTL sqlite3 "$DB" "INSERT OR IGNORE INTO domainlist_by_group (domainlist_id,group_id) VALUES ($ID,9);"
+docker exec pihole pihole reloaddns
+```
 
 ---
 

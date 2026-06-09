@@ -3,6 +3,7 @@
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
 **Last Updated:** 2026-06-04
 **DEPLOYED 2026-06-04:** Dashboard redesigned (Fire HD 10 landscape layout + phone-responsive) and crash fixes flashed to the device via OTA. Verified live (Firefox headless screenshot at 1280×800 against http://192.168.12.240/). 57% flash / 16% RAM. See "Dashboard Redesign 2026-06-04" below.
+**DEPLOYED 2026-06-04 (PM):** Hardware Task Watchdog added — fixes the device going fully unreachable (no ping, LED still lit) and needing a manual power-cycle. Root cause: a hung HTTPS weather fetch froze `loop()`, so the soft heap-watchdog never ran. Now `esp_task_wdt` resets the chip if loop() doesn't pet it for 30s; fed around weather fetch, WiFi reconnect, and OTA upload. Flashed via USB (/dev/ttyUSB0), verified online + /data serving. See "Hardware Watchdog 2026-06-04" below.
 
 ## Hardware
 
@@ -104,6 +105,22 @@ Works against the live device URL (shows real data) or a local `file://` preview
 **CSS notes:** grid `2fr 1fr` at min-width 760px; gauge uses `conic-gradient(from 225deg, ...)` masked with `radial-gradient(transparent 62%, #000 63%)` to make a ring; gap at bottom (270° arc).
 
 **IMPORTANT lesson learned:** the redesign was iterated on `preview.html` for several rounds (big orange buttons, separate forecast card, centered 6em temp) but those changes were NOT mirrored back into `esp32-weather.ino` — so the first OTA flash shipped a stale draft. ALWAYS sync preview changes into the sketch before compiling/flashing, and verify the live page after flashing (grep for new markers or screenshot it).
+
+## Hardware Watchdog 2026-06-04 (DEPLOYED)
+
+**Symptom:** ESP32 periodically went *completely* unreachable — no ping response at all, onboard LED still lit — and only a manual USB power-cycle brought it back. The daily 2 AM reboot and the soft heap-watchdog did NOT recover it.
+
+**Root cause:** The soft heap-watchdog (`ESP.getFreeHeap() < 10000` → restart) lives inside `loop()`. When the hang is *inside* a blocking call in `loop()` — almost certainly a `WiFiClientSecure` TLS handshake in one of the three HTTPS weather fetches that never returns despite the 8s `setTimeout`/`setConnectTimeout` (a known ESP32 core issue where the handshake blocks past the set timeout) — `loop()` never returns, so the soft check never runs. Nothing reboots it. Frozen until power-cycled.
+
+**Fix:** Hardware Task Watchdog Timer (`esp_task_wdt`), which resets the chip independent of `loop()` running:
+1. `#include "esp_task_wdt.h"`, `#define WDT_TIMEOUT_S 30`.
+2. In `setup()` after `server.begin()`: init `esp_task_wdt_config_t` (timeout_ms = 30000, trigger_panic = true), `esp_task_wdt_init()` — falling back to `esp_task_wdt_reconfigure()` on `ESP_ERR_INVALID_STATE` since the core may have already inited the TWDT for idle tasks — then `esp_task_wdt_add(NULL)` to watch the loop task.
+3. `esp_task_wdt_reset()` at the top of `loop()` every pass.
+4. Fed at strategic blocking points so normal slow round-trips don't false-trip the 30s timer: between each of the 3 fetches in `fetchWeather()`, inside the blocking WiFi-reconnect `while` loop, and in the OTA `UPLOAD_FILE_WRITE` callback (a ~1.1MB upload runs >30s inside that callback).
+
+If loop() now hangs for any reason, the chip resets within 30s and auto-reconnects to WiFi. Soft heap-watchdog kept as a secondary backstop. Flashed via USB (more reliable than OTA when the board is on the cable); verified back online (ping + /data serving real data).
+
+**Note on headless screenshots:** Firefox `--headless --screenshot` FAILS once a normal Firefox instance is already running on Wayland (`RenderCompositorSWGL failed mapping default framebuffer`). Close Firefox first, or grab the preview before opening any browser. No chromium/xvfb installed on this laptop.
 
 ## Crash / Reliability Fixes 2026-06-04 (DEPLOYED)
 

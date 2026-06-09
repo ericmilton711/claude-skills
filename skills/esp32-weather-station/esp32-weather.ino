@@ -6,10 +6,12 @@
 #include <DHT.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include "esp_task_wdt.h"
 
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
 #define FORECAST_DAYS 6
+#define WDT_TIMEOUT_S 30
 
 const char* ssid = "DIEMILTONHAUS";
 const char* password = "wisdom22!!";
@@ -218,9 +220,14 @@ void fetchSunriseSunset() {
 
 void fetchWeather() {
   if (WiFi.status() != WL_CONNECTED) return;
+  // Feed the hardware watchdog between each blocking TLS fetch so a slow (but
+  // not hung) network round-trip never trips the 30s reset.
   fetchCurrentObs();
+  esp_task_wdt_reset();
   fetchForecast();
+  esp_task_wdt_reset();
   fetchSunriseSunset();
+  esp_task_wdt_reset();
 }
 
 void readSensors() {
@@ -249,61 +256,60 @@ const char page[] PROGMEM = R"rawliteral(
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      font-family: 'Comfortaa', sans-serif;
-      background: #d2c6a5;
-      color: #3b3225;
-      min-height: 100vh;
+      font-family: 'Comfortaa', sans-serif; background: #d2c6a5; color: #3b3225;
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
     }
-    .topbar {
-      background: linear-gradient(90deg, #8b5e3c, #6d4a2e);
-      padding: 10px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .tb-title { font-weight: 700; font-size: 1.15em; letter-spacing: 1px; color: #fff; }
-    .tb-clock { font-size: 1em; color: #f0e6d2; text-align: right; }
+    /* ---- Top bar ---- */
+    .topbar { flex: 0 0 auto; background: linear-gradient(90deg, #8b5e3c, #6d4a2e);
+      padding: clamp(6px,1.3vh,12px) clamp(12px,2vw,20px); display: flex; justify-content: space-between; align-items: center; }
+    .tb-title { font-weight: 700; font-size: clamp(0.95rem,2.4vh,1.25rem); letter-spacing: 1px; color: #fff; }
+    .tb-clock { color: #f0e6d2; text-align: right; font-size: clamp(0.85rem,2vh,1.1rem); line-height: 1.15; }
     .tb-clock .t { font-weight: 700; }
     .tb-clock .d { font-size: 0.72em; color: #d8c9a8; display: block; }
-    .wrap { padding: 18px; max-width: 1200px; margin: 0 auto; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
-    @media (min-width: 760px) {
-      .grid { grid-template-columns: 2fr 1fr; }
-      .weather-main { grid-column: 1; }
-      .gauge-card { grid-column: 2; }
-      .forecast-card { grid-column: 1 / -1; }
-      .stats { grid-column: 1 / -1; }
-    }
-    .card {
-      background: #e8dcc8;
-      border: 1px solid #c4b494;
-      border-radius: 16px;
-      padding: 18px;
-    }
-    .section { font-size: 0.78em; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; font-weight: 700; }
-    /* Weather main card */
-    .wm-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-    .hourly-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: 18px 42px; font-family: inherit; font-size: 1.5em; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); }
+    /* ---- Layout: fills the viewport, never scrolls ---- */
+    .wrap { flex: 1 1 auto; min-height: 0; padding: clamp(8px,1.6vh,18px) clamp(10px,2vw,20px); display: flex; }
+    .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
+      display: grid; gap: clamp(8px,1.5vh,16px);
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: 1.3fr 1fr 0.72fr;
+      grid-template-areas: "main gauge" "fc fc" "stats stats"; }
+    .weather-main { grid-area: main; }
+    .gauge-card { grid-area: gauge; }
+    .forecast-card { grid-area: fc; }
+    .stats { grid-area: stats; }
+    .card { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 16px;
+      padding: clamp(10px,1.8vh,18px) clamp(12px,1.6vw,18px); min-height: 0; overflow: hidden; }
+    .section { font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    /* ---- Weather main card ---- */
+    .weather-main { display: flex; flex-direction: column; }
+    .wm-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: clamp(4px,1vh,12px); }
+    .hourly-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px;
+      padding: clamp(8px,1.4vh,16px) clamp(16px,2.4vw,40px); font-family: inherit; font-size: clamp(0.95rem,2.1vh,1.4rem);
+      font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); white-space: nowrap; }
     .hourly-btn:active { transform: scale(0.96); }
-    .wm-top { text-align: center; padding: 6px 0; }
-    .wm-cond-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 6px; }
-    .wm-icon { font-size: 2.6em; line-height: 1; }
-    .wm-cond { font-size: 1.8em; font-weight: 700; }
-    .wm-temp { font-size: 6em; font-weight: 700; line-height: 1; color: #3b3225; margin: 6px 0; }
+    .wm-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .wm-cond-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .wm-icon { font-size: clamp(1.6rem, min(5vh,7vw), 2.8rem); line-height: 1; }
+    .wm-cond { font-size: clamp(1.1rem, min(3.4vh,4.6vw), 1.9rem); font-weight: 700; }
+    .wm-temp { font-size: clamp(2.4rem, min(13vh,17vw), 6.2rem); font-weight: 700; line-height: 1; color: #3b3225; margin: clamp(2px,0.6vh,8px) 0; }
     .wm-temp .u { font-size: 0.3em; color: #7a6f5f; vertical-align: super; }
-    .wm-hl { font-size: 1.15em; color: #7a6f5f; margin-top: 4px; }
-    /* 6-day forecast */
-    .fc-strip { display: flex; gap: 8px; }
-    .fc-item { flex: 1; text-align: center; background: #ddcdb2; border-radius: 12px; padding: 12px 6px; }
-    .fc-day { font-size: 0.85em; color: #7a6f5f; margin-bottom: 8px; font-weight: 700; }
-    .fc-icon { font-size: 1.9em; margin-bottom: 8px; }
-    .fc-hi { font-weight: 700; color: #e81e00; font-size: 1.1em; }
-    .fc-lo { font-size: 0.9em; color: #7a6f5f; }
-    /* Indoor gauge */
-    .gauge-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-title { align-self: flex-start; font-size: 0.78em; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; font-weight: 700; }
-    .gauge { position: relative; width: 210px; height: 210px; }
+    .wm-hl { font-size: clamp(0.85rem, min(2.4vh,3.2vw), 1.25rem); color: #7a6f5f; }
+    /* ---- 6-day forecast ---- */
+    .forecast-card { display: flex; flex-direction: column; }
+    .forecast-card .section { margin-bottom: clamp(4px,1vh,10px); }
+    .fc-strip { flex: 1; display: flex; gap: clamp(4px,0.8vw,8px); }
+    .fc-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #ddcdb2; border-radius: 12px; padding: clamp(4px,1vh,12px) 2px; }
+    .fc-day { font-size: clamp(0.62rem, min(1.7vh,2.4vw), 0.9rem); color: #7a6f5f; font-weight: 700; margin-bottom: clamp(2px,0.6vh,8px); }
+    .fc-icon { font-size: clamp(1.1rem, min(3vh,4.2vw), 1.9rem); margin-bottom: clamp(2px,0.6vh,8px); }
+    .fc-hi { font-weight: 700; color: #e81e00; font-size: clamp(0.78rem, min(2vh,2.8vw), 1.15rem); }
+    .fc-lo { font-size: clamp(0.68rem, min(1.7vh,2.4vw), 0.95rem); color: #7a6f5f; }
+    /* ---- Indoor gauge ---- */
+    .gauge-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(4px,1vh,10px); }
+    .gauge-title { align-self: flex-start; font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    .gauge { position: relative; width: var(--g); height: var(--g); --g: clamp(96px, min(30vh,40vw), 200px); }
     .gauge-ring {
       width: 100%; height: 100%; border-radius: 50%;
       background: conic-gradient(from 225deg,
@@ -311,65 +317,40 @@ const char page[] PROGMEM = R"rawliteral(
         #cdbf9f var(--deg, 0deg), #cdbf9f 270deg,
         transparent 270deg);
       -webkit-mask: radial-gradient(transparent 62%, #000 63%);
-      mask: radial-gradient(transparent 62%, #000 63%);
-      transition: --deg 0.6s ease;
-    }
+      mask: radial-gradient(transparent 62%, #000 63%); }
     .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-temp { font-size: 2.8em; font-weight: 700; color: #3b3225; }
+    .gauge-temp { font-size: clamp(1.4rem, min(7vh,9vw), 2.8rem); font-weight: 700; color: #3b3225; line-height: 1.05; }
     .gauge-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
-    .gauge-sub { font-size: 0.85em; color: #7a6f5f; margin-top: 2px; }
-    .gauge-hum { font-size: 0.95em; color: #00b35a; margin-top: 6px; }
-    .status { margin-top: 14px; }
-    .pill { display: inline-block; padding: 5px 16px; border-radius: 20px; font-size: 0.82em; color: #fff; background: #a0522d; }
+    .gauge-sub { font-size: clamp(0.7rem, min(1.8vh,2.4vw), 0.95rem); color: #7a6f5f; }
+    .gauge-hum { font-size: clamp(0.72rem, min(1.9vh,2.6vw), 1rem); color: #00b35a; }
+    .status { margin-top: clamp(2px,0.8vh,8px); }
+    .pill { display: inline-block; padding: clamp(3px,0.7vh,6px) clamp(10px,1.4vw,16px); border-radius: 20px; font-size: clamp(0.66rem,1.5vh,0.85rem); color: #fff; background: #a0522d; }
     .pill.ok { background: #2e7d5b; }
-    /* Stats strip */
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    @media (max-width: 480px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    /* ---- Stats strip ---- */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px,1vw,12px); align-items: center; }
     .stat { text-align: center; }
-    .stat .slabel { font-size: 0.75em; color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
-    .stat .sval { font-size: 1.7em; font-weight: 700; margin: 4px 0; }
-    .stat .sunit { font-size: 0.6em; color: #7a6f5f; }
-    .hum { color: #00b35a; }
-    .wind { color: #0090cc; }
-    .sun { color: #e8a000; }
-    .footer { text-align: center; margin-top: 20px; color: #9a8d7a; font-size: 0.78em; }
+    .stat .slabel { font-size: clamp(0.6rem, min(1.5vh,2.2vw), 0.78rem); color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
+    .stat .sval { font-size: clamp(1rem, min(3.4vh,4.4vw), 1.8rem); font-weight: 700; margin: clamp(1px,0.4vh,4px) 0; line-height: 1.1; }
+    .stat .sval.time { font-size: clamp(0.85rem, min(2.6vh,3.2vw), 1.35rem); }
+    .stat .sunit { font-size: clamp(0.5rem,1.1vh,0.62rem); color: #7a6f5f; }
+    .hum { color: #00b35a; } .wind { color: #0090cc; } .sun { color: #e8a000; }
+    /* ---- Footer ---- */
+    .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
     .footer a { color: #8b5e3c; }
-    /* Phone layout */
-    @media (max-width: 600px) {
-      .wrap { padding: 12px; }
-      .grid { gap: 12px; }
-      .card { padding: 14px; }
-      .tb-title { font-size: 1em; }
-      .wm-head { flex-direction: column; gap: 10px; align-items: stretch; }
-      .hourly-btn { width: 100%; font-size: 1.2em; padding: 14px; }
-      .wm-icon { font-size: 2em; }
-      .wm-cond { font-size: 1.4em; }
-      .wm-temp { font-size: 4em; }
-      .wm-hl { font-size: 1em; }
-      .fc-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-      .fc-icon { font-size: 1.6em; }
-      .gauge { width: 180px; height: 180px; }
-      .gauge-temp { font-size: 2.3em; }
-      .stats { grid-template-columns: repeat(2, 1fr); }
-      .close-btn { font-size: 1.2em; padding: 14px 30px; }
-      .overlay-header h2 { font-size: 1em; }
+    /* ---- Narrow phones: give the gauge a bit more room ---- */
+    @media (max-width: 460px) {
+      .grid { grid-template-columns: 3fr 2fr; gap: 8px; }
+      .tb-title { letter-spacing: 0; }
     }
-    /* Hourly overlay */
-    .overlay {
-      display: none; position: fixed; inset: 0;
-      background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px;
-    }
+    /* ---- Hourly overlay (its own scroll) ---- */
+    .overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
     .overlay.open { display: block; }
     .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; max-width: 1200px; margin-left: auto; margin-right: auto; }
-    .overlay-header h2 { color: #8b5e3c; font-size: 1.2em; }
-    .close-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: 18px 48px; font-family: inherit; font-size: 1.5em; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); }
+    .overlay-header h2 { color: #8b5e3c; font-size: clamp(1rem,2.4vh,1.3rem); }
+    .close-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: clamp(10px,1.6vh,18px) clamp(24px,3vw,48px); font-family: inherit; font-size: clamp(1rem,2.2vh,1.5rem); font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); }
     .close-btn:active { transform: scale(0.96); }
     .overlay-body { max-width: 1200px; margin: 0 auto; }
-    .hourly-row {
-      background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px;
-      padding: 11px 16px; margin-bottom: 7px;
-      display: flex; justify-content: space-between; align-items: center; font-size: 1em;
-    }
+    .hourly-row { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px; padding: 11px 16px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; font-size: 1em; }
     .hourly-row .hr-time { font-weight: 700; min-width: 80px; }
     .hourly-row .hr-desc { color: #6b6050; font-size: 0.88em; flex: 1; text-align: center; }
     .hourly-row .hr-temp { color: #e81e00; font-weight: 700; }
@@ -386,7 +367,7 @@ const char page[] PROGMEM = R"rawliteral(
     <div class="grid">
       <div class="card weather-main">
         <div class="wm-head">
-          <div class="section" style="margin:0;">Willow Street, PA</div>
+          <div class="section">Willow Street, PA</div>
           <button class="hourly-btn" onclick="showHourly()">&#9201; Hourly &raquo;</button>
         </div>
         <div class="wm-top">
@@ -412,28 +393,14 @@ const char page[] PROGMEM = R"rawliteral(
         <div class="fc-strip" id="forecast"></div>
       </div>
       <div class="card stats">
-        <div class="stat">
-          <div class="slabel">Humidity</div>
-          <div class="sval hum"><span id="oHum">--</span></div>
-          <div class="sunit">%</div>
-        </div>
-        <div class="stat">
-          <div class="slabel">Wind</div>
-          <div class="sval wind"><span id="oWind">--</span></div>
-          <div class="sunit">mph</div>
-        </div>
-        <div class="stat">
-          <div class="slabel">Sunrise</div>
-          <div class="sval sun" style="font-size:1.2em;" id="sunrise">--:--</div>
-        </div>
-        <div class="stat">
-          <div class="slabel">Sunset</div>
-          <div class="sval sun" style="font-size:1.2em;" id="sunset">--:--</div>
-        </div>
+        <div class="stat"><div class="slabel">Humidity</div><div class="sval hum"><span id="oHum">--</span></div><div class="sunit">%</div></div>
+        <div class="stat"><div class="slabel">Wind</div><div class="sval wind"><span id="oWind">--</span></div><div class="sunit">mph</div></div>
+        <div class="stat"><div class="slabel">Sunrise</div><div class="sval sun time" id="sunrise">--:--</div></div>
+        <div class="stat"><div class="slabel">Sunset</div><div class="sval sun time" id="sunset">--:--</div></div>
       </div>
     </div>
-    <div class="footer">NWS Weather every 10 min &bull; <a href="/update">OTA Update</a></div>
   </div>
+  <div class="footer">NWS Weather every 10 min &bull; <a href="/update">OTA Update</a></div>
   <div class="overlay" id="hourlyOverlay">
     <div class="overlay-header">
       <h2>Hourly Forecast &mdash; Next 24 Hours</h2>
@@ -592,6 +559,7 @@ void setup() {
         Update.printError(Serial);
       }
     } else if (upload.status == UPLOAD_FILE_WRITE) {
+      esp_task_wdt_reset();  // upload can run >30s; keep the dog fed
       if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
         Update.printError(Serial);
       }
@@ -607,9 +575,25 @@ void setup() {
   server.begin();
   Serial.println("Web server started");
 
+  // Hardware Task Watchdog: if loop() ever hangs (e.g. a TLS handshake that
+  // never returns), the chip resets itself instead of going unreachable until
+  // a manual power-cycle. This is the real fix for the "frozen, LED on, won't
+  // respond to ping" lockups. The core may already have inited the TWDT for
+  // idle tasks, so retune via reconfigure if init reports it's already up.
+  esp_task_wdt_config_t wdtConfig = {
+    .timeout_ms = WDT_TIMEOUT_S * 1000,
+    .idle_core_mask = 0,
+    .trigger_panic = true,
+  };
+  if (esp_task_wdt_init(&wdtConfig) == ESP_ERR_INVALID_STATE) {
+    esp_task_wdt_reconfigure(&wdtConfig);
+  }
+  esp_task_wdt_add(NULL);  // watch this (loop) task
+  Serial.printf("Hardware watchdog armed (%ds)\n", WDT_TIMEOUT_S);
 }
 
 void loop() {
+  esp_task_wdt_reset();  // pet the hardware watchdog every pass
   server.handleClient();
 
 
@@ -634,6 +618,7 @@ void loop() {
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 20) {
       delay(500);
+      esp_task_wdt_reset();  // keep feeding during the blocking reconnect
       attempts++;
     }
     if (WiFi.status() == WL_CONNECTED) {
