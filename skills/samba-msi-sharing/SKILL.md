@@ -87,13 +87,36 @@ net use Z: /delete
 - Close the laptop and walk away. Nothing stays on the laptop except temp files created by apps (e.g., Word creates a local temp copy while editing, then saves back to the server)
 - Any device on the network can connect to the same share
 
-## TODO: MSI Laptop Setup
-When setting up the MSI laptop for the daughter:
-1. SSH into the MSI laptop
-2. Map `\\192.168.12.136\shared` as a persistent drive letter
-3. Save credentials so she doesn't get prompted every time
-4. Optionally create a subfolder per kid (e.g., `/srv/shared/gianna/`) for organization
-5. Transfer files from the Chromebook to `/srv/shared/` (via SCP, SFTP, or USB drive)
+## MSI Laptop Setup (Eva, .202) — Completed 2026-06-11
+
+### Windows 11 Guest Access Fix
+Windows 11 blocks unauthenticated guest access by default. Run this via SSH or on the laptop:
+```
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters" /v AllowInsecureGuestAuth /t REG_DWORD /d 1 /f
+```
+Requires a reboot to take effect.
+
+### Desktop Shortcut
+Created `C:\Users\eva milton\Desktop\Server - Shared Files.bat`:
+```
+explorer.exe \\192.168.12.136\shared
+```
+Double-click to open the share in File Explorer.
+
+### Auto-Map Z: Drive on Login
+Created startup script so Z: maps automatically when Eva logs in:
+`C:\Users\eva milton\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\map-server.bat`
+```
+net use Z: \\192.168.12.136\shared /user:milton 645866 /persistent:no
+```
+
+### Accessing via Firefox
+Type `\\192.168.12.136\shared` directly in the Firefox address bar — works on Windows.
+Firefox bookmark policy at `C:\Program Files\Mozilla Firefox\distribution\policies.json`:
+```json
+{"policies":{"Bookmarks":[{"Title":"Server - Shared Files","URL":"file://192.168.12.136/shared","Placement":"toolbar"}]}}
+```
+Note: clicking the bookmark may not work due to Firefox security restrictions — use the address bar or desktop shortcut instead.
 
 ### Chromebook File Transfer Options
 - **If ChromeOS supports SMB:** Files app > Add Network File Share > `\\192.168.12.136\shared`
