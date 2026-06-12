@@ -81,6 +81,21 @@ net use Z: \\192.168.12.136\shared /user:milton 645866 /persistent:yes
 net use Z: /delete
 ```
 
+## Connecting from Eric's Fedora Laptop
+
+**Nautilus sidebar (permanent):** Added to `~/.config/gtk-3.0/bookmarks`:
+```
+smb://192.168.12.136/shared Server - Shared Files
+```
+Shows in the Files app left panel every time — one click to open.
+
+**Open via terminal:**
+```bash
+setsid nautilus --new-window smb://192.168.12.136/shared &
+```
+
+Note: Firefox does not handle `smb://` on Linux. GNOME Fedora has no desktop icons. Use the Files app sidebar bookmark.
+
 ## How It Works for the Kids
 - Files live on the server, not on the laptop
 - Open, edit, and save files directly from the mapped drive or UNC path
