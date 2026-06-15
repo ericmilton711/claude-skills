@@ -1,7 +1,8 @@
 # ESP32 Weather Station
 
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
-**Last Updated:** 2026-06-04
+**Last Updated:** 2026-06-14
+**DEPLOYED 2026-06-14:** FreeRTOS weather task — fetch moved to core 0, web server starts immediately on core 1. Boot time to reachable dashboard: ~3s instead of ~57s. See "FreeRTOS Weather Task 2026-06-14" below.
 **DEPLOYED 2026-06-04:** Dashboard redesigned (Fire HD 10 landscape layout + phone-responsive) and crash fixes flashed to the device via OTA. Verified live (Firefox headless screenshot at 1280×800 against http://192.168.12.240/). 57% flash / 16% RAM. See "Dashboard Redesign 2026-06-04" below.
 **DEPLOYED 2026-06-04 (PM):** Hardware Task Watchdog added — fixes the device going fully unreachable (no ping, LED still lit) and needing a manual power-cycle. Root cause: a hung HTTPS weather fetch froze `loop()`, so the soft heap-watchdog never ran. Now `esp_task_wdt` resets the chip if loop() doesn't pet it for 30s; fed around weather fetch, WiFi reconnect, and OTA upload. Flashed via USB (/dev/ttyUSB0), verified online + /data serving. See "Hardware Watchdog 2026-06-04" below.
 
@@ -77,6 +78,22 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - NWS API calls have 10-second connect and read timeouts
 - Sunrise-sunset.org has 5-second timeouts
 - Heap is fine with HTTPS now that BLE and OLED are removed (~56% flash, 16% RAM)
+
+## FreeRTOS Weather Task 2026-06-14 (DEPLOYED)
+
+**Problem:** Boot-to-reachable took ~57 seconds. `setup()` called `fetchWeather()` (3 sequential HTTPS fetches, up to ~40s combined with 8s timeouts each) before `server.begin()`. The web server didn't start accepting connections until all fetches completed.
+
+**Fix:** Moved weather fetching to a FreeRTOS task pinned to core 0. Web server runs on core 1 (the default Arduino loop core) and starts immediately after WiFi+NTP sync (~3s). The fetch task runs in the background and populates data as soon as it completes.
+
+**Key design choices:**
+- `WxData` struct replaced individual weather globals — holds all weather fields
+- `wxMutex` (FreeRTOS mutex) protects `wx` — fetch task builds a local `WxData fresh`, then takes mutex and does `wx = fresh` atomically; `handleData()` takes mutex to safely read `wx`
+- Mutex hold time during swap is ~1-2ms (just String copies), never blocks the web server during HTTPS fetches
+- `weatherTask` runs on core 0 with 10240 byte stack; fetches immediately on boot, then `vTaskDelay(600000ms)` between cycles
+- `esp_task_wdt_reset()` calls removed from `fetchWeather()` — loop() runs freely now and pets the watchdog every pass without competition from fetches
+- Removed `fetchWeather()` call from WiFi reconnect path in `loop()` — weatherTask handles it on next scheduled cycle (up to 10 min stale after reconnect, acceptable)
+
+**Result:** Dashboard reachable in ~3s after power-on, showing `--` weather data briefly while the first fetch completes on core 0. 57% flash / 16% RAM unchanged.
 
 ## Dashboard Redesign 2026-06-04 (DEPLOYED)
 

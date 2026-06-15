@@ -23,22 +23,26 @@ WebServer server(80);
 float tempC = 0, tempF = 0, dhtHumidity = 0;
 bool sensorConnected = false;
 unsigned long lastSensorRead = 0;
-unsigned long lastWeatherFetch = 0;
 unsigned long lastWifiCheck = 0;
 int wifiFailCount = 0;
 
-String outsideTemp = "--";
-String outsideHigh = "--";
-String outsideLow = "--";
-String outsideHumidity = "--";
-String windSpeed = "--";
-String weatherDesc = "Loading...";
-String sunrise = "--:--";
-String sunset = "--:--";
-String forecastDay[FORECAST_DAYS];
-String forecastHigh[FORECAST_DAYS];
-String forecastLow[FORECAST_DAYS];
-String forecastDesc[FORECAST_DAYS];
+struct WxData {
+  String oTemp = "--";
+  String oHigh = "--";
+  String oLow = "--";
+  String oHum = "--";
+  String oWind = "--";
+  String desc = "Loading...";
+  String sunrise = "--:--";
+  String sunset = "--:--";
+  String fcDay[FORECAST_DAYS];
+  String fcHigh[FORECAST_DAYS];
+  String fcLow[FORECAST_DAYS];
+  String fcDesc[FORECAST_DAYS];
+};
+
+WxData wx;
+SemaphoreHandle_t wxMutex;
 
 volatile bool otaInProgress = false;
 
@@ -66,15 +70,13 @@ bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr
   http.addHeader("Accept", "application/geo+json");
   http.setConnectTimeout(8000);
   http.setTimeout(8000);
+  http.useHTTP10(true);
   int code = http.GET();
   bool ok = false;
   if (code == 200) {
-    String payload = http.getString();
-    // Filtered parse: keep only the few fields we use so the JsonDocument
-    // stays tiny (NWS payloads are 50-100KB; full parse exhausts heap).
     DeserializationError err = filter
-      ? deserializeJson(doc, payload, DeserializationOption::Filter(*filter))
-      : deserializeJson(doc, payload);
+      ? deserializeJson(doc, http.getStream(), DeserializationOption::Filter(*filter))
+      : deserializeJson(doc, http.getStream());
     if (!err) ok = true;
     else Serial.printf("NWS JSON error: %s\n", err.c_str());
   } else {
@@ -84,7 +86,7 @@ bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr
   return ok;
 }
 
-void fetchCurrentObs() {
+void fetchCurrentObs(WxData& d) {
   JsonDocument filter;
   filter["properties"]["temperature"]["value"] = true;
   filter["properties"]["relativeHumidity"]["value"] = true;
@@ -98,24 +100,24 @@ void fetchCurrentObs() {
 
   float tempCVal = props["temperature"]["value"].as<float>();
   float tempFVal = tempCVal * 9.0 / 5.0 + 32.0;
-  outsideTemp = String(tempFVal, 1);
+  d.oTemp = String(tempFVal, 1);
 
   float rh = props["relativeHumidity"]["value"].as<float>();
-  outsideHumidity = String((int)rh);
+  d.oHum = String((int)rh);
 
   float windKmh = props["windSpeed"]["value"].as<float>();
   float windMph = windKmh * 0.621371;
-  windSpeed = String(windMph, 1);
+  d.oWind = String(windMph, 1);
 
   const char* desc = props["textDescription"];
   if (desc) {
-    weatherDesc = nwsDescToEmoji(String(desc)) + " " + String(desc);
+    d.desc = nwsDescToEmoji(String(desc)) + " " + String(desc);
   }
 
   Serial.println("NWS current observations updated");
 }
 
-void fetchForecast() {
+void fetchForecast(WxData& d) {
   JsonDocument filter;
   JsonObject pf = filter["properties"]["periods"].add<JsonObject>();
   pf["isDaytime"] = true;
@@ -139,27 +141,27 @@ void fetchForecast() {
     const char* shortFc = p["shortForecast"];
 
     if (!todayHighSet && daytime) {
-      outsideHigh = String(temp);
+      d.oHigh = String(temp);
       todayHighSet = true;
       continue;
     }
     if (!todayLowSet && !daytime) {
-      outsideLow = String(temp);
+      d.oLow = String(temp);
       todayLowSet = true;
       if (!todayHighSet) {
         todayHighSet = true;
-        outsideHigh = "--";
+        d.oHigh = "--";
       }
       continue;
     }
 
     if (daytime && dayIdx < FORECAST_DAYS) {
-      forecastDay[dayIdx] = String(name).substring(0, 3);
-      forecastHigh[dayIdx] = String(temp);
-      forecastDesc[dayIdx] = nwsDescToEmoji(String(shortFc)) + " " + String(shortFc);
+      d.fcDay[dayIdx] = String(name).substring(0, 3);
+      d.fcHigh[dayIdx] = String(temp);
+      d.fcDesc[dayIdx] = nwsDescToEmoji(String(shortFc)) + " " + String(shortFc);
     }
     if (!daytime && dayIdx < FORECAST_DAYS) {
-      forecastLow[dayIdx] = String(temp);
+      d.fcLow[dayIdx] = String(temp);
       dayIdx++;
     }
   }
@@ -167,18 +169,18 @@ void fetchForecast() {
   Serial.println("NWS forecast updated");
 }
 
-void fetchSunriseSunset() {
+void fetchSunriseSunset(WxData& d) {
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
   http.begin(client, "https://api.sunrise-sunset.org/json?lat=39.98&lng=-76.28&formatted=0");
   http.setConnectTimeout(5000);
   http.setTimeout(5000);
+  http.useHTTP10(true);
   int code = http.GET();
   if (code == 200) {
-    String payload = http.getString();
     JsonDocument doc;
-    if (!deserializeJson(doc, payload)) {
+    if (!deserializeJson(doc, http.getStream())) {
       String sr = doc["results"]["sunrise"].as<String>();
       String ss = doc["results"]["sunset"].as<String>();
       auto utcIsoToLocal = [](const String& iso) -> String {
@@ -208,9 +210,9 @@ void fetchSunriseSunset() {
         return String(buf);
       };
 
-      sunrise = utcIsoToLocal(sr);
-      sunset = utcIsoToLocal(ss);
-      Serial.printf("Sunrise: %s  Sunset: %s\n", sunrise.c_str(), sunset.c_str());
+      d.sunrise = utcIsoToLocal(sr);
+      d.sunset = utcIsoToLocal(ss);
+      Serial.printf("Sunrise: %s  Sunset: %s\n", d.sunrise.c_str(), d.sunset.c_str());
     }
   } else {
     Serial.printf("Sunrise API failed: %d\n", code);
@@ -220,14 +222,21 @@ void fetchSunriseSunset() {
 
 void fetchWeather() {
   if (WiFi.status() != WL_CONNECTED) return;
-  // Feed the hardware watchdog between each blocking TLS fetch so a slow (but
-  // not hung) network round-trip never trips the 30s reset.
-  fetchCurrentObs();
-  esp_task_wdt_reset();
-  fetchForecast();
-  esp_task_wdt_reset();
-  fetchSunriseSunset();
-  esp_task_wdt_reset();
+  WxData fresh;
+  fetchCurrentObs(fresh);
+  fetchForecast(fresh);
+  fetchSunriseSunset(fresh);
+  if (xSemaphoreTake(wxMutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+    wx = fresh;
+    xSemaphoreGive(wxMutex);
+  }
+}
+
+void weatherTask(void* param) {
+  for (;;) {
+    fetchWeather();
+    vTaskDelay(pdMS_TO_TICKS(600000));
+  }
 }
 
 void readSensors() {
@@ -464,20 +473,26 @@ void handleRoot() {
 
 void handleData() {
   static char buf[4096];
-  int pos = snprintf(buf, sizeof(buf),
-    "{\"tempC\":%.1f,\"tempF\":%.1f,\"dhtH\":%.1f,\"sensor\":%s,"
-    "\"oTemp\":\"%s\",\"oHigh\":\"%s\",\"oLow\":\"%s\","
-    "\"oHum\":\"%s\",\"oWind\":\"%s\",\"oDesc\":\"%s\","
-    "\"sunrise\":\"%s\",\"sunset\":\"%s\",\"forecast\":[",
-    tempC, tempF, dhtHumidity, sensorConnected ? "true" : "false",
-    outsideTemp.c_str(), outsideHigh.c_str(), outsideLow.c_str(),
-    outsideHumidity.c_str(), windSpeed.c_str(), weatherDesc.c_str(),
-    sunrise.c_str(), sunset.c_str());
-  for (int i = 0; i < FORECAST_DAYS; i++) {
-    pos += snprintf(buf + pos, sizeof(buf) - pos, "%s{\"day\":\"%s\",\"desc\":\"%s\",\"hi\":\"%s\",\"lo\":\"%s\"}",
-      i > 0 ? "," : "", forecastDay[i].c_str(), forecastDesc[i].c_str(), forecastHigh[i].c_str(), forecastLow[i].c_str());
+  int pos = 0;
+  if (xSemaphoreTake(wxMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+    pos = snprintf(buf, sizeof(buf),
+      "{\"tempC\":%.1f,\"tempF\":%.1f,\"dhtH\":%.1f,\"sensor\":%s,"
+      "\"oTemp\":\"%s\",\"oHigh\":\"%s\",\"oLow\":\"%s\","
+      "\"oHum\":\"%s\",\"oWind\":\"%s\",\"oDesc\":\"%s\","
+      "\"sunrise\":\"%s\",\"sunset\":\"%s\",\"forecast\":[",
+      tempC, tempF, dhtHumidity, sensorConnected ? "true" : "false",
+      wx.oTemp.c_str(), wx.oHigh.c_str(), wx.oLow.c_str(),
+      wx.oHum.c_str(), wx.oWind.c_str(), wx.desc.c_str(),
+      wx.sunrise.c_str(), wx.sunset.c_str());
+    for (int i = 0; i < FORECAST_DAYS; i++) {
+      pos += snprintf(buf + pos, sizeof(buf) - pos, "%s{\"day\":\"%s\",\"desc\":\"%s\",\"hi\":\"%s\",\"lo\":\"%s\"}",
+        i > 0 ? "," : "", wx.fcDay[i].c_str(), wx.fcDesc[i].c_str(), wx.fcHigh[i].c_str(), wx.fcLow[i].c_str());
+    }
+    snprintf(buf + pos, sizeof(buf) - pos, "]}");
+    xSemaphoreGive(wxMutex);
+  } else {
+    snprintf(buf, sizeof(buf), "{\"error\":\"busy\"}");
   }
-  snprintf(buf + pos, sizeof(buf) - pos, "]}");
   server.send(200, "application/json", buf);
 }
 
@@ -485,6 +500,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("\n=== MILTONHAUS Weather Station ===");
 
+  wxMutex = xSemaphoreCreateMutex();
   dht.begin();
 
   WiFi.mode(WIFI_STA);
@@ -524,7 +540,6 @@ void setup() {
       delay(500);
     }
 
-    fetchWeather();
   } else {
     Serial.println("\nWiFi FAILED - will retry in loop");
   }
@@ -575,6 +590,9 @@ void setup() {
   server.begin();
   Serial.println("Web server started");
 
+  xTaskCreatePinnedToCore(weatherTask, "weather", 10240, NULL, 1, NULL, 0);
+  Serial.println("Weather fetch task started on core 0");
+
   // Hardware Task Watchdog: if loop() ever hangs (e.g. a TLS handshake that
   // never returns), the chip resets itself instead of going unreachable until
   // a manual power-cycle. This is the real fix for the "frozen, LED on, won't
@@ -602,11 +620,6 @@ void loop() {
     lastSensorRead = millis();
   }
 
-  if (millis() - lastWeatherFetch > 600000) {
-    fetchWeather();
-    lastWeatherFetch = millis();
-  }
-
   bool wifiDead = (WiFi.status() != WL_CONNECTED);
   if (wifiDead && millis() - lastWifiCheck > 30000) {
     lastWifiCheck = millis();
@@ -630,7 +643,6 @@ void loop() {
       Serial.print("WiFi reconnected! IP: ");
       Serial.println(WiFi.localIP());
       wifiFailCount = 0;
-      fetchWeather();
     } else {
       wifiFailCount++;
       Serial.printf("WiFi reconnect failed (%d)\n", wifiFailCount);
