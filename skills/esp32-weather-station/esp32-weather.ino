@@ -277,6 +277,9 @@ const char page[] PROGMEM = R"rawliteral(
     .tb-clock { color: #f0e6d2; text-align: right; font-size: clamp(0.85rem,2vh,1.1rem); line-height: 1.15; }
     .tb-clock .t { font-weight: 700; }
     .tb-clock .d { font-size: 0.72em; color: #d8c9a8; display: block; }
+    .fs-btn { background: rgba(255,255,255,0.15); border: none; color: #f0e6d2; border-radius: 8px; padding: 4px 8px; font-size: 1.2rem; cursor: pointer; margin-left: 12px; line-height: 1; }
+    .fs-btn:active { background: rgba(255,255,255,0.3); }
+    :fullscreen .fs-btn, :-webkit-full-screen .fs-btn { display: none; }
     /* ---- Layout: fills the viewport, never scrolls ---- */
     .wrap { flex: 1 1 auto; min-height: 0; padding: clamp(8px,1.6vh,18px) clamp(10px,2vw,20px); display: flex; }
     .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
@@ -401,7 +404,10 @@ const char page[] PROGMEM = R"rawliteral(
 <body>
   <div class="topbar">
     <div class="tb-title">&#127968; MILTONHAUS Weather</div>
-    <div class="tb-clock"><span class="t" id="clock">--:--</span><span class="d" id="date">Loading...</span></div>
+    <div style="display:flex;align-items:center;">
+      <div class="tb-clock"><span class="t" id="clock">--:--</span><span class="d" id="date">Loading...</span></div>
+      <button class="fs-btn" id="fsBtn" onclick="goFullscreen()" title="Fullscreen">&#x26F6;</button>
+    </div>
   </div>
   <div class="wrap">
     <div class="grid">
@@ -475,6 +481,9 @@ const char page[] PROGMEM = R"rawliteral(
   function showScores(){document.getElementById('scoresOverlay').className='scores-overlay open';document.getElementById('scoresList').innerHTML='<div class="overlay-loading">Loading...</div>';var now=new Date();var s=new Date(now);s.setDate(now.getDate()-14);var en=new Date(now);en.setDate(now.getDate()+21);function fd(d){return d.toISOString().slice(0,10).replace(/-/g,'');}fetch(WC_URL+'?dates='+fd(s)+'-'+fd(en)+'&limit=200').then(function(r){return r.json();}).then(function(d){var events=d.events||[];if(!events.length){document.getElementById('scoresList').innerHTML='<div class="overlay-loading">No match data</div>';return;}var groups={};events.forEach(function(e){var day=e.date.slice(0,10);if(!groups[day])groups[day]=[];groups[day].push(e);});var days=Object.keys(groups).sort();var html=days.map(function(day){var label=new Date(day+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});var rows=groups[day].map(function(e){var m=parseMTC(e);var midHTML;if(m.state==='post'){midHTML='<span class="sc-score">'+m.homeScore+' - '+m.awayScore+'</span><span class="sc-st">Final</span>';}else if(m.state==='in'){midHTML='<span class="sc-score live">'+m.homeScore+' - '+m.awayScore+'</span><span class="sc-st live">'+m.detail+'</span>';}else{midHTML='<span class="sc-kick">'+new Date(m.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'})+'</span>';}return'<div class="sc-match"><div class="sc-team home">'+m.homeFull+'</div><div class="sc-mid">'+midHTML+'</div><div class="sc-team away">'+m.awayFull+'</div></div>';}).join('');return'<div class="sc-day-group"><div class="sc-day-label">'+label+'</div>'+rows+'</div>';}).join('');document.getElementById('scoresList').innerHTML=html;}).catch(function(){document.getElementById('scoresList').innerHTML='<div class="overlay-loading">Failed to load match data</div>';});}
   function closeScores(){document.getElementById('scoresOverlay').className='scores-overlay';}
   fetchTodayScores();setInterval(fetchTodayScores,60000);
+  function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
+  document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
+  document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
   </script>
 </body>
 </html>
