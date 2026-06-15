@@ -282,8 +282,8 @@ const char page[] PROGMEM = R"rawliteral(
     .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
       display: grid; gap: clamp(8px,1.5vh,16px);
       grid-template-columns: 2fr 1fr;
-      grid-template-rows: 1.3fr 1fr 0.72fr;
-      grid-template-areas: "main gauge" "fc fc" "stats stats"; }
+      grid-template-rows: 1.3fr 1fr 0.72fr 0.6fr;
+      grid-template-areas: "main gauge" "fc fc" "stats stats" "scores scores"; }
     .weather-main { grid-area: main; }
     .gauge-card { grid-area: gauge; }
     .forecast-card { grid-area: fc; }
@@ -343,6 +343,37 @@ const char page[] PROGMEM = R"rawliteral(
     .stat .sval.time { font-size: clamp(0.85rem, min(2.6vh,3.2vw), 1.35rem); }
     .stat .sunit { font-size: clamp(0.5rem,1.1vh,0.62rem); color: #7a6f5f; }
     .hum { color: #00b35a; } .wind { color: #0090cc; } .sun { color: #e8a000; }
+    /* ---- World Cup scores strip ---- */
+    .scores-strip { grid-area: scores; display: flex; flex-direction: column; }
+    .scores-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: clamp(3px,0.6vh,7px); }
+    .scores-btn { background: linear-gradient(135deg, #2e7d5b, #1a5540); color: #fff; border: none; border-radius: 30px; padding: clamp(5px,1vh,10px) clamp(12px,1.8vw,24px); font-family: inherit; font-size: clamp(0.82rem,1.7vh,1.1rem); font-weight: 700; cursor: pointer; box-shadow: 0 3px 8px rgba(30,80,50,0.4); white-space: nowrap; }
+    .scores-btn:active { transform: scale(0.96); }
+    .matches-row { flex: 1; display: flex; gap: clamp(5px,0.8vw,10px); align-items: center; overflow: hidden; }
+    .match-chip { background: #ddcdb2; border-radius: 10px; padding: clamp(3px,0.7vh,7px) clamp(7px,1vw,12px); display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: clamp(0.68rem,1.5vh,0.9rem); flex-shrink: 0; }
+    .match-score { font-weight: 700; color: #3b3225; }
+    .match-teams { color: #5a5040; }
+    .match-ft { font-size: 0.8em; color: #8b5e3c; }
+    .match-live { font-size: 0.8em; color: #e81e00; font-weight: 700; }
+    .match-time { font-size: 0.8em; color: #7a6f5f; }
+    .no-matches { color: #7a6f5f; font-style: italic; font-size: clamp(0.78rem,1.6vh,0.95rem); }
+    /* ---- Scores overlay ---- */
+    .scores-overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
+    .scores-overlay.open { display: block; }
+    .sc-ov-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; max-width: 1200px; margin-left: auto; margin-right: auto; }
+    .sc-ov-hdr h2 { color: #8b5e3c; font-size: clamp(1rem,2.4vh,1.3rem); }
+    .sc-ov-body { max-width: 1200px; margin: 0 auto; }
+    .sc-day-group { margin-bottom: 14px; }
+    .sc-day-label { font-size: 0.75rem; color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 6px; }
+    .sc-match { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px; padding: 10px 16px; margin-bottom: 6px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+    .sc-team { font-size: 1em; }
+    .sc-team.home { text-align: right; }
+    .sc-team.away { text-align: left; }
+    .sc-mid { text-align: center; min-width: 80px; }
+    .sc-score { font-size: 1.3em; font-weight: 700; color: #3b3225; display: block; }
+    .sc-score.live { color: #e81e00; }
+    .sc-st { font-size: 0.75em; color: #8b5e3c; display: block; }
+    .sc-st.live { color: #e81e00; }
+    .sc-kick { font-size: 0.88em; color: #7a6f5f; }
     /* ---- Footer ---- */
     .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
     .footer a { color: #8b5e3c; }
@@ -407,9 +438,23 @@ const char page[] PROGMEM = R"rawliteral(
         <div class="stat"><div class="slabel">Sunrise</div><div class="sval sun time" id="sunrise">--:--</div></div>
         <div class="stat"><div class="slabel">Sunset</div><div class="sval sun time" id="sunset">--:--</div></div>
       </div>
+      <div class="card scores-strip">
+        <div class="scores-hdr">
+          <div class="section">&#9917; World Cup 2026</div>
+          <button class="scores-btn" onclick="showScores()">All Matches &raquo;</button>
+        </div>
+        <div class="matches-row" id="todayMatches"><span class="no-matches">Loading scores...</span></div>
+      </div>
     </div>
   </div>
   <div class="footer">NWS Weather every 10 min &bull; <a href="/update">OTA Update</a></div>
+  <div class="scores-overlay" id="scoresOverlay">
+    <div class="sc-ov-hdr">
+      <h2>&#9917; FIFA World Cup 2026</h2>
+      <button class="close-btn" onclick="closeScores()">Back</button>
+    </div>
+    <div class="sc-ov-body" id="scoresList"><div class="overlay-loading">Loading...</div></div>
+  </div>
   <div class="overlay" id="hourlyOverlay">
     <div class="overlay-header">
       <h2>Hourly Forecast &mdash; Next 24 Hours</h2>
@@ -423,6 +468,13 @@ const char page[] PROGMEM = R"rawliteral(
   function descEmoji(d){d=d.toLowerCase();if(d.indexOf('thunder')>=0)return'⚡';if(d.indexOf('snow')>=0||d.indexOf('blizzard')>=0)return'\u{1F328}️';if(d.indexOf('rain')>=0||d.indexOf('shower')>=0||d.indexOf('drizzle')>=0)return'\u{1F327}️';if(d.indexOf('fog')>=0||d.indexOf('mist')>=0)return'\u{1F32B}️';if(d.indexOf('cloud')>=0||d.indexOf('overcast')>=0)return'⛅';if(d.indexOf('sunny')>=0||d.indexOf('clear')>=0)return'☀️';return'\u{1F324}️';}
   function showHourly(){document.getElementById('hourlyOverlay').className='overlay open';document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast/hourly',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json()}).then(function(d){var p=d.properties.periods;var h='';var count=Math.min(p.length,24);for(var i=0;i<count;i++){var t=new Date(p[i].startTime);var hr=t.getHours();var ampm=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var timeStr=hr+':00 '+ampm;var e=descEmoji(p[i].shortForecast);h+='<div class="hourly-row"><div class="hr-time">'+timeStr+'</div><div class="hr-desc">'+e+' '+p[i].shortForecast+'</div><div class="hr-temp">'+p[i].temperature+'°</div><div class="hr-wind">'+p[i].windSpeed+'</div></div>'}document.getElementById('hourlyList').innerHTML=h}).catch(function(){document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Failed to load hourly forecast</div>'});}
   function closeHourly(){document.getElementById('hourlyOverlay').className='overlay';}
+  // ---- World Cup Scores ----
+  var WC_URL='https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
+  function parseMTC(e){var comp=e.competitions[0];var home=comp.competitors.find(function(c){return c.homeAway==='home';});var away=comp.competitors.find(function(c){return c.homeAway==='away';});return{home:home.team.abbreviation,away:away.team.abbreviation,homeFull:home.team.displayName,awayFull:away.team.displayName,homeScore:home.score||'',awayScore:away.score||'',state:e.status.type.state,detail:e.status.type.shortDetail||e.status.type.description,date:e.date};}
+  function fetchTodayScores(){fetch(WC_URL).then(function(r){return r.json();}).then(function(d){var events=d.events||[];var strip=document.getElementById('todayMatches');if(!events.length){strip.innerHTML='<span class="no-matches">No matches today</span>';return;}strip.innerHTML=events.map(function(e){var m=parseMTC(e);var scoreStr,stHTML;if(m.state==='post'){scoreStr=m.homeScore+'-'+m.awayScore;stHTML='<span class="match-ft">FT</span>';}else if(m.state==='in'){scoreStr=m.homeScore+'-'+m.awayScore;stHTML='<span class="match-live">'+m.detail+'</span>';}else{scoreStr='vs';stHTML='<span class="match-time">'+new Date(m.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'})+'</span>';}return'<div class="match-chip"><span class="match-teams">'+m.home+'</span><span class="match-score">'+scoreStr+'</span><span class="match-teams">'+m.away+'</span>'+stHTML+'</div>';}).join('');}).catch(function(){document.getElementById('todayMatches').innerHTML='<span class="no-matches">Scores unavailable</span>';});}
+  function showScores(){document.getElementById('scoresOverlay').className='scores-overlay open';document.getElementById('scoresList').innerHTML='<div class="overlay-loading">Loading...</div>';var now=new Date();var s=new Date(now);s.setDate(now.getDate()-14);var en=new Date(now);en.setDate(now.getDate()+21);function fd(d){return d.toISOString().slice(0,10).replace(/-/g,'');}fetch(WC_URL+'?dates='+fd(s)+'-'+fd(en)+'&limit=200').then(function(r){return r.json();}).then(function(d){var events=d.events||[];if(!events.length){document.getElementById('scoresList').innerHTML='<div class="overlay-loading">No match data</div>';return;}var groups={};events.forEach(function(e){var day=e.date.slice(0,10);if(!groups[day])groups[day]=[];groups[day].push(e);});var days=Object.keys(groups).sort();var html=days.map(function(day){var label=new Date(day+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});var rows=groups[day].map(function(e){var m=parseMTC(e);var midHTML;if(m.state==='post'){midHTML='<span class="sc-score">'+m.homeScore+' - '+m.awayScore+'</span><span class="sc-st">Final</span>';}else if(m.state==='in'){midHTML='<span class="sc-score live">'+m.homeScore+' - '+m.awayScore+'</span><span class="sc-st live">'+m.detail+'</span>';}else{midHTML='<span class="sc-kick">'+new Date(m.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'})+'</span>';}return'<div class="sc-match"><div class="sc-team home">'+m.homeFull+'</div><div class="sc-mid">'+midHTML+'</div><div class="sc-team away">'+m.awayFull+'</div></div>';}).join('');return'<div class="sc-day-group"><div class="sc-day-label">'+label+'</div>'+rows+'</div>';}).join('');document.getElementById('scoresList').innerHTML=html;}).catch(function(){document.getElementById('scoresList').innerHTML='<div class="overlay-loading">Failed to load match data</div>';});}
+  function closeScores(){document.getElementById('scoresOverlay').className='scores-overlay';}
+  fetchTodayScores();setInterval(fetchTodayScores,60000);
   </script>
 </body>
 </html>
