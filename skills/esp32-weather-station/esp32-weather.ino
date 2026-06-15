@@ -285,7 +285,7 @@ const char page[] PROGMEM = R"rawliteral(
     .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
       display: grid; gap: clamp(8px,1.5vh,16px);
       grid-template-columns: 2fr 1fr;
-      grid-template-rows: 1.3fr 1fr 0.72fr 0.6fr;
+      grid-template-rows: 1.3fr 1fr 0.72fr 0.9fr;
       grid-template-areas: "main gauge" "fc fc" "stats stats" "scores scores"; }
     .weather-main { grid-area: main; }
     .gauge-card { grid-area: gauge; }
@@ -351,14 +351,14 @@ const char page[] PROGMEM = R"rawliteral(
     .scores-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: clamp(3px,0.6vh,7px); }
     .scores-btn { background: linear-gradient(135deg, #2e7d5b, #1a5540); color: #fff; border: none; border-radius: 30px; padding: clamp(5px,1vh,10px) clamp(12px,1.8vw,24px); font-family: inherit; font-size: clamp(0.82rem,1.7vh,1.1rem); font-weight: 700; cursor: pointer; box-shadow: 0 3px 8px rgba(30,80,50,0.4); white-space: nowrap; }
     .scores-btn:active { transform: scale(0.96); }
-    .matches-row { flex: 1; display: flex; gap: clamp(5px,0.8vw,10px); align-items: center; overflow: hidden; }
-    .match-chip { background: #ddcdb2; border-radius: 10px; padding: clamp(3px,0.7vh,7px) clamp(7px,1vw,12px); display: flex; align-items: center; gap: 5px; white-space: nowrap; font-size: clamp(0.68rem,1.5vh,0.9rem); flex-shrink: 0; }
+    .matches-row { flex: 1; display: flex; gap: clamp(8px,1.2vw,16px); align-items: center; overflow: hidden; }
+    .match-chip { background: #ddcdb2; border-radius: 14px; padding: clamp(6px,1.2vh,14px) clamp(12px,1.8vw,22px); display: flex; align-items: center; gap: 8px; white-space: nowrap; font-size: clamp(1rem,2.2vh,1.4rem); flex-shrink: 0; }
     .match-score { font-weight: 700; color: #3b3225; }
     .match-teams { color: #5a5040; }
-    .match-ft { font-size: 0.8em; color: #8b5e3c; }
-    .match-live { font-size: 0.8em; color: #e81e00; font-weight: 700; }
-    .match-time { font-size: 0.8em; color: #7a6f5f; }
-    .no-matches { color: #7a6f5f; font-style: italic; font-size: clamp(0.78rem,1.6vh,0.95rem); }
+    .match-ft { font-size: 0.82em; color: #8b5e3c; }
+    .match-live { font-size: 0.82em; color: #e81e00; font-weight: 700; }
+    .match-time { font-size: 0.82em; color: #7a6f5f; }
+    .no-matches { color: #7a6f5f; font-style: italic; font-size: clamp(0.9rem,2vh,1.2rem); }
     /* ---- Scores overlay ---- */
     .scores-overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
     .scores-overlay.open { display: block; }
