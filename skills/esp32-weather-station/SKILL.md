@@ -1,7 +1,8 @@
 # ESP32 Weather Station
 
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
-**Last Updated:** 2026-06-14
+**Last Updated:** 2026-06-15
+**DEPLOYED 2026-06-15:** Dashboard v3 — new 5fr/3fr grid layout with World Cup card spanning right column rows 2-3. Bigger fonts (temp 4-10rem, condition 1.6-3rem, gauge 1.8-3.2rem). Gauge ring fixed at 66%/67%. "All Matches" overlay with grouped-by-date display. Fullscreen toggle button. ESPN live API. Compiled 57% flash / 16% RAM. Flashed via OTA. Display: Fire HD 10 in Fully Kiosk Browser (kiosk mode).
 **DEPLOYED 2026-06-14:** FreeRTOS weather task — fetch moved to core 0, web server starts immediately on core 1. Boot time to reachable dashboard: ~3s instead of ~57s. See "FreeRTOS Weather Task 2026-06-14" below.
 **DEPLOYED 2026-06-04:** Dashboard redesigned (Fire HD 10 landscape layout + phone-responsive) and crash fixes flashed to the device via OTA. Verified live (Firefox headless screenshot at 1280×800 against http://192.168.12.240/). 57% flash / 16% RAM. See "Dashboard Redesign 2026-06-04" below.
 **DEPLOYED 2026-06-04 (PM):** Hardware Task Watchdog added — fixes the device going fully unreachable (no ping, LED still lit) and needing a manual power-cycle. Root cause: a hung HTTPS weather fetch froze `loop()`, so the soft heap-watchdog never ran. Now `esp_task_wdt` resets the chip if loop() doesn't pet it for 30s; fed around weather fetch, WiFi reconnect, and OTA upload. Flashed via USB (/dev/ttyUSB0), verified online + /data serving. See "Hardware Watchdog 2026-06-04" below.
@@ -61,9 +62,11 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - **Hourly forecast** — tap Conditions card to open full-screen overlay with next 24 hours (fetched client-side from NWS)
 - **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
 - **~~Homestead Pi via BLE~~** — **REMOVED 2026-05-27.** BLE code stripped from firmware.
+- **FIFA World Cup 2026 live scores** — ESPN free API (`site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard`), client-side fetch every 60 seconds, no API key needed. Shows up to 3 matches in the card, "All Matches" overlay groups by date with live indicators. Added 2026-06-15.
+- **Fullscreen toggle** — button in top bar uses JavaScript Fullscreen API. Works with Fully Kiosk Browser on Fire HD 10.
 - **Web dashboard** — served at `http://192.168.12.240/` on port 80, auto-refreshes every 5 seconds
   - Comfortaa font, warm earth-tone theme (#d2c6a5 background, #8b5e3c accents)
-  - Responsive layout — 70% max-width on desktop, full-width on mobile
+  - Grid layout: 5fr/3fr columns, areas: main/gauge, fc/wc, stats/wc
 - **OTA firmware updates** — browse to `/update` to upload .bin files wirelessly
 - **Weather updates** every 10 minutes
 

@@ -88,6 +88,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 7 | tower-of-gondor | Tower of Gondor (ThinkCentre M900) — DEFAULT-ALLOW with specific blocks |
 | 8 | gianna-laptop | Gianna's Fedora laptop |
 | 9 | eva-laptop | Eva's Windows laptop (.202) — default-deny; Gmail allowed, Chat/Search/YouTube blocked |
+| 10 | fire-tablet | Fire HD 10 (.172) — default-deny; weather dashboard display (Fully Kiosk Browser) |
 
 ## Client Assignments
 
@@ -104,6 +105,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 192.168.12.160 | Tower of Gondor (M900) | 7 (tower-of-gondor) |
 | 192.168.12.226 | Gianna Fedora laptop | 8 (gianna-laptop) |
 | 192.168.12.202 | Eva Windows laptop | 6 (ev-temp-unrestricted) — moved from 9 on 2026-06-13, fully unrestricted |
+| 192.168.12.172 | Fire HD 10 - weather dashboard | 10 (fire-tablet) |
 
 ---
 
@@ -141,7 +143,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 
 ## Default Deny Rule
 
-Regex deny `.*` applies to groups: 0, 1, 2, 3, 5 — blocks ALL domains unless explicitly whitelisted.
+Regex deny `.*` applies to groups: 0, 1, 2, 3, 5, 10 — blocks ALL domains unless explicitly whitelisted.
 Group 4 (yti-chromebook) was removed from the deny-all rule on 2026-05-04 — legacy group, no longer actively used.
 Group 7 (tower-of-gondor) uses **default-allow with specific blocks** instead of deny-all (see below).
 
@@ -250,6 +252,25 @@ Plus ensure `signaler-pa.clients6.google.com` is NOT allowed (don't add a broad 
 
 ALLOW (type 2): accounts, mail, gmail, workspace, apis, ogs, play, googleapis, gstatic (+ssl/fonts), googleusercontent, lh3.googleusercontent, pki.goog, firefox/mozilla, windows update/microsoft, homeschoolconnections (covers caravel.homeschoolconnections.com via wildcard), caravel.software, teachingtextbooks(+app), duolingo, vimeo(+cdn), zoom.us, cloudfront, amazonaws, kiddle, britannica, detectportal.firefox.com.
 DENY (type 3): chat.google.com, chat.usercontent.google.com, dynamite*signaler, hangouts.google.com — plus `.*` default-deny (so Search/YouTube/everything-else blocked).
+
+---
+
+## Group 10 (fire-tablet, .172) — Default-Deny Weather Dashboard Display
+
+**Device:** Fire HD 10 tablet at 192.168.12.172 (MAC: b6-7f-2b-ae-24-3a, randomized). Static IP configured on device. DNS 1: 192.168.12.136, DNS 2: blank. Runs Fully Kiosk Browser in kiosk mode showing http://192.168.12.240/ (ESP32 weather dashboard).
+
+**Approach:** Default-deny (`.*` in group 10). Only weather dashboard dependencies whitelisted. Dashboard itself is local IP, no DNS needed.
+
+**Allowed domains (regex allow, group 10):**
+- `api.weather.gov` — NWS hourly forecast (client-side JS fetch)
+- `site.api.espn.com` — FIFA World Cup live scores (client-side JS fetch)
+- `fonts.googleapis.com` — Comfortaa font
+- `fonts.gstatic.com` — font files
+- `time.android.com` — Android time sync
+- `connectivitycheck.gstatic.com` — Android connectivity check
+- `firebaseinstallations.googleapis.com` — Fire OS basic services
+
+**Added 2026-06-15.**
 
 ---
 
