@@ -1,0 +1,106 @@
+# Kids Research Timer — Timed Pi-hole Unrestrict
+
+**Last Updated:** 2026-06-16
+**Status:** Ready to use
+
+---
+
+## Overview
+
+Lifts Pi-hole restrictions on all kids' devices during a research window, then restores them automatically.
+All timers run on the ThinkCentre via `at` or cron — survives Claude session closure.
+
+**ThinkCentre:** `milton@192.168.12.136`
+**Pi-hole DB:** `docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db`
+
+---
+
+## Kids Device Map (Pi-hole Client IDs + Groups)
+
+| Device | IP | Client ID | Group ID | Group Name |
+|--------|----|-----------|----------|------------|
+| Mac Mini | 192.168.12.163 | 1 | 1 | mac-mini |
+| Kids1 laptop | 192.168.12.249 | 2 | 2 | kids1 |
+| Kids2 laptop | 192.168.12.239 | 3 | 3 | kids2 |
+| Patrick's Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
+| Ev's Chromebook | 192.168.12.194 | 8 | 6 | ev-chromebook |
+| Tower of Gondor | 192.168.12.160 | 9 | 7 | tower-of-gondor |
+| YTI Chromebook | 192.168.12.219 | 11 | 7 | tower-of-gondor |
+| Gianna's laptop | 192.168.12.226 | 12 | 8 | gianna-laptop |
+| Eva's laptop | 192.168.12.202 | 13 | 9 | eva-laptop |
+
+---
+
+## One-Shot: Open Now, Close at a Specific Time
+
+### Step 1 — Open all kids' devices now
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id IN (1,2,3,5,8,9,11,12,13);" && docker exec pihole pihole reloaddns'
+```
+
+### Step 2 — Schedule restore at a specific time (e.g. 3pm)
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "echo \"docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \\\"INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (1,1),(2,2),(3,3),(5,4),(8,6),(9,7),(11,7),(12,8),(13,9);\\\" && docker exec pihole pihole reloaddns\" | at 3pm"
+```
+
+---
+
+## Recurring Daily Research Window (Cron)
+
+Add to ThinkCentre crontab to open at 1pm and close at 3pm every day:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 '
+(crontab -l 2>/dev/null; echo "0 13 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"DELETE FROM client_by_group WHERE client_id IN (1,2,3,5,8,9,11,12,13);\" && docker exec pihole pihole reloaddns") | crontab -
+(crontab -l 2>/dev/null; echo "0 15 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (1,1),(2,2),(3,3),(5,4),(8,6),(9,7),(11,7),(12,8),(13,9);\" && docker exec pihole pihole reloaddns") | crontab -
+'
+```
+
+View the crontab to confirm:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'crontab -l'
+```
+
+Remove research window cron entries:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'crontab -l | grep -v "client_by_group.*client_id IN" | crontab -'
+```
+
+---
+
+## Manual Restore (Close Immediately)
+
+If you need to lock everything down right now:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (1,1),(2,2),(3,3),(5,4),(8,6),(9,7),(11,7),(12,8),(13,9);" && docker exec pihole pihole reloaddns'
+```
+
+---
+
+## Single Device Override
+
+To open/close one device only (e.g. just Gianna, client_id 12, group 8):
+
+Open:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 12;" && docker exec pihole pihole reloaddns'
+```
+
+Close (timed via `at`):
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'echo "docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 8);\" && docker exec pihole pihole reloaddns" | at 11pm'
+```
+
+---
+
+## Notes
+
+- Removing a client from all groups = full unrestricted access (no group = no rules applied)
+- Restoring uses `INSERT OR IGNORE` — safe to run even if already in the group
+- `atq` on ThinkCentre shows pending jobs; `atrm <id>` cancels them
+- After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
