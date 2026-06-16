@@ -259,81 +259,111 @@ const char page[] PROGMEM = R"rawliteral(
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MILTONHAUS Weather</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
-    body { font-family: 'Comfortaa', sans-serif; background: #d2c6a5; color: #3b3225; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-    .topbar { flex: 0 0 auto; background: linear-gradient(90deg, #8b5e3c, #6d4a2e); padding: clamp(6px,1.3vh,12px) clamp(12px,2vw,20px); display: flex; justify-content: space-between; align-items: center; }
-    .tb-title { font-weight: 700; font-size: clamp(1rem,2.6vh,1.35rem); letter-spacing: 1px; color: #fff; }
-    .tb-clock { color: #f0e6d2; text-align: right; font-size: clamp(0.9rem,2.2vh,1.15rem); line-height: 1.15; }
+    body {
+      font-family: 'Comfortaa', sans-serif; background: #d2c6a5; color: #3b3225;
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    /* ---- Top bar ---- */
+    .topbar { flex: 0 0 auto; background: linear-gradient(90deg, #8b5e3c, #6d4a2e);
+      padding: clamp(6px,1.3vh,12px) clamp(12px,2vw,20px); display: flex; justify-content: space-between; align-items: center; }
+    .tb-title { font-weight: 700; font-size: clamp(0.95rem,2.4vh,1.25rem); letter-spacing: 1px; color: #fff; }
+    .tb-clock { color: #f0e6d2; text-align: right; font-size: clamp(0.85rem,2vh,1.1rem); line-height: 1.15; }
     .tb-clock .t { font-weight: 700; }
-    .tb-clock .d { font-size: 0.75em; color: #d8c9a8; display: block; }
-    .tb-right { display: flex; align-items: center; gap: clamp(8px,1.4vw,16px); }
-    .fs-btn { background: none; border: 2px solid rgba(255,255,255,0.4); border-radius: 8px; color: #f0e6d2; font-size: clamp(1rem,2.4vh,1.4rem); padding: 4px 8px; cursor: pointer; line-height: 1; }
-    .fs-btn:active { background: rgba(255,255,255,0.15); }
-    .wrap { flex: 1 1 auto; min-height: 0; padding: clamp(6px,1.2vh,14px) clamp(10px,2vw,20px); display: flex; }
-    .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto; display: grid; gap: clamp(6px,1.2vh,12px); grid-template-columns: 5fr 3fr; grid-template-rows: 1fr auto auto; grid-template-areas: "main gauge" "fc wc" "stats wc"; }
+    .tb-clock .d { font-size: 0.72em; color: #d8c9a8; display: block; }
+    .fs-btn { background: rgba(255,255,255,0.15); border: none; color: #f0e6d2; border-radius: 8px; padding: 4px 8px; font-size: 1.2rem; cursor: pointer; margin-left: 12px; line-height: 1; }
+    .fs-btn:active { background: rgba(255,255,255,0.3); }
+    :fullscreen .fs-btn, :-webkit-full-screen .fs-btn { display: none; }
+    /* ---- Layout: fills the viewport, never scrolls ---- */
+    .wrap { flex: 1 1 auto; min-height: 0; padding: clamp(8px,1.6vh,18px) clamp(10px,2vw,20px); display: flex; }
+    .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
+      display: grid; gap: clamp(8px,1.5vh,16px);
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: 1.3fr 1fr 0.72fr;
+      grid-template-areas: "main gauge" "fc fc" "stats stats"; }
     .weather-main { grid-area: main; }
     .gauge-card { grid-area: gauge; }
     .forecast-card { grid-area: fc; }
-    .wc-card { grid-area: wc; }
     .stats { grid-area: stats; }
-    .card { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 14px; padding: clamp(8px,1.4vh,14px) clamp(10px,1.4vw,16px); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-    .section { font-size: clamp(0.7rem,1.6vh,0.88rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    .card { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 16px;
+      padding: clamp(10px,1.8vh,18px) clamp(12px,1.6vw,18px); min-height: 0; overflow: hidden; }
+    .section { font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    /* ---- Weather main card ---- */
     .weather-main { display: flex; flex-direction: column; }
-    .wm-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .hourly-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: clamp(8px,1.4vh,16px) clamp(16px,2.4vw,40px); font-family: inherit; font-size: clamp(0.95rem,2.1vh,1.4rem); font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); white-space: nowrap; }
+    .wm-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: clamp(4px,1vh,12px); }
+    .hourly-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px;
+      padding: clamp(8px,1.4vh,16px) clamp(16px,2.4vw,40px); font-family: inherit; font-size: clamp(0.95rem,2.1vh,1.4rem);
+      font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); white-space: nowrap; }
     .hourly-btn:active { transform: scale(0.96); }
     .wm-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
     .wm-cond-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
-    .wm-icon { font-size: clamp(2.4rem, min(8vh,10vw), 4.5rem); line-height: 1; }
-    .wm-cond { font-size: clamp(1.6rem, min(5vh,7vw), 3rem); font-weight: 700; }
-    .wm-temp { font-size: clamp(4rem, min(20vh,24vw), 10rem); font-weight: 700; line-height: 1; color: #3b3225; margin: clamp(2px,0.5vh,6px) 0; }
+    .wm-icon { font-size: clamp(1.6rem, min(5vh,7vw), 2.8rem); line-height: 1; }
+    .wm-cond { font-size: clamp(1.1rem, min(3.4vh,4.6vw), 1.9rem); font-weight: 700; }
+    .wm-temp { font-size: clamp(2.4rem, min(13vh,17vw), 6.2rem); font-weight: 700; line-height: 1; color: #3b3225; margin: clamp(2px,0.6vh,8px) 0; }
     .wm-temp .u { font-size: 0.3em; color: #7a6f5f; vertical-align: super; }
-    .wm-hl { font-size: clamp(1.2rem, min(3.4vh,4.4vw), 1.8rem); color: #7a6f5f; }
-    .forecast-card .section { margin-bottom: clamp(4px,0.8vh,8px); }
-    .fc-strip { flex: 1; display: flex; gap: clamp(4px,0.6vw,6px); }
-    .fc-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #ddcdb2; border-radius: 10px; padding: clamp(4px,0.8vh,10px) 2px; }
-    .fc-day { font-size: clamp(0.75rem, min(2vh,2.8vw), 1rem); color: #7a6f5f; font-weight: 700; margin-bottom: clamp(1px,0.4vh,4px); }
-    .fc-icon { font-size: clamp(1.2rem, min(3.2vh,4.4vw), 2rem); margin-bottom: clamp(1px,0.4vh,4px); }
-    .fc-hi { font-weight: 700; color: #e81e00; font-size: clamp(0.9rem, min(2.4vh,3.2vw), 1.3rem); }
-    .fc-lo { font-size: clamp(0.8rem, min(2vh,2.8vw), 1.1rem); color: #7a6f5f; }
+    .wm-hl { font-size: clamp(0.85rem, min(2.4vh,3.2vw), 1.25rem); color: #7a6f5f; }
+    /* ---- 6-day forecast ---- */
+    .forecast-card { display: flex; flex-direction: column; }
+    .forecast-card .section { margin-bottom: clamp(4px,1vh,10px); }
+    .fc-strip { flex: 1; display: flex; gap: clamp(4px,0.8vw,8px); }
+    .fc-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #ddcdb2; border-radius: 12px; padding: clamp(4px,1vh,12px) 2px; cursor: pointer; transition: background 0.15s; }
+    .fc-item:hover { background: #cfc0a0; }
+    .fc-item:active { transform: scale(0.96); }
+    .fc-day { font-size: clamp(0.62rem, min(1.7vh,2.4vw), 0.9rem); color: #7a6f5f; font-weight: 700; margin-bottom: clamp(2px,0.6vh,8px); }
+    .fc-icon { font-size: clamp(1.1rem, min(3vh,4.2vw), 1.9rem); margin-bottom: clamp(2px,0.6vh,8px); }
+    .fc-hi { font-weight: 700; color: #e81e00; font-size: clamp(0.78rem, min(2vh,2.8vw), 1.15rem); }
+    .fc-lo { font-size: clamp(0.68rem, min(1.7vh,2.4vw), 0.95rem); color: #7a6f5f; }
+    /* ---- Day detail overlay cards ---- */
+    .day-period { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
+    .dp-name { font-size: clamp(0.75rem,1.8vh,0.95rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 4px; }
+    .dp-temp { font-size: clamp(2rem,5vh,3rem); font-weight: 700; color: #3b3225; margin-bottom: 8px; }
+    .dp-detail { color: #5a5040; font-size: clamp(0.88rem,2vh,1.1rem); line-height: 1.5; margin-bottom: 10px; }
+    .dp-stats { display: flex; gap: clamp(12px,2vw,24px); flex-wrap: wrap; }
+    .dp-stats span { font-size: clamp(0.78rem,1.7vh,0.95rem); color: #7a6f5f; }
+    /* ---- Indoor gauge ---- */
     .gauge-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(4px,1vh,10px); }
-    .gauge-title { align-self: flex-start; }
-    .gauge { position: relative; width: var(--g); height: var(--g); --g: clamp(100px, min(28vh,36vw), 200px); }
-    .gauge-ring { width: 100%; height: 100%; border-radius: 50%; background: conic-gradient(from 225deg, #e8a000 0deg, #e81e00 var(--deg, 0deg), #cdbf9f var(--deg, 0deg), #cdbf9f 270deg, transparent 270deg); -webkit-mask: radial-gradient(transparent 66%, #000 67%); mask: radial-gradient(transparent 66%, #000 67%); }
+    .gauge-title { align-self: flex-start; font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    .gauge { position: relative; width: var(--g); height: var(--g); --g: clamp(96px, min(30vh,40vw), 200px); }
+    .gauge-ring {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: conic-gradient(from 225deg,
+        #e8a000 0deg, #e81e00 var(--deg, 0deg),
+        #cdbf9f var(--deg, 0deg), #cdbf9f 270deg,
+        transparent 270deg);
+      -webkit-mask: radial-gradient(transparent 62%, #000 63%);
+      mask: radial-gradient(transparent 62%, #000 63%); }
     .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .gauge-temp { font-size: clamp(1.8rem, min(8vh,10vw), 3.2rem); font-weight: 700; color: #3b3225; line-height: 1.05; }
+    .gauge-temp { font-size: clamp(1.4rem, min(7vh,9vw), 2.8rem); font-weight: 700; color: #3b3225; line-height: 1.05; }
     .gauge-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
-    .gauge-sub { font-size: clamp(0.9rem, min(2.4vh,3.2vw), 1.2rem); color: #7a6f5f; }
-    .gauge-hum { font-size: clamp(0.9rem, min(2.4vh,3.2vw), 1.2rem); color: #00b35a; }
-    .status { margin-top: clamp(2px,0.6vh,6px); }
-    .pill { display: inline-block; padding: clamp(3px,0.7vh,6px) clamp(10px,1.4vw,16px); border-radius: 20px; font-size: clamp(0.72rem,1.6vh,0.9rem); color: #fff; background: #a0522d; }
+    .gauge-sub { font-size: clamp(0.7rem, min(1.8vh,2.4vw), 0.95rem); color: #7a6f5f; }
+    .gauge-hum { font-size: clamp(0.72rem, min(1.9vh,2.6vw), 1rem); color: #00b35a; }
+    .status { margin-top: clamp(2px,0.8vh,8px); }
+    .pill { display: inline-block; padding: clamp(3px,0.7vh,6px) clamp(10px,1.4vw,16px); border-radius: 20px; font-size: clamp(0.66rem,1.5vh,0.85rem); color: #fff; background: #a0522d; }
     .pill.ok { background: #2e7d5b; }
-    .wc-card { display: flex; flex-direction: column; overflow-y: auto; }
-    .wc-card .section { margin-bottom: clamp(4px,0.8vh,8px); display: flex; justify-content: space-between; align-items: center; }
-    .wc-match { display: flex; align-items: center; justify-content: center; gap: clamp(6px,1vw,12px); background: #ddcdb2; border-radius: 10px; padding: clamp(5px,1vh,10px) clamp(6px,1vw,10px); margin-bottom: clamp(3px,0.6vh,6px); }
-    .wc-team { flex: 1; min-width: 0; font-size: clamp(0.78rem, min(2vh,2.6vw), 1.05rem); font-weight: 700; }
-    .wc-team.left { text-align: right; }
-    .wc-team.right { text-align: left; }
-    .wc-score { font-size: clamp(1.1rem, min(3vh,4vw), 1.6rem); font-weight: 700; color: #3b3225; background: #c4b494; border-radius: 8px; padding: 2px clamp(8px,1.2vw,14px); min-width: 60px; text-align: center; }
-    .wc-score.live { background: #e81e00; color: #fff; }
-    .wc-time { font-size: clamp(0.65rem, min(1.5vh,2vw), 0.82rem); color: #7a6f5f; text-align: center; margin-top: 1px; }
-    .wc-status { font-size: clamp(0.6rem, min(1.3vh,1.8vw), 0.75rem); color: #e81e00; font-weight: 700; text-transform: uppercase; }
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px,1vw,12px); align-items: center; align-content: center; }
+    /* ---- Stats strip ---- */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px,1vw,12px); align-items: center; }
     .stat { text-align: center; }
-    .stat .slabel { font-size: clamp(0.7rem, min(1.8vh,2.4vw), 0.9rem); color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
-    .stat .sval { font-size: clamp(1.1rem, min(3.6vh,4.6vw), 1.9rem); font-weight: 700; margin: clamp(1px,0.3vh,3px) 0; line-height: 1.1; }
-    .stat .sval.time { font-size: clamp(0.95rem, min(2.8vh,3.4vw), 1.4rem); }
-    .stat .sunit { font-size: clamp(0.6rem,1.3vh,0.72rem); color: #7a6f5f; }
+    .stat .slabel { font-size: clamp(0.6rem, min(1.5vh,2.2vw), 0.78rem); color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
+    .stat .sval { font-size: clamp(1rem, min(3.4vh,4.4vw), 1.8rem); font-weight: 700; margin: clamp(1px,0.4vh,4px) 0; line-height: 1.1; }
+    .stat .sval.time { font-size: clamp(0.85rem, min(2.6vh,3.2vw), 1.35rem); }
+    .stat .sunit { font-size: clamp(0.5rem,1.1vh,0.62rem); color: #7a6f5f; }
     .hum { color: #00b35a; } .wind { color: #0090cc; } .sun { color: #e8a000; }
-    .footer { flex: 0 0 auto; text-align: center; padding: clamp(2px,0.6vh,6px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
+    /* ---- Footer ---- */
+    .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
     .footer a { color: #8b5e3c; }
-    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; grid-template-rows: auto; grid-template-areas: "main" "gauge" "wc" "fc" "stats"; } }
+    /* ---- Narrow phones: give the gauge a bit more room ---- */
+    @media (max-width: 460px) {
+      .grid { grid-template-columns: 3fr 2fr; gap: 8px; }
+      .tb-title { letter-spacing: 0; }
+    }
+    /* ---- Hourly overlay (its own scroll) ---- */
     .overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
     .overlay.open { display: block; }
     .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; max-width: 1200px; margin-left: auto; margin-right: auto; }
@@ -347,24 +377,14 @@ const char page[] PROGMEM = R"rawliteral(
     .hourly-row .hr-temp { color: #e81e00; font-weight: 700; }
     .hourly-row .hr-wind { color: #0090cc; font-size: 0.88em; min-width: 70px; text-align: right; }
     .overlay-loading { text-align: center; color: #7a6f5f; padding: 40px; }
-    .wc-all-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: clamp(6px,1.2vh,12px) clamp(12px,2vw,30px); font-family: inherit; font-size: clamp(0.82rem,1.8vh,1.1rem); font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); white-space: nowrap; }
-    .wc-all-btn:active { transform: scale(0.96); }
-    .match-group-title { font-size: clamp(0.85rem,1.8vh,1.05rem); color: #8b5e3c; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: clamp(10px,2vh,18px) 0 clamp(6px,1vh,10px); }
-    .match-row { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px; padding: 12px 16px; margin-bottom: 7px; display: flex; align-items: center; justify-content: center; gap: clamp(8px,1.4vw,16px); }
-    .match-row .mr-team { flex: 1; font-size: clamp(0.9rem,2vh,1.15rem); font-weight: 700; }
-    .match-row .mr-team.left { text-align: right; }
-    .match-row .mr-team.right { text-align: left; }
-    .match-row .mr-score { font-size: clamp(1.2rem,3vh,1.7rem); font-weight: 700; background: #c4b494; border-radius: 8px; padding: 4px clamp(12px,2vw,20px); min-width: 70px; text-align: center; }
-    .match-row .mr-score.live { background: #e81e00; color: #fff; }
-    .match-row .mr-info { font-size: clamp(0.7rem,1.5vh,0.88rem); color: #7a6f5f; text-align: center; min-width: 70px; }
   </style>
 </head>
 <body>
   <div class="topbar">
     <div class="tb-title">&#127968; MILTONHAUS Weather</div>
-    <div class="tb-right">
+    <div style="display:flex;align-items:center;">
       <div class="tb-clock"><span class="t" id="clock">--:--</span><span class="d" id="date">Loading...</span></div>
-      <button class="fs-btn" onclick="toggleFS()" title="Fullscreen">&#x26F6;</button>
+      <button class="fs-btn" id="fsBtn" onclick="goFullscreen()" title="Fullscreen">&#x26F6;</button>
     </div>
   </div>
   <div class="wrap">
@@ -381,7 +401,7 @@ const char page[] PROGMEM = R"rawliteral(
         </div>
       </div>
       <div class="card gauge-card">
-        <div class="gauge-title section">Indoor</div>
+        <div class="gauge-title">Indoor</div>
         <div class="gauge">
           <div class="gauge-ring" id="gaugeRing"></div>
           <div class="gauge-center">
@@ -395,10 +415,6 @@ const char page[] PROGMEM = R"rawliteral(
       <div class="card forecast-card">
         <div class="section">6-Day Forecast</div>
         <div class="fc-strip" id="forecast"></div>
-      </div>
-      <div class="card wc-card">
-        <div class="section">&#9917; World Cup <button class="wc-all-btn" onclick="showAllMatches()">All Matches &raquo;</button></div>
-        <div id="wcMain"><div class="wc-time">Loading scores...</div></div>
       </div>
       <div class="card stats">
         <div class="stat"><div class="slabel">Humidity</div><div class="sval hum"><span id="oHum">--</span></div><div class="sunit">%</div></div>
@@ -416,28 +432,24 @@ const char page[] PROGMEM = R"rawliteral(
     </div>
     <div class="overlay-body" id="hourlyList"><div class="overlay-loading">Loading...</div></div>
   </div>
-  <div class="overlay" id="wcOverlay">
+  <div class="overlay" id="dayOverlay">
     <div class="overlay-header">
-      <h2>&#9917; FIFA World Cup 2026</h2>
-      <button class="close-btn" onclick="closeAllMatches()">Back</button>
+      <h2 id="dayOverlayTitle">Day Detail</h2>
+      <button class="close-btn" onclick="closeDayDetail()">Back</button>
     </div>
-    <div class="overlay-body" id="wcList"><div class="overlay-loading">Loading...</div></div>
+    <div class="overlay-body" id="dayDetail"><div class="overlay-loading">Loading...</div></div>
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});},1000)}());
-    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(0);var fr=Math.max(0,Math.min(1,(d.tempF-40)/50));document.getElementById('gaugeRing').style.setProperty('--deg',(fr*270)+'deg')}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--';document.getElementById('gaugeRing').style.setProperty('--deg','0deg')}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;var parts=d.oDesc.split(' ');document.getElementById('oIcon').innerHTML=parts.shift();document.getElementById('oCond').textContent=parts.join(' ');document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fc=document.getElementById('forecast');var h='';for(var i=0;i<d.forecast.length;i++){var f=d.forecast[i];var ic=f.desc.split(' ')[0];h+='<div class="fc-item"><div class="fc-day">'+f.day+'</div><div class="fc-icon">'+ic+'</div><div class="fc-hi">'+f.hi+'°</div><div class="fc-lo">'+f.lo+'°</div></div>'}fc.innerHTML=h}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
+    void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(0);var fr=Math.max(0,Math.min(1,(d.tempF-40)/50));document.getElementById('gaugeRing').style.setProperty('--deg',(fr*270)+'deg')}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--';document.getElementById('gaugeRing').style.setProperty('--deg','0deg')}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;var parts=d.oDesc.split(' ');document.getElementById('oIcon').innerHTML=parts.shift();document.getElementById('oCond').textContent=parts.join(' ');document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fc=document.getElementById('forecast');var h='';for(var i=0;i<d.forecast.length;i++){var f=d.forecast[i];var ic=f.desc.split(' ')[0];h+='<div class="fc-item" onclick="showDayDetail(\''+f.day+'\')"><div class="fc-day">'+f.day+'</div><div class="fc-icon">'+ic+'</div><div class="fc-hi">'+f.hi+'°</div><div class="fc-lo">'+f.lo+'°</div></div>'}fc.innerHTML=h}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
   function descEmoji(d){d=d.toLowerCase();if(d.indexOf('thunder')>=0)return'⚡';if(d.indexOf('snow')>=0||d.indexOf('blizzard')>=0)return'\u{1F328}️';if(d.indexOf('rain')>=0||d.indexOf('shower')>=0||d.indexOf('drizzle')>=0)return'\u{1F327}️';if(d.indexOf('fog')>=0||d.indexOf('mist')>=0)return'\u{1F32B}️';if(d.indexOf('cloud')>=0||d.indexOf('overcast')>=0)return'⛅';if(d.indexOf('sunny')>=0||d.indexOf('clear')>=0)return'☀️';return'\u{1F324}️';}
   function showHourly(){document.getElementById('hourlyOverlay').className='overlay open';document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast/hourly',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json()}).then(function(d){var p=d.properties.periods;var h='';var count=Math.min(p.length,24);for(var i=0;i<count;i++){var t=new Date(p[i].startTime);var hr=t.getHours();var ampm=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var timeStr=hr+':00 '+ampm;var e=descEmoji(p[i].shortForecast);h+='<div class="hourly-row"><div class="hr-time">'+timeStr+'</div><div class="hr-desc">'+e+' '+p[i].shortForecast+'</div><div class="hr-temp">'+p[i].temperature+'°</div><div class="hr-wind">'+p[i].windSpeed+'</div></div>'}document.getElementById('hourlyList').innerHTML=h}).catch(function(){document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Failed to load hourly forecast</div>'});}
   function closeHourly(){document.getElementById('hourlyOverlay').className='overlay';}
-  var wcData=[];
-  function wcStatus(ev){var s=ev.competitions[0].status.type;if(s.state==='in')return{label:ev.competitions[0].status.displayClock,live:true};if(s.completed)return{label:'Final',live:false};var d=new Date(ev.date);var hr=d.getHours();var ap=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var m=d.getMinutes();return{label:hr+':'+(m<10?'0':'')+m+' '+ap,live:false};}
-  function wcRenderCard(events){var el=document.getElementById('wcMain');if(!events||!events.length){el.innerHTML='<div class="wc-time">No matches today</div>';return;}var h='';var shown=0;for(var i=0;i<events.length&&shown<3;i++){var c=events[i].competitions[0];var home=c.competitors.find(function(t){return t.homeAway==='home';});var away=c.competitors.find(function(t){return t.homeAway==='away';});var st=wcStatus(events[i]);var scoreClass=st.live?'wc-score live':'wc-score';var scoreText=st.live||c.status.type.completed?home.score+' - '+away.score:'vs';h+='<div class="wc-match"><div class="wc-team left">'+away.team.abbreviation+'</div><div class="'+scoreClass+'">'+scoreText+'</div><div class="wc-team right">'+home.team.abbreviation+'</div></div>';if(st.live){h+='<div style="text-align:center"><span class="wc-status">🔴 '+st.label+'</span></div>';}else{h+='<div class="wc-time">'+st.label+'</div>';}shown++;}el.innerHTML=h;}
-  function wcRenderOverlay(events){var el=document.getElementById('wcList');if(!events||!events.length){el.innerHTML='<div class="overlay-loading">No matches found</div>';return;}var groups={};events.forEach(function(ev){var d=new Date(ev.date);var key=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});if(!groups[key])groups[key]=[];groups[key].push(ev);});var h='';var today=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});Object.keys(groups).forEach(function(day){var label=day===today?'Today':day;var hasLive=groups[day].some(function(ev){return ev.competitions[0].status.type.state==='in';});if(hasLive)label='🔴 '+label+' (Live)';h+='<div class="match-group-title">'+label+'</div>';groups[day].forEach(function(ev){var c=ev.competitions[0];var home=c.competitors.find(function(t){return t.homeAway==='home';});var away=c.competitors.find(function(t){return t.homeAway==='away';});var st=wcStatus(ev);var scoreClass=st.live?'mr-score live':'mr-score';var scoreText=st.live||c.status.type.completed?home.score+' - '+away.score:'vs';var infoStyle=st.live?' style="color:#e81e00;font-weight:700;"':'';h+='<div class="match-row"><div class="mr-team left">'+away.team.displayName+'</div><div class="'+scoreClass+'">'+scoreText+'</div><div class="mr-team right">'+home.team.displayName+'</div><div class="mr-info"'+infoStyle+'>'+st.label+'</div></div>';});});el.innerHTML=h;}
-  function fetchWC(){fetch('https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard').then(function(r){return r.json();}).then(function(d){wcData=d.events||[];wcRenderCard(wcData);}).catch(function(){document.getElementById('wcMain').innerHTML='<div class="wc-time">Scores unavailable</div>';});}
-  fetchWC();setInterval(fetchWC,60000);
-  function showAllMatches(){document.getElementById('wcOverlay').className='overlay open';wcRenderOverlay(wcData);}
-  function closeAllMatches(){document.getElementById('wcOverlay').className='overlay';}
-  function toggleFS(){if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(function(){});}else{document.exitFullscreen();}}
+  function showDayDetail(day){document.getElementById('dayOverlay').className='overlay open';document.getElementById('dayOverlayTitle').textContent='Loading...';document.getElementById('dayDetail').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json();}).then(function(d){var periods=d.properties.periods.filter(function(p){return p.name.substring(0,3)===day;});if(!periods.length){document.getElementById('dayDetail').innerHTML='<div class="overlay-loading">No data available</div>';return;}document.getElementById('dayOverlayTitle').textContent=periods[0].name.split(' ')[0]+' Forecast';var h=periods.map(function(p){var precip=(p.probabilityOfPrecipitation&&p.probabilityOfPrecipitation.value!=null)?p.probabilityOfPrecipitation.value+'%':'--';var humidity=(p.relativeHumidity&&p.relativeHumidity.value!=null)?Math.round(p.relativeHumidity.value)+'%':'--';return'<div class="day-period"><div class="dp-name">'+p.name+'</div><div class="dp-temp">'+p.temperature+'\xB0F</div><div class="dp-detail">'+p.detailedForecast+'</div><div class="dp-stats"><span>Wind: '+p.windDirection+' '+p.windSpeed+'</span><span>Precip: '+precip+'</span><span>Humidity: '+humidity+'</span></div></div>';}).join('');document.getElementById('dayDetail').innerHTML=h;}).catch(function(){document.getElementById('dayDetail').innerHTML='<div class="overlay-loading">Failed to load day detail</div>';});}
+  function closeDayDetail(){document.getElementById('dayOverlay').className='overlay';}
+  function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
+  document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
+  document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
   </script>
 </body>
 </html>

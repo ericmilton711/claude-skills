@@ -1,11 +1,42 @@
 # ESP32 Weather Station
 
+> **⚠ CURRENT AS OF 2026-06-16** — World Cup scores REMOVED. Forecast day tiles now tap for detail. See "What Changed 2026-06-16" first if you're picking this up mid-project.
+
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
-**Last Updated:** 2026-06-15
-**DEPLOYED 2026-06-15:** Dashboard v3 — new 5fr/3fr grid layout with World Cup card spanning right column rows 2-3. Bigger fonts (temp 4-10rem, condition 1.6-3rem, gauge 1.8-3.2rem). Gauge ring fixed at 66%/67%. "All Matches" overlay with grouped-by-date display. Fullscreen toggle button. ESPN live API. Compiled 57% flash / 16% RAM. Flashed via OTA. Display: Fire HD 10 in Fully Kiosk Browser (kiosk mode).
-**DEPLOYED 2026-06-14:** FreeRTOS weather task — fetch moved to core 0, web server starts immediately on core 1. Boot time to reachable dashboard: ~3s instead of ~57s. See "FreeRTOS Weather Task 2026-06-14" below.
-**DEPLOYED 2026-06-04:** Dashboard redesigned (Fire HD 10 landscape layout + phone-responsive) and crash fixes flashed to the device via OTA. Verified live (Firefox headless screenshot at 1280×800 against http://192.168.12.240/). 57% flash / 16% RAM. See "Dashboard Redesign 2026-06-04" below.
-**DEPLOYED 2026-06-04 (PM):** Hardware Task Watchdog added — fixes the device going fully unreachable (no ping, LED still lit) and needing a manual power-cycle. Root cause: a hung HTTPS weather fetch froze `loop()`, so the soft heap-watchdog never ran. Now `esp_task_wdt` resets the chip if loop() doesn't pet it for 30s; fed around weather fetch, WiFi reconnect, and OTA upload. Flashed via USB (/dev/ttyUSB0), verified online + /data serving. See "Hardware Watchdog 2026-06-04" below.
+**Last Updated:** 2026-06-16
+
+---
+
+## What Changed 2026-06-16 (DEPLOYED — flash: 57% / RAM: 16%)
+
+**1. World Cup scores strip REMOVED**
+- Removed the entire bottom row from the dashboard grid (`"scores scores"` area gone)
+- Deleted all CSS (`.scores-strip`, `.scores-overlay`, `.sc-*`, `.match-*`)
+- Deleted HTML for the strip card and the full-screen overlay
+- Deleted all JS: `WC_URL`, `parseMTC()`, `fetchTodayScores()`, `showScores()`, `closeScores()`, and the 60s interval
+- Grid is now 3 rows: `"main gauge" / "fc fc" / "stats stats"` — stats row fills the space naturally
+
+**2. Forecast day tiles are now tappable (day detail overlay)**
+- Tap any day tile (Wed, Thu, Fri…) on any device — phone, tablet, desktop
+- Opens a full-screen overlay (same warm earth-tone style as the hourly overlay)
+- Fetches NWS `gridpoints/CTP/128,27/forecast` client-side, filters to periods matching the tapped day (first 3 chars of period name)
+- Shows both daytime and overnight cards for that day, each with:
+  - Period name (e.g. "Wednesday" / "Wednesday Night")
+  - Temperature in big text
+  - Full NWS detailed forecast sentence
+  - Wind direction + speed, precipitation probability, humidity
+- Tap **Back** to return to dashboard
+- Tiles have hover darkening and `scale(0.96)` active feedback
+
+---
+
+## What Changed 2026-06-14 (DEPLOYED)
+
+**FreeRTOS Weather Task** — boot time to reachable dashboard: ~3s instead of ~57s.
+`fetchWeather()` moved to a FreeRTOS task on core 0; web server starts immediately on core 1.
+`WxData` struct + `wxMutex` protect shared weather data. See full details below.
+
+---
 
 ## Hardware
 
@@ -41,136 +72,104 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 
 - **arduino-cli** 1.5.0 at `~/.local/bin/arduino-cli` (Linux) or `%USERPROFILE%\.local\bin\arduino-cli.exe` (Windows)
 - **Board package:** esp32:esp32 3.3.8 (FQBN: `esp32:esp32:esp32`)
-- **Partition scheme:** `min_spiffs` (1.9MB app x2 with OTA, 192KB SPIFFS) — sketch uses 93% of partition
+- **Partition scheme:** `min_spiffs` (1.9MB app x2 with OTA, 192KB SPIFFS)
 - **Libraries:** DHT sensor library, Adafruit Unified Sensor, ArduinoJson 7.4.3, WiFiClientSecure (built-in)
 - **esptool** 5.2.0 via pip
-- **CRITICAL: Do NOT use PlatformIO.** PlatformIO's framework-arduinoespressif32 3.3.7 breaks BLE connectivity. The ESP32 can connect to WiFi but BLE fails silently (connect() returns false, Pi never receives any commands). Only use arduino-cli with esp32:esp32 3.3.8. Learned the hard way 2026-05-05.
+- **CRITICAL: Do NOT use PlatformIO.** Only use arduino-cli with esp32:esp32 3.3.8. PlatformIO 3.3.7 breaks BLE silently.
 
 ## Sketch Location
 
 - Working copy: `~/esp32-weather/esp32-weather.ino`
 - Skills copy: `~/.claude/skills/esp32-weather-station/esp32-weather.ino`
 
-## Features
+## Features (current)
 
 - **Live clock** — Eastern time (America/New_York) via NTP, 12-hour format, no seconds
 - **Current weather** — NWS (api.weather.gov) via HTTPS, station KLNS (Lancaster Airport), grid CTP/128,27
   - Temperature (°F), high/low, conditions with emoji, humidity, wind speed
-  - Uses real observation station data — much more accurate than Open-Meteo's model data
 - **Sunrise/Sunset** — sunrise-sunset.org API via HTTPS, UTC→Eastern conversion, 12-hour AM/PM format
-- **7-day forecast** — NWS forecast periods, day name, conditions with emoji, high/low temps
-- **Hourly forecast** — tap Conditions card to open full-screen overlay with next 24 hours (fetched client-side from NWS)
+- **7-day forecast strip** — NWS forecast periods, day name, conditions with emoji, high/low temps; **tap any tile to open day detail overlay**
+- **Day detail overlay** — tap a forecast tile → full-screen overlay with NWS detailed text, wind, precip %, humidity for that day's periods (NEW 2026-06-16)
+- **Hourly forecast overlay** — tap Conditions card → next 24 hours, fetched client-side from NWS
 - **Indoor sensor** — DHT11 temp (°F and °C) + humidity, wired and reading
-- **~~Homestead Pi via BLE~~** — **REMOVED 2026-05-27.** BLE code stripped from firmware.
-- **FIFA World Cup 2026 live scores** — ESPN free API (`site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard`), client-side fetch every 60 seconds, no API key needed. Shows up to 3 matches in the card, "All Matches" overlay groups by date with live indicators. Added 2026-06-15.
-- **Fullscreen toggle** — button in top bar uses JavaScript Fullscreen API. Works with Fully Kiosk Browser on Fire HD 10.
 - **Web dashboard** — served at `http://192.168.12.240/` on port 80, auto-refreshes every 5 seconds
   - Comfortaa font, warm earth-tone theme (#d2c6a5 background, #8b5e3c accents)
-  - Grid layout: 5fr/3fr columns, areas: main/gauge, fc/wc, stats/wc
-- **OTA firmware updates** — browse to `/update` to upload .bin files wirelessly
+  - Responsive — Fire HD 10 landscape (1280×800) full layout, phone ≤600px adapts
+- **OTA firmware updates** — browse to `/update`
 - **Weather updates** every 10 minutes
+- **~~World Cup scores~~** — REMOVED 2026-06-16
 
-## WiFi Hardening (critical — do not change)
+## Dashboard Layout (current — 3-row grid)
 
-- `WiFi.setSleep(false)` — keeps WiFi radio always active (prevents phantom disconnects)
+```
+┌─────────────────────────────────────┐
+│ 🏠 MILTONHAUS Weather      [clock]  │  ← top bar
+├─────────────────┬───────────────────┤
+│  Weather (2fr)  │  Indoor dial (1fr)│  ← row 1: main + gauge
+├─────────────────┴───────────────────┤
+│       6-Day Forecast (tappable)     │  ← row 2: fc fc
+├─────────────────────────────────────┤
+│  Humidity  Wind  Sunrise  Sunset    │  ← row 3: stats stats
+└─────────────────────────────────────┘
+```
+
+Grid: `grid-template-rows: 1.3fr 1fr 0.72fr` — no 4th row anymore.
+
+**Forecast tiles:** cursor:pointer, hover darkens to #cfc0a0, active scales to 0.96. Click → `showDayDetail(day)`.
+
+**Overlays (full-screen, z-index 100):**
+- Hourly — tap Conditions card, `showHourly()` / `closeHourly()`
+- Day detail — tap any forecast tile, `showDayDetail(day)` / `closeDayDetail()` (NEW)
+
+## WiFi Hardening (do not change)
+
+- `WiFi.setSleep(false)` — keeps WiFi radio always active
 - `WiFi.setTxPower(WIFI_POWER_19_5dBm)` — max transmit power
 - `WiFi.setAutoReconnect(true)` — auto-reconnect on drop
-- **Static IP set AFTER `WiFi.begin()` connects** — ESP32 Arduino Core 3.3.8 bug ignores `WiFi.config()` before `WiFi.begin()`
-- Non-blocking WiFi reconnect: calls `WiFi.disconnect(true)` + `WiFi.begin()` and moves on, checks result on next loop pass (does NOT block in a retry loop)
-- `fetchWeather()` uses HTTPS for NWS and sunrise-sunset.org (`WiFiClientSecure` with `setInsecure()`)
-- NWS API calls have 10-second connect and read timeouts
-- Sunrise-sunset.org has 5-second timeouts
-- Heap is fine with HTTPS now that BLE and OLED are removed (~56% flash, 16% RAM)
+- **Static IP set AFTER `WiFi.begin()` connects** — Core 3.3.8 bug ignores pre-connect `WiFi.config()`
+- Non-blocking WiFi reconnect in `loop()` — calls disconnect+begin and checks on next pass
+- NWS API calls: 10s connect + read timeouts; sunrise-sunset.org: 5s timeouts
 
 ## FreeRTOS Weather Task 2026-06-14 (DEPLOYED)
 
-**Problem:** Boot-to-reachable took ~57 seconds. `setup()` called `fetchWeather()` (3 sequential HTTPS fetches, up to ~40s combined with 8s timeouts each) before `server.begin()`. The web server didn't start accepting connections until all fetches completed.
+**Problem:** Boot-to-reachable took ~57 seconds — `setup()` ran all 3 HTTPS fetches before `server.begin()`.
 
-**Fix:** Moved weather fetching to a FreeRTOS task pinned to core 0. Web server runs on core 1 (the default Arduino loop core) and starts immediately after WiFi+NTP sync (~3s). The fetch task runs in the background and populates data as soon as it completes.
+**Fix:** `weatherTask` pinned to core 0 with 10240-byte stack. Web server starts on core 1 immediately after WiFi+NTP (~3s). Task fetches immediately on boot, then `vTaskDelay(600000ms)` between cycles.
 
-**Key design choices:**
-- `WxData` struct replaced individual weather globals — holds all weather fields
-- `wxMutex` (FreeRTOS mutex) protects `wx` — fetch task builds a local `WxData fresh`, then takes mutex and does `wx = fresh` atomically; `handleData()` takes mutex to safely read `wx`
-- Mutex hold time during swap is ~1-2ms (just String copies), never blocks the web server during HTTPS fetches
-- `weatherTask` runs on core 0 with 10240 byte stack; fetches immediately on boot, then `vTaskDelay(600000ms)` between cycles
-- `esp_task_wdt_reset()` calls removed from `fetchWeather()` — loop() runs freely now and pets the watchdog every pass without competition from fetches
-- Removed `fetchWeather()` call from WiFi reconnect path in `loop()` — weatherTask handles it on next scheduled cycle (up to 10 min stale after reconnect, acceptable)
+**Key design:**
+- `WxData` struct holds all weather fields; replaces individual globals
+- `wxMutex` protects `wx` — fetch task builds local `WxData fresh`, swaps atomically (~1-2ms hold)
+- `handleData()` takes mutex to read safely
+- `esp_task_wdt_reset()` removed from `fetchWeather()` — loop() pets the watchdog freely
+- `fetchWeather()` removed from WiFi reconnect path — weatherTask handles it on next cycle
 
-**Result:** Dashboard reachable in ~3s after power-on, showing `--` weather data briefly while the first fetch completes on core 0. 57% flash / 16% RAM unchanged.
+**Result:** Dashboard reachable in ~3s. Shows `--` briefly while first fetch completes on core 0.
+
+## Hardware Watchdog 2026-06-04 (DEPLOYED)
+
+**Symptom:** ESP32 went completely unreachable (no ping), only manual power-cycle recovered it.
+
+**Root cause:** Soft heap-watchdog in `loop()` never ran when a `WiFiClientSecure` TLS handshake blocked past its timeout — a known ESP32 core bug.
+
+**Fix:** `esp_task_wdt` hardware watchdog (30s). Resets the chip if `loop()` doesn't pet it. Fed at top of `loop()`, and inside the OTA upload callback (uploads take >30s).
+
+## Crash / Reliability Fixes 2026-06-04 (DEPLOYED)
+
+1. **ArduinoJson filters** — `nwsFetch()` passes filters; only ~4-6 needed fields parsed. Prevents heap fragmentation from 50-100KB NWS payloads.
+2. **NWS timeouts** 10s → 8s.
+3. **Heap watchdog reboots** at <10000 bytes free (guarded by `!otaInProgress`).
 
 ## Dashboard Redesign 2026-06-04 (DEPLOYED)
 
-Eric wanted the dashboard to match the **layout** of a Home Assistant wall-tablet photo (NOT the dark theme — he explicitly only wanted the layout). Kept the warm earth-tone palette (Rosemary's gift colors). Target display: **Amazon Fire HD 10** in landscape (1280×800), so the layout is a two-column grid that fills the screen with no scrolling.
+Layout matches a Home Assistant wall-tablet photo (layout only — NOT dark theme). Warm earth-tone palette kept (Rosemary's gift).
 
-**New layout (top → bottom):**
-1. **Top bar** — brown gradient strip with "🏠 MILTONHAUS Weather" title + live clock (replaces old centered h1/clock)
-2. **Weather card (left, 2fr)** — condition icon + text centered on top, **big centered current temp (6em)**, H/L below. A large **orange-gradient "⏱ Hourly »" button** in the card header opens the touch hourly overlay.
-3. **Indoor dial (right, 1fr)** — circular CSS conic-gradient gauge (thermostat-style, repurposed from the HA photo's thermostat). Shows indoor temp °F in center, °C + humidity below. Arc fills proportionally: `--deg = clamp((tempF-40)/50,0,1) * 270deg`. Sensor status pill underneath.
-4. **6-Day Forecast (full width)** — own labeled card, each day a tile (day / icon / hi in red / lo in gray)
-5. **Stats tiles (full width)** — Humidity, Wind, Sunrise, Sunset
+**Preview workflow:** `~/esp32-weather/preview.html` — open with `setsid xdg-open` before flashing. ALWAYS sync preview changes into the sketch before compiling. ALWAYS verify the live page after flashing.
 
-**Buttons:** Hourly + overlay Back button both use an orange gradient (`linear-gradient(135deg,#ff9d2e,#e8590c)`), big (1.5em, 18px padding, rounded pill, shadow). Eric iterated these bigger several times — keep them large.
-
-**Phone responsive (≤600px media query):** Fire HD 10 landscape (~1280×800) is above the breakpoint so it gets the full landscape layout. On phones the layout adapts: Hourly button goes full-width below the location label, temp scales 6em→4em, 6-day forecast becomes a 3-across grid (two rows), stats go 2-across, gauge shrinks to 180px. Eric tested on his phone (Galaxy S23) and confirmed.
-
-**Preview workflow:** `~/esp32-weather/preview.html` is a standalone static mockup (sample data, functional hourly overlay) opened with `setsid xdg-open` so Eric can review the look in a browser BEFORE flashing. Skills copy: `preview.html` in this dir. Always preview design changes this way before OTA — Eric reviews visually.
-
-**Verify at a specific device size (Fire HD 10, phone, etc.):** use Firefox headless to screenshot at an exact resolution, then Read the PNG. Firefox is at `/usr/bin/firefox` (no chromium installed). Must use a separate profile or it conflicts with a running instance:
+**Firefox headless screenshot** (close Firefox first — headless fails with Wayland instance running):
 ```bash
 firefox --headless --new-instance --profile /tmp/ffprof --window-size=1280,800 \
   --screenshot /tmp/shot.png "http://192.168.12.240/"
 ```
-Works against the live device URL (shows real data) or a local `file://` preview. Clock will show "Loading..." in headless grabs (JS clock hasn't ticked) — harmless.
-
-**CSS notes:** grid `2fr 1fr` at min-width 760px; gauge uses `conic-gradient(from 225deg, ...)` masked with `radial-gradient(transparent 62%, #000 63%)` to make a ring; gap at bottom (270° arc).
-
-**IMPORTANT lesson learned:** the redesign was iterated on `preview.html` for several rounds (big orange buttons, separate forecast card, centered 6em temp) but those changes were NOT mirrored back into `esp32-weather.ino` — so the first OTA flash shipped a stale draft. ALWAYS sync preview changes into the sketch before compiling/flashing, and verify the live page after flashing (grep for new markers or screenshot it).
-
-## Hardware Watchdog 2026-06-04 (DEPLOYED)
-
-**Symptom:** ESP32 periodically went *completely* unreachable — no ping response at all, onboard LED still lit — and only a manual USB power-cycle brought it back. The daily 2 AM reboot and the soft heap-watchdog did NOT recover it.
-
-**Root cause:** The soft heap-watchdog (`ESP.getFreeHeap() < 10000` → restart) lives inside `loop()`. When the hang is *inside* a blocking call in `loop()` — almost certainly a `WiFiClientSecure` TLS handshake in one of the three HTTPS weather fetches that never returns despite the 8s `setTimeout`/`setConnectTimeout` (a known ESP32 core issue where the handshake blocks past the set timeout) — `loop()` never returns, so the soft check never runs. Nothing reboots it. Frozen until power-cycled.
-
-**Fix:** Hardware Task Watchdog Timer (`esp_task_wdt`), which resets the chip independent of `loop()` running:
-1. `#include "esp_task_wdt.h"`, `#define WDT_TIMEOUT_S 30`.
-2. In `setup()` after `server.begin()`: init `esp_task_wdt_config_t` (timeout_ms = 30000, trigger_panic = true), `esp_task_wdt_init()` — falling back to `esp_task_wdt_reconfigure()` on `ESP_ERR_INVALID_STATE` since the core may have already inited the TWDT for idle tasks — then `esp_task_wdt_add(NULL)` to watch the loop task.
-3. `esp_task_wdt_reset()` at the top of `loop()` every pass.
-4. Fed at strategic blocking points so normal slow round-trips don't false-trip the 30s timer: between each of the 3 fetches in `fetchWeather()`, inside the blocking WiFi-reconnect `while` loop, and in the OTA `UPLOAD_FILE_WRITE` callback (a ~1.1MB upload runs >30s inside that callback).
-
-If loop() now hangs for any reason, the chip resets within 30s and auto-reconnects to WiFi. Soft heap-watchdog kept as a secondary backstop. Flashed via USB (more reliable than OTA when the board is on the cable); verified back online (ping + /data serving real data).
-
-**Note on headless screenshots:** Firefox `--headless --screenshot` FAILS once a normal Firefox instance is already running on Wayland (`RenderCompositorSWGL failed mapping default framebuffer`). Close Firefox first, or grab the preview before opening any browser. No chromium/xvfb installed on this laptop.
-
-## Crash / Reliability Fixes 2026-06-04 (DEPLOYED)
-
-Eric reported the ESP32 periodically becoming unreachable (page won't load on any device) until manual restart. Root cause: heap exhaustion — `fetchCurrentObs`/`fetchForecast` parsed the **entire** NWS JSON (50–100KB) into a JsonDocument on top of the payload String, fragmenting/exhausting heap over time. Fixes applied to the sketch:
-
-1. **ArduinoJson filters** — `nwsFetch()` now takes an optional `JsonDocument* filter`; `fetchCurrentObs` and `fetchForecast` pass filters so only the ~4–6 fields actually used get parsed. Keeps the JsonDocument tiny. (Kept `getString()` because it correctly de-chunks NWS's chunked transfer encoding — raw `getStream()` would break on chunk markers.)
-2. **NWS timeouts** 10s → 8s (connect + read).
-3. **Heap watchdog now reboots** — was only logging at <8192 bytes; now `ESP.restart()` at <10000 bytes (guarded by `!otaInProgress`), so it self-recovers before a fragmented alloc hard-crashes the web server.
-
-Still single-threaded (fetch in `loop()`). If the ~once-per-10-min fetch stall is still noticeable after this, next step is moving the fetch to a background FreeRTOS task on core 0 with a mutex around the shared weather Strings.
-
-## BLE Connection — SCRAPPED 2026-05-24
-
-Pi-to-ESP32 BLE communication has been permanently scrapped. The ESP32 was moved to the basement for seed starting, and the Pi cannot reach it via WiFi or Bluetooth.
-
-The BLE code is still compiled into the firmware but will perpetually show "Not in Range" on the dashboard. If the firmware is ever updated, the BLE task and related code can be removed to free up resources.
-
-<details>
-<summary>Historical BLE details (for reference only)</summary>
-
-- **Pi BLE MAC:** `b8:27:eb:ea:98:e1`
-- **Service UUID:** `12345678-1234-5678-1234-56789abcdef0`
-- **Command characteristic:** `...def1` (write "status")
-- **Response characteristic:** `...def2` (read parsed result)
-- **Poll interval:** 30 seconds
-- **BLE task ran on core 0, web server on core 1 (FreeRTOS dual-core)**
-- **piConn** used `lastSuccessfulBleMillis` (true if BLE response within 90s)
-- Pi side had a BLE watchdog (`ble-watchdog.timer`) and startup flags fix
-
-</details>
 
 ## WiFi
 
@@ -179,41 +178,31 @@ The BLE code is still compiled into the firmware but will perpetually show "Not 
 
 ## Remote Access (Tailscale)
 
-- **Remote URL:** `http://100.70.179.60:8240` (from phone or any Tailscale device)
-- **Local URL:** `http://192.168.12.240` (on DIEMILTONHAUS WiFi)
-- **How:** Tailscale on ThinkCentre (100.70.179.60) + reverse proxy (`weather-proxy.service`) forwarding port 8240 to ESP32 port 80
-- **Tailscale account:** ericmilton711@gmail.com
-- **Phone:** Galaxy S23 with Tailscale app, IP 100.111.139.83
+- **Remote URL:** `http://100.70.179.60:8240`
+- **Local URL:** `http://192.168.12.240`
+- **How:** Tailscale on ThinkCentre (100.70.179.60) + `weather-proxy.service` forwarding port 8240 → ESP32:80
+- **Phone:** Galaxy S23 with Tailscale, IP 100.111.139.83
 - **Why not WireGuard:** T-Mobile CGNAT blocks inbound connections
 
 ## Flashing
 
-### Via OTA (preferred — wireless)
+### Via OTA (preferred)
 
-Browse to `http://192.168.12.240/update`, upload the compiled `.bin` file. The ESP32 reboots automatically after upload.
-
-To get the `.bin` file:
 ```bash
-arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
+arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --output-dir /tmp/esp32-build ~/esp32-weather
+curl --max-time 90 --form "update=@/tmp/esp32-build/esp32-weather.ino.bin;type=application/octet-stream" http://192.168.12.240/update
 ```
-The `.bin` is at `~/.arduino/sketches/<hash>/esp32-weather.ino.bin` (or use `--output-dir` flag).
 
-### Via USB
+### Via USB (when board is physically connected)
 
 ```bash
 arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
-arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port COM15 ~/esp32-weather
+arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /dev/ttyUSB0 ~/esp32-weather
 ```
 
-**IMPORTANT:** Must use `PartitionScheme=min_spiffs` — the sketch is 93% of the 1.9MB partition.
+If upload fails: hold BOOT, press+release EN/RST, release BOOT, upload within a few seconds.
 
-This board does NOT always auto-enter bootloader. If upload fails:
-1. Hold **BOOT** button
-2. While holding BOOT, press and release **EN/RST** button
-3. Release BOOT after ~1 second
-4. Upload within a few seconds
-
-**NEVER use `esptool erase_flash`** — it wipes NVS, causes boot loops, and loses network state. Just compile and re-upload.
+**NEVER use `esptool erase_flash`** — wipes NVS, causes boot loops, loses network state.
 
 ## JSON API
 
@@ -224,64 +213,46 @@ This board does NOT always auto-enter bootloader. If upload fails:
   "oTemp": "72.4", "oHigh": "74", "oLow": "47",
   "oHum": "51", "oWind": "9.0", "oDesc": "&#9728;&#65039; Clear",
   "sunrise": "5:54 AM", "sunset": "8:08 PM",
-  "fc": [
-    {"d": "Mon", "c": "&#9925; Partly Cloudy", "h": "64", "l": "46"},
-    {"d": "Tue", "c": "&#9925; Partly Cloudy", "h": "61", "l": "40"},
-    {"d": "Wed", "c": "&#127783; Rain Showers", "h": "66", "l": "45"},
-    {"d": "Thu", "c": "&#127783; Rain Showers", "h": "56", "l": "45"},
-    {"d": "Fri", "c": "&#9925; Partly Cloudy", "h": "64", "l": "46"},
-    {"d": "Sat", "c": "&#9925; Partly Cloudy", "h": "77", "l": "51"},
-    {"d": "Sun", "c": "&#9925; Partly Cloudy", "h": "83", "l": "60"}
-  ],
-  "piConn": true, "piLed": "OFF", "piWater": "OFF",
-  "piTemp": "32.7'C", "piUp": "up 6 hours, 19 minutes",
-  "bleMiss": 0
+  "forecast": [
+    {"day": "Wed", "desc": "&#127783;&#65039; Chance Rain Showers", "hi": "82", "lo": "64"},
+    {"day": "Thu", "desc": "&#9889; Chance Showers And Thunderstorms", "hi": "90", "lo": "65"}
+  ]
 }
 ```
-
-## Pi BLE Service Fix (2026-05-01) — OBSOLETE
-
-Historical: The Pi's `ble-homestead.py` adapter selection fix. No longer relevant since Pi-ESP32 BLE is scrapped.
+Note: array key is `forecast`, item keys are `day`/`desc`/`hi`/`lo` (not `fc`/`d`/`c`/`h`/`l`).
 
 ## Build Notes
 
-- Raw string literals in Arduino: avoid `function`, `!`, or other C++ keywords at column 1 inside `R"rawliteral(...)rawliteral"` — the compiler parses them as C++.
-- HTML pages use `const char page[] PROGMEM` (not `const char*`) to store in flash. Serving uses chunked `sendContent()` in 1KB chunks.
-- BLE library (v3.3.8) uses Arduino `String` type, not `std::string`.
-- User must be in `dialout` group for serial access (`/dev/ttyUSB0`).
-- String literal concatenation in Arduino: `"foo" + "bar"` fails (both are `const char[]`). Use `String("foo") + "bar"` or break into separate `json +=` statements.
+- Raw string literals in Arduino: avoid `function`, `!`, or other C++ keywords at column 1 inside `R"rawliteral(...)"`.
+- HTML pages use `const char page[] PROGMEM`. Served in 1KB chunks via `sendContent()`.
+- String literal concatenation: `"foo" + "bar"` fails. Use `String("foo") + "bar"` or `+=`.
+- User must be in `dialout` group for `/dev/ttyUSB0` access.
 
 ## TODO
 
 - [x] Wire DHT11 sensor (2026-05-09)
 - [x] Set static IP — hardcoded 192.168.12.240 (2026-04-30)
 - [x] Fix WiFi stability — setSleep(false), max TX power, post-connect config (2026-05-01)
-- [x] Fix BLE crash loop — timeout, backoff, client cleanup (2026-05-01)
-- [x] Fix Pi BLE adapter selection — hci1 over hci0 (2026-05-01)
-- [x] BLE resilience — read retry, lower backoff cap, /ble-reset endpoint, bleMiss debug field (2026-05-01)
-- [x] Fix piConn display bug — time-based check + JS shows data when available (2026-05-05)
-- [x] Switch to min_spiffs partition — enables OTA wireless updates (2026-05-10)
-- [x] Fix web server blocking — HTTP timeouts on fetchWeather(), non-blocking WiFi reconnect (2026-05-10)
-- [x] Fix Pi BLE advertising flag — added btmgmt advertising on to ble-homestead.py startup (2026-05-10)
-- [x] 7-day forecast — expanded from 2-day, dynamic JS rendering (2026-05-10)
-- [x] Compact grid layout — 2-column CSS grid, no scrolling on phone (2026-05-10)
-- [x] Horizontal 7-day forecast — 7-column grid instead of stacked rows, tighter spacing (2026-05-11)
-- [x] Weather API switched to HTTP — saves heap, avoids SSL issues on ESP32 (2026-05-11)
-- [x] DHT11 ground wire reconnected — was unplugged, causing "No Sensor" (2026-05-11)
-- [x] Remote access via Tailscale — proxy on ThinkCentre, phone accesses http://100.70.179.60:8240 (2026-05-11)
-- [x] Switched from Open-Meteo to NWS (api.weather.gov) — real station observations, much more accurate conditions (2026-05-27)
-- [x] Sunrise/sunset via sunrise-sunset.org API with UTC→Eastern conversion (2026-05-27)
-- [x] Hourly forecast overlay — tap Conditions card, fetched client-side from NWS (2026-05-27)
-- [x] BLE code removed — dashboard simplification (2026-05-27)
+- [x] Switch to min_spiffs partition — enables OTA (2026-05-10)
+- [x] 7-day forecast (2026-05-10)
+- [x] Remote access via Tailscale (2026-05-11)
+- [x] Switched to NWS (api.weather.gov) — real station observations (2026-05-27)
+- [x] Sunrise/sunset via sunrise-sunset.org (2026-05-27)
+- [x] Hourly forecast overlay (2026-05-27)
+- [x] BLE code removed (2026-05-27)
+- [x] Crash/reliability fixes — ArduinoJson filters, heap watchdog (2026-06-04)
+- [x] Hardware Task Watchdog (2026-06-04)
+- [x] Dashboard redesign — Fire HD 10 landscape layout (2026-06-04)
+- [x] FreeRTOS weather task — 3s boot time (2026-06-14)
+- [x] World Cup scores REMOVED (2026-06-16)
+- [x] Forecast day tiles → tap for day detail overlay (2026-06-16)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
 - [ ] ESP32 needs heatsink + fan + case (runs warm with WiFi)
-- [ ] **Yard camera** — ESP32-CAM pointed at yard/garden/chicken coop, embed live stream in dashboard
-- [ ] **Outdoor sensor** — second ESP32 with DHT11/DHT22 outside, sends readings to dashboard via HTTP or BLE
-- [ ] **Soil moisture** — garden moisture sensor on Homestead Pi, display on dashboard (see `project_garden_moisture_sensor.md`)
-- [ ] Strip out BLE code from firmware (free up resources now that Pi connection is scrapped)
+- [ ] **Yard camera** — ESP32-CAM pointed at yard/garden/chicken coop
+- [ ] **Outdoor sensor** — second ESP32 with DHT11/DHT22 outside, sends readings via HTTP
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-05-27*
+*Created: 2026-04-26 | Updated: 2026-06-16*
