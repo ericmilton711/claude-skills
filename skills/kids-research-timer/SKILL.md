@@ -98,6 +98,31 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
 
 ---
 
+## How the Commands Work
+
+Each command has two parts:
+
+### Part 1 — SSH connection (connects to ThinkCentre)
+```
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136
+```
+- `ssh` — remote login command
+- `-i ~/.ssh/id_ed25519` — uses your SSH key (no password needed)
+- `-o StrictHostKeyChecking=no` — skips the "are you sure?" prompt
+- `milton@192.168.12.136` — logs in as user `milton` on the ThinkCentre
+
+### Part 2 — Pi-hole command (runs on ThinkCentre after connecting)
+
+This is the quoted portion after the SSH line. It talks to the Pi-hole database inside Docker to add or remove group restrictions on the kids' devices, then reloads DNS so the change takes effect.
+
+- **Opening** (DELETE) — removes devices from their restricted groups, giving full internet access
+- **Closing** (INSERT OR IGNORE) — puts devices back into their restricted groups, restoring blocks
+- **Timed close** (`| at 3pm`) — schedules the restore command to run later so you don't have to remember
+
+The SSH part is the delivery truck, the quoted part is the package.
+
+---
+
 ## Notes
 
 - Removing a client from all groups = full unrestricted access (no group = no rules applied)
