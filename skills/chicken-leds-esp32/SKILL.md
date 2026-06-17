@@ -1,14 +1,14 @@
 # Chicken LEDs — ESP32-S3 Controller
 
-**Last Updated:** 2026-06-16
-**Status:** ✅ Firmware flashed and running. Physical wiring pending (fuse short to resolve).
+**Last Updated:** 2026-06-17
+**Status:** ✅ Firmware flashed and running. Physical wiring pending (fuse short to resolve). New relay on order.
 
 ---
 
 ## Overview
 
 ESP32-S3 replaces the dead Homestead Pi for controlling the UV/Blue chicken bug lights.
-Controls SSR-41FDD #1 via GPIO 16. Manages its own NTP-based schedule autonomously.
+Controls MY2NJ ice cube relay via GPIO 16 through a 2N2222 transistor driver. Manages its own NTP-based schedule autonomously.
 ThinkCentre can override via HTTP at any time.
 
 ---
@@ -20,13 +20,36 @@ ThinkCentre can override via HTTP at any time.
 | Controller | ESP32-S3 (spare from inventory) |
 | IP | 192.168.12.241 (static) |
 | MAC | 30:ed:a0:bb:45:a4 |
-| Control pin | GPIO 16 → SSR-41FDD #1 IN+ |
-| SSR | SSR-41FDD #1 (3–32VDC input, 6A 60VDC output) |
+| Control pin | GPIO 16 → 2N2222 transistor → MY2NJ relay coil |
+| Relay | MY2NJ DPDT 12VDC coil, 5A contacts, with socket base (MECCANIXITY 6-pack) |
+| Transistor | 2N2222 NPN — drives 12V relay coil from 3.3V ESP32 GPIO |
+| Flyback diode | 1N4148 across relay coil terminals |
+| Gate resistor | 1kΩ between GPIO 16 and transistor base |
 | LEDs | 5× UV 365nm (CHANZON 3W) + 5× Blue 460nm (1W), parallel at 9.5V |
 | LED power | DROK 5A buck: 12V → 9.5V |
 | ESP32 power | D-Planet 5A buck: 12V → 5V → ESP32-S3 VIN |
 | Battery | DieHard Marine 24M 12V |
 | Fuse | 3A inline on battery (+) |
+| SSR-41FDD #1 | Replaced by MY2NJ — set aside as spare |
+
+---
+
+## Parts List
+
+| Item | Status |
+|------|--------|
+| MY2NJ 12VDC relay + socket (MECCANIXITY 6-pack) | Ordered |
+| 2N2222 NPN transistor (BOJACK 200-pack) | Ordered |
+| 1N4148 diode | On hand |
+| 1kΩ resistor | On hand |
+| ESP32-S3 | On hand / installed |
+| DROK 5A buck converter | On hand / installed |
+| D-Planet 5A buck converter | On hand / installed |
+| DieHard Marine 12V battery | On hand / installed |
+| 3A inline fuse | On hand |
+| 5× CHANZON UV 365nm 3W LEDs | On hand / installed |
+| 5× Blue 460nm 1W LEDs | On hand / installed |
+| Hookup wire | On hand |
 
 ---
 
@@ -58,21 +81,26 @@ ThinkCentre can override via HTTP at any time.
 | D-Planet buck OUT+ (5V) | ESP32-S3 VIN |
 | D-Planet buck OUT− | ESP32-S3 GND |
 
-### 3 — SSR Control (low-voltage side)
+### 3 — Relay Driver Circuit (2N2222 transistor)
 | From | To |
 |------|----|
-| ESP32-S3 GPIO 16 | SSR-41FDD #1 IN+ |
-| ESP32-S3 GND | SSR-41FDD #1 IN− |
+| ESP32-S3 GPIO 16 | 1kΩ resistor (one end) |
+| 1kΩ resistor (other end) | 2N2222 Base |
+| 12V (from battery/fuse) | MY2NJ coil (+) |
+| MY2NJ coil (−) | 2N2222 Collector |
+| 2N2222 Emitter | GND |
+| 1N4148 anode | MY2NJ coil (−) |
+| 1N4148 cathode | MY2NJ coil (+) |
 
-### 4 — LED Circuit (high-voltage side)
+### 4 — LED Circuit (through relay contacts)
 | From | To |
 |------|----|
-| DROK buck OUT+ (9.5V) | SSR-41FDD #1 OUT+ |
-| SSR-41FDD #1 OUT− | LEDs (+) |
+| DROK buck OUT+ (9.5V) | MY2NJ NO contact (line in) |
+| MY2NJ COM contact (line out) | LEDs (+) |
 | LEDs (−) | DROK buck OUT− |
 
 ### 5 — Common Ground (all share one point)
-Battery (−), D-Planet IN−, DROK IN−, D-Planet OUT−, DROK OUT−, ESP32-S3 GND
+Battery (−), D-Planet IN−, DROK IN−, D-Planet OUT−, DROK OUT−, ESP32-S3 GND, 2N2222 Emitter
 
 ---
 
