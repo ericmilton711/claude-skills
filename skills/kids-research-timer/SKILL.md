@@ -130,3 +130,4 @@ The SSH part is the delivery truck, the quoted part is the package.
 - `atq` on ThinkCentre shows pending jobs; `atrm <id>` cancels them
 - After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
 - **YTI Chromebook** is client 5 at .221. Old drift entries (.219, .220) exist in Pi-hole but are inactive
+- **YTI daily research window:** 7pm-8pm every day via cron on ThinkCentre (added 2026-06-17)
