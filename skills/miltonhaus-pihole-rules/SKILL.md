@@ -86,7 +86,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 5 | ev-chromebook | Ev's Chromebook |
 | 6 | ev-temp-unrestricted | Ev's Chromebook - temp full access |
 | 7 | tower-of-gondor | Tower of Gondor (ThinkCentre M900) — DEFAULT-ALLOW with specific blocks |
-| 8 | gianna-laptop | Gianna's Fedora laptop |
+| 8 | gianna-laptop | Gianna's Fedora laptop — unrestricted as of 2026-06-16 (deny rules removed) |
 | 9 | eva-laptop | Eva's Windows laptop (.202) — default-deny; Gmail allowed, Chat/Search/YouTube blocked |
 | 10 | fire-tablet | Fire HD 10 (.172) — default-deny; weather dashboard display (Fully Kiosk Browser) |
 

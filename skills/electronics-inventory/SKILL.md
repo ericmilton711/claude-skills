@@ -65,7 +65,7 @@ Central inventory of all electronic components Eric has in the house — install
 | ESP32 #1 | | installed | Closet LED lighting project |
 | ESP-WROOM-32 #1 | Hosyond, CP210x, WiFi+BT, dual core 2.4GHz | installed | Weather station at .240 (MAC: a4:f0:0f:74:11:74) |
 | ESP-WROOM-32 #2 | Hosyond, CP210x, WiFi+BT, dual core 2.4GHz | spare | Weather station spare (MAC: a4:f0:0f:76:70:0c) |
-| ESP32-S3 | | spare | |
+| ESP32-S3 | | installed | Chicken LED controller at 192.168.12.241 — GPIO 16 → SSR-41FDD #1, NTP schedule 6pm-11pm, HTTP control |
 | ESP32-CAM + ESP32-CAM-MB | ESP-32S chip, camera connector, microSD slot, WiFi+BT, CH340 | spare | Pan-tilt camera project loaded (joystick+servos); includes USB programmer base board |
 | Arduino Nano ×2 | | spare | |
 | Arduino Uno | | spare | |
