@@ -1,94 +1,86 @@
-# Server-Side LED Shutoff Timer
+# Server-Side LED Timer — Chicken Lights
 
 **Last Updated:** 2026-06-16
-**Status:** SSH key setup required before use (see Setup section)
+**Status:** ✅ Live — ESP32-S3 at 192.168.12.241
 
 ---
 
 ## Overview
 
-Schedule the barn LEDs to shut off at a specific time using `at` on the ThinkCentre.
-ThinkCentre SSHes to the Pi and runs `homestead.py leds-off`.
-Survives Claude session closure — runs on the server regardless.
+The chicken LEDs are controlled by an ESP32-S3 directly — no Pi required.
+The ESP32 syncs time via NTP and manages its own schedule autonomously.
+The ThinkCentre can override it anytime via `curl`.
 
-**LED command on Pi:** `python3 /home/eric/homestead.py leds-off`
-**Pi SSH:** `eric@192.168.12.114` (requires `-tt` flag)
+**Hardware:** ESP32-S3 → GPIO 16 → SSR-41FDD #1 → LEDs (5× UV + 5× Blue at 9.5V)
+**Firmware:** `~/Documents/chicken-leds-esp32/chicken-leds-esp32.ino`
+**Pi-hole:** client_id 15, no group (full DNS access)
+**Pi-hole MAC:** 30:ed:a0:bb:45:a4
 
 ---
 
-## One-Shot Timer (Tonight)
+## Schedule
+
+| Time | State |
+|------|-------|
+| 12:00am | OFF |
+| 5:00am | ON |
+| 8:00am | OFF |
+| 6:00pm | ON |
+| (repeat) | |
+
+---
+
+## HTTP Control (from anywhere on MILTONHAUS)
+
+```bash
+curl http://192.168.12.241/leds-on
+curl http://192.168.12.241/leds-off
+curl http://192.168.12.241/status
+```
+
+---
+
+## ThinkCentre One-Shot Override (at a specific time)
 
 ```bash
 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
-  'echo "ssh -i /home/milton/.ssh/id_ed25519 -o StrictHostKeyChecking=no -tt eric@192.168.12.114 python3 /home/eric/homestead.py leds-off" | at 11pm'
+  'echo "curl -s http://192.168.12.241/leds-off" | at 11pm'
 ```
 
-Check it was scheduled:
+Check scheduled jobs:
 ```bash
 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'atq'
 ```
 
-Cancel a scheduled job (replace `<JOB_ID>` with number from atq):
+Cancel a job (replace `<ID>`):
 ```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'atrm <JOB_ID>'
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'atrm <ID>'
 ```
 
 ---
 
-## Recurring Cron (Every Night)
+## Reflashing the Firmware
 
-Add a cron entry on the ThinkCentre to shut off LEDs every night at 11pm:
+ESP32-S3 must be plugged in via USB (`/dev/ttyACM0`):
+
 ```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
-  '(crontab -l 2>/dev/null; echo "0 23 * * * ssh -i /home/milton/.ssh/id_ed25519 -o StrictHostKeyChecking=no -tt eric@192.168.12.114 python3 /home/eric/homestead.py leds-off") | crontab -'
+/home/ericmilton/.local/bin/arduino-cli compile --upload \
+  -b esp32:esp32:esp32s3 \
+  -p /dev/ttyACM0 \
+  /home/ericmilton/Documents/chicken-leds-esp32/
 ```
 
-View the ThinkCentre crontab:
-```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'crontab -l'
-```
-
-Remove the LED cron entry:
-```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
-  'crontab -l | grep -v "homestead.py leds-off" | crontab -'
-```
-
----
-
-## Setup — ThinkCentre SSH Key to Pi
-
-This must be done once before the timer works.
-
-### Step 1 — Generate a key on the ThinkCentre (if none exists)
-```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
-  'ls ~/.ssh/id_ed25519 2>/dev/null || ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519'
-```
-
-### Step 2 — Get the ThinkCentre's public key
-```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'cat ~/.ssh/id_ed25519.pub'
-```
-
-### Step 3 — Add it to the Pi's authorized_keys
-```bash
-PUBKEY=$(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'cat ~/.ssh/id_ed25519.pub')
-ssh -i ~/.ssh/id_ed25519 -tt -o StrictHostKeyChecking=no eric@192.168.12.114 \
-  "mkdir -p ~/.ssh && echo '$PUBKEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
-```
-
-### Step 4 — Test it
-```bash
-ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
-  'ssh -i /home/milton/.ssh/id_ed25519 -o StrictHostKeyChecking=no -tt eric@192.168.12.114 echo "SSH from ThinkCentre to Pi works"'
+To change the schedule, edit `applySchedule()` in the `.ino` file:
+```cpp
+// Current schedule: ON 5am-8am, ON 6pm-midnight
+bool shouldBeOn = (h >= 5 && h < 8) || (h >= 18);
 ```
 
 ---
 
 ## Notes
 
-- Pi requires `-tt` flag (forced TTY) or SSH commands hang silently
-- The Pi already has a Pi-side cron (`0 23 * * *`) for leds-off — the ThinkCentre timer is an *additional* or *replacement* option. Don't double-schedule without removing one.
-- `atq` lists pending jobs; `atrm <id>` cancels them
-- All `at` jobs run as the `milton` user on the ThinkCentre
+- Boot-state restore: if the ESP32 reboots mid-schedule, it checks the time and restores the correct LED state immediately
+- `getLocalTime()` blocks up to 5s per call — after a reset, allow ~15s for NTP sync before the web server comes up
+- If the ESP32 loses WiFi, it reconnects automatically in `loop()`
+- Pi-hole group 0 block-all (`.*`) applies to unregistered devices — the ESP32 is registered as client_id 15 with no group to bypass this
