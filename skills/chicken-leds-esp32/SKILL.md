@@ -170,11 +170,26 @@ bool shouldBeOn = (h >= 5 && h < 8) || (h >= 18);
 
 ## Troubleshooting
 
-**Fuse pops immediately on connection** — dead short somewhere. Disconnect everything, reconnect one section at a time starting with just the two buck converters on the battery.
+### Fuse Pops — Short Isolation Procedure
 
-**Web server not responding after reset** — check Pi-hole. If the ESP32 was removed and re-added to Pi-hole, it gets auto-assigned to group 0 (block-all). Delete the client_by_group entry (see Pi-hole section above).
+Disconnect everything from the battery. Reconnect one section at a time with the 3A fuse in place. If the fuse pops at any step, that section has the short. Use a multimeter on continuity between positive and negative of each section before connecting it.
 
-**LEDs on when they shouldn't be / off when they should be on** — check NTP sync via `/status`. If not synced, DNS may be blocked again.
+| Step | Connect | Fuse pops = |
+|------|---------|-------------|
+| 1 | Battery + fuse only, nothing on output | Fuse holder or wiring itself is shorted |
+| 2 | D-Planet buck IN+ to fuse, IN- to battery neg (nothing on output) | Bad D-Planet buck converter |
+| 3 | DROK buck IN+ to fuse, IN- to battery neg (nothing on output) | Bad DROK buck converter |
+| 4 | D-Planet output to ESP32 VIN and GND | ESP32 pulling too much or wiring short on that run |
+| 5 | Relay driver: GPIO 16 wiring, 1kΩ resistor, 2N2222, MY2NJ coil between 12V and collector | Short in relay coil circuit (check 1N4148 diode polarity, coil wires not reversed or touching) |
+| 6 | LEDs: DROK output through relay NO/COM to LEDs, trigger with `curl http://192.168.12.241/leds-on` | Short in LED string or relay contacts |
+
+### Web server not responding after reset
+
+Check Pi-hole. If the ESP32 was removed and re-added, it gets auto-assigned to group 0 (block-all). Delete the client_by_group entry (see Pi-hole section above).
+
+### LEDs on/off at wrong times
+
+Check NTP sync via `/status`. If not synced, DNS may be blocked again.
 
 ---
 
