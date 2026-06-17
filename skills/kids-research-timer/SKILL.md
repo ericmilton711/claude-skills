@@ -25,7 +25,9 @@ All timers run on the ThinkCentre via `at` or cron — survives Claude session c
 | Patrick's Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
 | Ev's Chromebook | 192.168.12.194 | 8 | 6 | ev-chromebook |
 | Tower of Gondor | 192.168.12.160 | 9 | 7 | tower-of-gondor |
-| YTI Chromebook | 192.168.12.219 | 11 | 7 | tower-of-gondor |
+| YTI Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
+| YTI Chromebook (drift .220) | 192.168.12.220 | 4 | 4 | patricks-chromebook |
+| YTI Chromebook (drift .219) | 192.168.12.219 | 11 | 7 | tower-of-gondor |
 | Gianna's laptop | 192.168.12.226 | 12 | 8 | gianna-laptop |
 | Eva's laptop | 192.168.12.202 | 13 | 9 | eva-laptop |
 
@@ -129,3 +131,4 @@ The SSH part is the delivery truck, the quoted part is the package.
 - Restoring uses `INSERT OR IGNORE` — safe to run even if already in the group
 - `atq` on ThinkCentre shows pending jobs; `atrm <id>` cancels them
 - After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
+- **YTI Chromebook has 3 client entries** (IPs .219, .220, .221) from DHCP drift. Must unrestrict/restore ALL THREE (client_id IN (4,5,11)) or it stays blocked
