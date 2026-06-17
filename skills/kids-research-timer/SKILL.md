@@ -1,7 +1,7 @@
 # Kids Research Timer — Timed Pi-hole Unrestrict
 
-**Last Updated:** 2026-06-16
-**Status:** Ready to use
+**Last Updated:** 2026-06-17
+**Status:** Live — YTI Chromebook daily 7-8pm cron active, tested 2026-06-17
 
 ---
 
@@ -22,10 +22,9 @@ All timers run on the ThinkCentre via `at` or cron — survives Claude session c
 | Mac Mini | 192.168.12.163 | 1 | 1 | mac-mini |
 | Kids1 laptop | 192.168.12.249 | 2 | 2 | kids1 |
 | Kids2 laptop | 192.168.12.239 | 3 | 3 | kids2 |
-| Patrick's Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
+| YTI Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
 | Ev's Chromebook | 192.168.12.194 | 8 | 6 | ev-chromebook |
 | Tower of Gondor | 192.168.12.160 | 9 | 7 | tower-of-gondor |
-| YTI Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
 | Gianna's laptop | 192.168.12.226 | 12 | 8 | gianna-laptop |
 | Eva's laptop | 192.168.12.202 | 13 | 9 | eva-laptop |
 
@@ -129,5 +128,34 @@ The SSH part is the delivery truck, the quoted part is the package.
 - Restoring uses `INSERT OR IGNORE` — safe to run even if already in the group
 - `atq` on ThinkCentre shows pending jobs; `atrm <id>` cancels them
 - After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
-- **YTI Chromebook** is client 5 at .221. Old drift entries (.219, .220) exist in Pi-hole but are inactive
+- **YTI Chromebook** (also called Patrick's Chromebook) is client 5 at .221. Old drift entries (.219, .220) exist in Pi-hole but are inactive
 - **YTI daily research window:** 7pm-8pm every day via cron on ThinkCentre (added 2026-06-17)
+
+---
+
+## Active Cron Timers
+
+| Device | Open | Close | Added |
+|--------|------|-------|-------|
+| YTI Chromebook (client 5) | 7:00pm daily | 8:00pm daily | 2026-06-17 |
+
+Cron entries on ThinkCentre (`crontab -l`):
+```
+0 19 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 5;" && docker exec pihole pihole reloaddns # YTI research open
+0 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (5,4);" && docker exec pihole pihole reloaddns # YTI research close
+```
+
+To remove:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'crontab -l | grep -v "YTI research" | crontab -'
+```
+
+---
+
+## Testing Log
+
+| Date | Test | Result |
+|------|------|--------|
+| 2026-06-17 | 2-minute one-shot unrestrict (client 5 only) | Worked. Google loaded. Restrictions restored on schedule. |
+| 2026-06-17 | 7-8pm daily cron | Pending verification tonight. |
