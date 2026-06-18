@@ -130,6 +130,7 @@ The SSH part is the delivery truck, the quoted part is the package.
 - After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
 - **YTI Chromebook** (also called Patrick's Chromebook) is client 5 at .221. Old drift entries (.219, .220) exist in Pi-hole but are inactive
 - **YTI daily research window:** 7pm-8pm every day via cron on ThinkCentre (added 2026-06-17)
+- **DNS TTL cap:** `max-cache-ttl=60` set in `/etc/dnsmasq.d/99-custom.conf` inside the Pi-hole container (added 2026-06-17). Caps all forwarded DNS responses to 60-second TTL so devices must re-query Pi-hole within a minute. Without this, devices cache IPs from the open window and keep browsing after restrictions are restored. Sites will stop loading within ~60 seconds of the close cron running.
 
 ---
 
@@ -158,4 +159,4 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
 | Date | Test | Result |
 |------|------|--------|
 | 2026-06-17 | 2-minute one-shot unrestrict (client 5 only) | Worked. Google loaded. Restrictions restored on schedule. |
-| 2026-06-17 | 7-8pm daily cron | Pending verification tonight. |
+| 2026-06-17 | 7-8pm daily cron | Open worked. Close restored DB group but sites stayed accessible due to DNS caching. Fixed with `max-cache-ttl=60`. |
