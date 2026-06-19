@@ -20,9 +20,9 @@ All timers run on the ThinkCentre via `at` or cron — survives Claude session c
 | Device | IP | Client ID | Group ID | Group Name |
 |--------|----|-----------|----------|------------|
 | Mac Mini | 192.168.12.163 | 1 | 1 | mac-mini |
-| Kids1 laptop | 192.168.12.249 | 2 | 2 | kids1 |
+| Patrick's schoolwork laptop | 192.168.12.249 | 2 | 2 | kids1 |
 | Kids2 laptop | 192.168.12.239 | 3 | 3 | kids2 |
-| Patrick's Chromebook | 192.168.12.221 | 5 | 4 | patricks-chromebook |
+| YTI Chromebook (stale — old IP .221) | 192.168.12.221 | 5 | 4 | patricks-chromebook |
 | Ev's Chromebook | 192.168.12.194 | 8 | 6 | ev-chromebook |
 | Tower of Gondor | 192.168.12.160 | 9 | 7 | tower-of-gondor |
 | YTI Chromebook | 192.168.12.219 | 11 | 7 | tower-of-gondor |

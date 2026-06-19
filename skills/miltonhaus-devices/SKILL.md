@@ -6,7 +6,7 @@ type: reference
 
 # MILTONHAUS — All Network Devices
 
-**Last updated:** 2026-05-05
+**Last updated:** 2026-06-18
 **Network:** DIEMILTONHAUS (T-Mobile, 192.168.12.x)
 **Gateway:** TMO-G5AR at 192.168.12.1
 
@@ -33,12 +33,12 @@ type: reference
 | 192.168.12.194 | e8-84-a5-82-df-fc | — | Chromebook (ChromeOS) | Eva's Chromebook — WireGuard installed (Android app); also on Tailscale at 100.115.92.195 |
 | 192.168.12.215 | 3e-e7-96-3e-55-e9 (random) | iPhone.lan | iPhone | Rosemary's iPhone |
 | 192.168.12.220 | — | Eric.lan | Windows 11 PC | Eric's main PC (was .219, DHCP drifted to .220 as of 2026-05-05) |
-| 192.168.12.219 | b0-47-e9-e3-78-d0 | — | Chromebook (ChromeOS) | Patrick's Chromebook (aka YTI Chromebook). DHCP drifted: was .221/.220, now .219 as of 2026-05-05. Pi-hole group 7 (tower-of-gondor): default-allow, Google search blocked, Gmail works. DNS manually set to 192.168.12.136. Secure DNS (DoH) disabled. |
+| 192.168.12.219 | b0-47-e9-e3-78-d0 | — | Chromebook (ChromeOS) | YTI Chromebook (NOT Patrick's). DHCP drifted: was .221/.220, now .219 as of 2026-05-05. Pi-hole client_id 11, group 7 (tower-of-gondor). DNS manually set to 192.168.12.136. Secure DNS (DoH) disabled. |
 | 192.168.12.226 | 06-f0-9a-33-c5-6c (random) | — | Asus laptop (Fedora) | Gianna's laptop — SSH open |
 | 192.168.12.109 | b8-c7-5d-12-c0-4d | Rosemarys-MacBook-Pro.local | MacBook Pro (macOS) | Rosemary's MacBook Pro — Python 3.9, SSH: `rosemary@Rosemarys-MacBook-Pro.local` / pw: wisdom22!! (use pexpect). Pi-Tools at `/Users/rosemary/Pi-Tools/` |
 | ~~.238~~ | e0-63-da-c7-43-84 | ubnt.lan | Ubiquiti UniFi AP | **REMOVED from house** — never adopted, no longer on network (as of 2026-04) |
 | 192.168.12.239 | c8-15-4e-2c-03-b7 | kids2.lan | Kids device #2 | Unconfirmed device type |
-| 192.168.12.249 | c8-15-4e-1c-a6-ba | kids1.lan | Kids device #1 | Unconfirmed device type |
+| 192.168.12.249 | c8-15-4e-1c-a6-ba | kids1.lan | Patrick's schoolwork laptop | Patrick's device for schoolwork. Pi-hole client_id 2, group 2 (kids1). |
 
 ### Tailscale Node
 | Tailscale IP | Device | Notes |
