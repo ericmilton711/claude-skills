@@ -1,7 +1,7 @@
 # Kids Research Timer — Timed Pi-hole Unrestrict
 
-**Last Updated:** 2026-06-16
-**Status:** Ready to use
+**Last Updated:** 2026-06-17
+**Status:** Live — YTI Chromebook daily 7-8pm cron active, tested 2026-06-17
 
 ---
 
@@ -23,9 +23,9 @@ All timers run on the ThinkCentre via `at` or cron — survives Claude session c
 | Patrick's schoolwork laptop | 192.168.12.249 | 2 | 2 | kids1 |
 | Kids2 laptop | 192.168.12.239 | 3 | 3 | kids2 |
 | YTI Chromebook (stale — old IP .221) | 192.168.12.221 | 5 | 4 | patricks-chromebook |
+| YTI Chromebook (current — .219) | 192.168.12.219 | 11 | 7 | tower-of-gondor |
 | Ev's Chromebook | 192.168.12.194 | 8 | 6 | ev-chromebook |
 | Tower of Gondor | 192.168.12.160 | 9 | 7 | tower-of-gondor |
-| YTI Chromebook | 192.168.12.219 | 11 | 7 | tower-of-gondor |
 | Gianna's laptop | 192.168.12.226 | 12 | 8 | gianna-laptop |
 | Eva's laptop | 192.168.12.202 | 13 | 9 | eva-laptop |
 
@@ -98,9 +98,66 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
 
 ---
 
+## How the Commands Work
+
+Each command has two parts:
+
+### Part 1 — SSH connection (connects to ThinkCentre)
+```
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136
+```
+- `ssh` — remote login command
+- `-i ~/.ssh/id_ed25519` — uses your SSH key (no password needed)
+- `-o StrictHostKeyChecking=no` — skips the "are you sure?" prompt
+- `milton@192.168.12.136` — logs in as user `milton` on the ThinkCentre
+
+### Part 2 — Pi-hole command (runs on ThinkCentre after connecting)
+
+This is the quoted portion after the SSH line. It talks to the Pi-hole database inside Docker to add or remove group restrictions on the kids' devices, then reloads DNS so the change takes effect.
+
+- **Opening** (DELETE) — removes devices from their restricted groups, giving full internet access
+- **Closing** (INSERT OR IGNORE) — puts devices back into their restricted groups, restoring blocks
+- **Timed close** (`| at 3pm`) — schedules the restore command to run later so you don't have to remember
+
+The SSH part is the delivery truck, the quoted part is the package.
+
+---
+
 ## Notes
 
 - Removing a client from all groups = full unrestricted access (no group = no rules applied)
 - Restoring uses `INSERT OR IGNORE` — safe to run even if already in the group
 - `atq` on ThinkCentre shows pending jobs; `atrm <id>` cancels them
 - After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
+- **YTI Chromebook** current IP is .219, client_id 11, group 7. Client 5 (.221) is a stale DHCP drift entry — do NOT use for cron
+- **YTI daily research window:** 7pm-8pm every day via cron on ThinkCentre (added 2026-06-17)
+- **DNS TTL cap:** `max-cache-ttl=60` set in `/etc/dnsmasq.d/99-custom.conf` inside the Pi-hole container (added 2026-06-17). Caps all forwarded DNS responses to 60-second TTL so devices must re-query Pi-hole within a minute. Without this, devices cache IPs from the open window and keep browsing after restrictions are restored. Sites will stop loading within ~60 seconds of the close cron running.
+
+---
+
+## Active Cron Timers
+
+| Device | Open | Close | Added |
+|--------|------|-------|-------|
+| YTI Chromebook (client 11, .219) | 7:00pm daily | 8:00pm daily | 2026-06-18 |
+
+Cron entries on ThinkCentre (`crontab -l`):
+```
+0 19 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 11;" && docker exec pihole pihole reloaddns # YTI research open
+0 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (11,7);" && docker exec pihole pihole reloaddns # YTI research close
+```
+
+To remove:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
+  'crontab -l | grep -v "YTI research" | crontab -'
+```
+
+---
+
+## Testing Log
+
+| Date | Test | Result |
+|------|------|--------|
+| 2026-06-17 | 2-minute one-shot unrestrict (client 5 only) | Worked. Google loaded. Restrictions restored on schedule. |
+| 2026-06-17 | 7-8pm daily cron | Open worked. Close restored DB group but sites stayed accessible due to DNS caching. Fixed with `max-cache-ttl=60`. |
