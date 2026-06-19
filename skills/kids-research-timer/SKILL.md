@@ -21,7 +21,7 @@ All timers run on the ThinkCentre via `at` or cron — survives Claude session c
 |--------|----|-----------|----------|------------|
 | Mac Mini | 192.168.12.163 | 1 | 1 | mac-mini |
 | Patrick's schoolwork laptop | 192.168.12.249 | 2 | 2 | kids1 |
-| Kids2 laptop | 192.168.12.239 | 3 | 3 | kids2 |
+| Benedict's laptop | 192.168.12.239 | 3 | 3 | kids2 |
 | YTI Chromebook | 192.168.12.219 | 11 | 7 | tower-of-gondor |
 | Ev's Chromebook | 192.168.12.194 | 8 | 6 | ev-chromebook |
 | Tower of Gondor | 192.168.12.160 | 9 | 7 | tower-of-gondor |

@@ -37,7 +37,7 @@ type: reference
 | 192.168.12.226 | 06-f0-9a-33-c5-6c (random) | — | Asus laptop (Fedora) | Gianna's laptop — SSH open |
 | 192.168.12.109 | b8-c7-5d-12-c0-4d | Rosemarys-MacBook-Pro.local | MacBook Pro (macOS) | Rosemary's MacBook Pro — Python 3.9, SSH: `rosemary@Rosemarys-MacBook-Pro.local` / pw: wisdom22!! (use pexpect). Pi-Tools at `/Users/rosemary/Pi-Tools/` |
 | ~~.238~~ | e0-63-da-c7-43-84 | ubnt.lan | Ubiquiti UniFi AP | **REMOVED from house** — never adopted, no longer on network (as of 2026-04) |
-| 192.168.12.239 | c8-15-4e-2c-03-b7 | kids2.lan | Kids device #2 | Unconfirmed device type |
+| 192.168.12.239 | c8-15-4e-2c-03-b7 | kids2.lan | Benedict's laptop (Windows) | **Static IP set 2026-06-18 — will not drift.** SSH: `themi@192.168.12.239` / pw: `1229` (use pexpect). Pi-hole client_id 3, group 3 (kids2). DNS: 192.168.12.136. |
 | 192.168.12.249 | c8-15-4e-1c-a6-ba | kids1.lan | Patrick's schoolwork laptop (Windows) | **Static IP set 2026-06-18 — will not drift.** SSH: `themi@192.168.12.249` / pw: `1229` (use pexpect). Pi-hole client_id 2, group 2 (kids1). DNS: 192.168.12.136. |
 
 ### Tailscale Node
