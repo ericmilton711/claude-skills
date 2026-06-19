@@ -1,7 +1,7 @@
 # Kids Research Timer — Timed Pi-hole Unrestrict
 
 **Last Updated:** 2026-06-17
-**Status:** Live — YTI Chromebook daily 7-8pm cron active, tested 2026-06-17
+**Status:** Live — YTI Chromebook daily 7-8:30pm cron active, updated 2026-06-18
 
 ---
 
@@ -130,7 +130,7 @@ The SSH part is the delivery truck, the quoted part is the package.
 - `atq` on ThinkCentre shows pending jobs; `atrm <id>` cancels them
 - After any Pi-hole DNS change, flush DNS on devices that are actively browsing: `ipconfig /flushdns` on Windows
 - **YTI Chromebook** current IP is .219, client_id 11, group 7. Client 5 (.221) is a stale DHCP drift entry — do NOT use for cron
-- **YTI daily research window:** 7pm-8pm every day via cron on ThinkCentre (added 2026-06-17)
+- **YTI daily research window:** 7pm-8:30pm every day via cron on ThinkCentre (updated 2026-06-18)
 - **DNS TTL cap:** `max-cache-ttl=60` set in `/etc/dnsmasq.d/99-custom.conf` inside the Pi-hole container (added 2026-06-17). Caps all forwarded DNS responses to 60-second TTL so devices must re-query Pi-hole within a minute. Without this, devices cache IPs from the open window and keep browsing after restrictions are restored. Sites will stop loading within ~60 seconds of the close cron running.
 
 ---
@@ -139,12 +139,12 @@ The SSH part is the delivery truck, the quoted part is the package.
 
 | Device | Open | Close | Added |
 |--------|------|-------|-------|
-| YTI Chromebook (client 11, .219) | 7:00pm daily | 8:00pm daily | 2026-06-18 |
+| YTI Chromebook (client 11, .219) | 7:00pm daily | 8:30pm daily | 2026-06-18 |
 
 Cron entries on ThinkCentre (`crontab -l`):
 ```
 0 19 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 11;" && docker exec pihole pihole reloaddns # YTI research open
-0 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (11,7);" && docker exec pihole pihole reloaddns # YTI research close
+30 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (11,7);" && docker exec pihole pihole reloaddns # YTI research close
 ```
 
 To remove:
