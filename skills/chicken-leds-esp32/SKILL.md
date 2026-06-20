@@ -1,7 +1,7 @@
 # Chicken LEDs — ESP32 Controller
 
 **Last Updated:** 2026-06-20
-**Status:** ✅ Fully deployed. OTA enabled. Blink endpoint live. Dashboard integrated.
+**Status:** ✅ Fully deployed. OTA enabled. Blink endpoint live. Dashboard integrated. Timezone correct.
 
 ---
 
@@ -45,6 +45,7 @@ ThinkCentre or MILTONHAUS Weather Dashboard can override via HTTP at any time.
 | 1kΩ resistor | Installed |
 | ESP32 | Installed |
 | DS3231 RTC module | Installed |
+| INA219 I2C current sensor (HiLetgo 2-pack) | Ordered — for battery voltage + solar charging status on dashboard |
 | DROK 5A buck converter | Installed |
 | D-Planet 5A buck converter | Installed |
 | DieHard Marine 12V battery | Installed |
@@ -160,7 +161,10 @@ The dashboard at `http://192.168.12.240/` shows live Chicken LED status and has 
 **Board:** `esp32:esp32:esp32`
 **Port:** `/dev/ttyUSB0` (USB) or OTA at `http://192.168.12.241/update`
 
-### Flash via OTA (preferred — no USB needed)
+### Flash via OTA (preferred when signal is good — NOT reliable from the garage)
+**Note:** The garage has weak WiFi (~9KB/s). OTA uploads time out or drop at ~30%. Use USB when physically in the garage. OTA works fine from inside the house if you ever move the board.
+
+
 ```bash
 /home/ericmilton/.local/bin/arduino-cli compile -b esp32:esp32:esp32 \
   --output-dir ~/Documents/chicken-leds-esp32/build \
@@ -198,6 +202,8 @@ Check Pi-hole. If the ESP32 was removed and re-added, it gets auto-assigned to g
 
 ### LEDs on/off at wrong times
 Check NTP sync via `/status`. If `clock: none`, DNS may be blocked again.
+
+**Timezone bug (fixed 2026-06-20):** WiFi reconnect loop was using `configTime(0,0,NTP_SERVER)` (UTC) instead of `configTzTime(TIMEZONE, NTP_SERVER)` (Eastern). Fixed in current firmware — `/status` should show Eastern time (e.g. `19:xx:xx` at 7pm, not `23:xx:xx`).
 
 ### Fuse Pops — Short Isolation Procedure
 
