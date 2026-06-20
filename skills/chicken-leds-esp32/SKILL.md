@@ -1,13 +1,13 @@
-# Chicken LEDs — ESP32-S3 Controller
+# Chicken LEDs — ESP32 Controller
 
-**Last Updated:** 2026-06-17
-**Status:** ✅ Firmware flashed and running. Physical wiring pending (fuse short to resolve). New relay on order.
+**Last Updated:** 2026-06-20
+**Status:** ✅ Firmware flashed and running on classic ESP32. Physical wiring in progress.
 
 ---
 
 ## Overview
 
-ESP32-S3 replaces the dead Homestead Pi for controlling the UV/Blue chicken bug lights.
+Classic ESP32 replaces the dead Homestead Pi for controlling the UV/Blue chicken bug lights.
 Controls MY2NJ ice cube relay via GPIO 16 through a 2N2222 transistor driver. Manages its own NTP-based schedule autonomously.
 ThinkCentre can override via HTTP at any time.
 
@@ -17,9 +17,9 @@ ThinkCentre can override via HTTP at any time.
 
 | Item | Detail |
 |------|--------|
-| Controller | ESP32-S3 (spare from inventory) |
+| Controller | ESP32-D0WD-V3 (classic ESP32, dual core) |
 | IP | 192.168.12.241 (static) |
-| MAC | 30:ed:a0:bb:45:a4 |
+| MAC | a4:f0:0f:76:70:0c |
 | Control pin | GPIO 16 → 2N2222 transistor → MY2NJ relay coil |
 | Relay | MY2NJ DPDT 12VDC coil, 5A contacts, with socket base (MECCANIXITY 6-pack) |
 | Transistor | 2N2222 NPN — drives 12V relay coil from 3.3V ESP32 GPIO |
@@ -27,7 +27,7 @@ ThinkCentre can override via HTTP at any time.
 | Gate resistor | 1kΩ between GPIO 16 and transistor base |
 | LEDs | 5× UV 365nm (CHANZON 3W) + 5× Blue 460nm (1W), parallel at 9.5V |
 | LED power | DROK 5A buck: 12V → 9.5V |
-| ESP32 power | D-Planet 5A buck: 12V → 5V → ESP32-S3 VIN |
+| ESP32 power | D-Planet 5A buck: 12V → 5V → ESP32 VIN |
 | Battery | DieHard Marine 24M 12V |
 | Fuse | 3A inline on battery (+) |
 | SSR-41FDD #1 | Replaced by MY2NJ — set aside as spare |
@@ -42,7 +42,7 @@ ThinkCentre can override via HTTP at any time.
 | 2N2222 NPN transistor (BOJACK 200-pack) | Ordered |
 | 1N4148 diode | On hand |
 | 1kΩ resistor | On hand |
-| ESP32-S3 | On hand / installed |
+| ESP32 | On hand / installed |
 | DROK 5A buck converter | On hand / installed |
 | D-Planet 5A buck converter | On hand / installed |
 | DieHard Marine 12V battery | On hand / installed |
@@ -75,32 +75,32 @@ ThinkCentre can override via HTTP at any time.
 | Battery (−) | D-Planet buck IN− |
 | Battery (−) | DROK buck IN− |
 
-### 2 — ESP32-S3 Power (from D-Planet buck)
+### 2 — ESP32 Power (from D-Planet buck)
 | From | To |
 |------|----|
-| D-Planet buck OUT+ (5V) | ESP32-S3 VIN |
-| D-Planet buck OUT− | ESP32-S3 GND |
+| D-Planet buck OUT+ (5V) | ESP32 VIN |
+| D-Planet buck OUT− | ESP32 GND |
 
 ### 3 — Relay Driver Circuit (2N2222 transistor)
 | From | To |
 |------|----|
-| ESP32-S3 GPIO 16 | 1kΩ resistor (one end) |
+| ESP32 GPIO 16 | 1kΩ resistor (one end) |
 | 1kΩ resistor (other end) | 2N2222 Base |
-| 12V (from battery/fuse) | MY2NJ coil (+) |
-| MY2NJ coil (−) | 2N2222 Collector |
+| 12V (from battery/fuse) | MY2NJ socket pin 14 (coil +) |
+| MY2NJ socket pin 13 (coil −) | 2N2222 Collector |
 | 2N2222 Emitter | GND |
-| 1N4148 anode | MY2NJ coil (−) |
-| 1N4148 cathode | MY2NJ coil (+) |
+| 1N4148 anode | MY2NJ socket pin 13 (coil −) |
+| 1N4148 cathode | MY2NJ socket pin 14 (coil +) |
 
 ### 4 — LED Circuit (through relay contacts)
 | From | To |
 |------|----|
-| DROK buck OUT+ (9.5V) | MY2NJ NO contact (line in) |
-| MY2NJ COM contact (line out) | LEDs (+) |
+| DROK buck OUT+ (9.5V) | MY2NJ socket pin 9 (NO) |
+| MY2NJ socket pin 5 (COM) | LEDs (+) |
 | LEDs (−) | DROK buck OUT− |
 
 ### 5 — Common Ground (all share one point)
-Battery (−), D-Planet IN−, DROK IN−, D-Planet OUT−, DROK OUT−, ESP32-S3 GND, 2N2222 Emitter
+Battery (−), D-Planet IN−, DROK IN−, D-Planet OUT−, DROK OUT−, ESP32 GND, 2N2222 Emitter
 
 ---
 
@@ -114,7 +114,7 @@ Battery (−), D-Planet IN−, DROK IN−, D-Planet OUT−, DROK OUT−, ESP32-S
 ```bash
 # Register and unrestrict
 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
-  "docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"INSERT OR IGNORE INTO client (ip, comment) VALUES ('192.168.12.241', 'Chicken LED ESP32-S3');\" && \
+  "docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"INSERT OR IGNORE INTO client (ip, comment) VALUES ('192.168.12.241', 'Chicken LED ESP32');\" && \
    docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"DELETE FROM client_by_group WHERE client_id=(SELECT id FROM client WHERE ip='192.168.12.241');\" && \
    docker exec pihole pihole reloaddns"
 ```
@@ -142,14 +142,14 @@ ip:    192.168.12.241
 ## Firmware
 
 **File:** `~/Documents/chicken-leds-esp32/chicken-leds-esp32.ino`
-**Board:** `esp32:esp32:esp32s3`
-**Port:** `/dev/ttyACM0`
+**Board:** `esp32:esp32:esp32`
+**Port:** `/dev/ttyUSB0`
 
 ### Flash command
 ```bash
 /home/ericmilton/.local/bin/arduino-cli compile --upload \
-  -b esp32:esp32:esp32s3 \
-  -p /dev/ttyACM0 \
+  -b esp32:esp32:esp32 \
+  -p /dev/ttyUSB0 \
   /home/ericmilton/Documents/chicken-leds-esp32/
 ```
 
@@ -160,11 +160,10 @@ Edit `applySchedule()` in the `.ino`:
 bool shouldBeOn = (h >= 5 && h < 8) || (h >= 18);
 ```
 
-### ESP32-S3 flash notes
-- Board select: `ESP32S3 Dev Module` in Arduino IDE
-- If it won't enter bootloader: hold **BOOT** then press **RESET**
+### ESP32 flash notes
+- Board select: `ESP32 Dev Module` in Arduino IDE
+- Port is `/dev/ttyUSB0` (CH340/CP2102 USB chip)
 - After reset, allow ~15s for NTP sync before web server responds
-- Port is `/dev/ttyACM0` (native USB on S3)
 
 ---
 
@@ -197,4 +196,4 @@ Check NTP sync via `/status`. If not synced, DNS may be blocked again.
 
 - `server-side-led-timer` — ThinkCentre `at`/cron overrides via curl
 - `homestead-automation` — original Pi-based setup (solenoid/chicken water still pending new Pi)
-- `electronics-inventory` — ESP32-S3 listed as installed at .241
+- `electronics-inventory` — ESP32 listed as installed at .241
