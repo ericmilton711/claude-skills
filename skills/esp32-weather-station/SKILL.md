@@ -1,13 +1,38 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-06-20** — Chicken LED control card added to stats strip. See "What Changed 2026-06-20" first if you're picking this up mid-project.
+> **⚠ CURRENT AS OF 2026-06-20 (v2)** — Kids section added as right-side column. See "What Changed 2026-06-20 v2" first if you're picking this up mid-project.
 
-**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Chicken LED status + control in stats strip.
+**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right. Chicken LED control in stats strip.
 **Last Updated:** 2026-06-20
 
 ---
 
-## What Changed 2026-06-20 (DEPLOYED — flash: 57% / RAM: 16%)
+## What Changed 2026-06-20 v2 (DEPLOYED — flash: 87% / RAM: 16%)
+
+**Kids section added — right-side column with chores/schedule editor on ThinkCentre**
+
+### Dashboard layout change
+- Grid changed from 3-row single-column to **two-column**: left panel (all weather content) + right panel (kids)
+- `grid-template-columns: 3fr 2fr` — weather takes 60%, kids take 40%
+- Left panel is a nested grid with the same 3-row weather layout as before
+- Right panel: 6 tappable cards stacked vertically — Benedict, Evangelina, Gianna, Patrick, Clementine, Adelaide
+- Tapping any kid card opens a full-screen overlay showing their **Daily Chores** and **Work Schedule**
+- Overlay has an "Edit" link that opens the admin page in a new tab
+
+### Kids data server (ThinkCentre .136, port 8181)
+- Flask app at `/home/milton/kids-dashboard/app.py`
+- Runs as `kids-dashboard.service` (systemd, auto-starts on boot)
+- Data stored in `/home/milton/kids-dashboard/kids.json`
+- **Admin page:** `http://192.168.12.136:8181/kids-admin` — edit chores (one per line) + schedule for each kid, hit Save. No Claude Code needed.
+- **API:** `GET /kids` returns JSON, `POST /kids/save` saves JSON (CORS enabled)
+- ESP32 dashboard fetches kids data every 2 minutes from `http://192.168.12.136:8181/kids`
+
+### To update kids' chores/schedule
+Open `http://192.168.12.136:8181/kids-admin` from any browser on the network. Edit and Save. Done.
+
+---
+
+## What Changed 2026-06-20 v1 (DEPLOYED — flash: 57% / RAM: 16%)
 
 **Chicken LED control card added to stats strip**
 - Stats strip expanded from 4 to 5 columns — Humidity, Wind, Sunrise, Sunset, **Chicken LEDs**
@@ -113,27 +138,32 @@ GPIO 4  ───────── DHT11 DATA (middle pin)
 - **Weather updates** every 10 minutes
 - **~~World Cup scores~~** — REMOVED 2026-06-16
 
-## Dashboard Layout (current — 3-row grid)
+## Dashboard Layout (current — two-column)
 
 ```
-┌─────────────────────────────────────┐
-│ 🏠 MILTONHAUS Weather      [clock]  │  ← top bar
-├─────────────────┬───────────────────┤
-│  Weather (2fr)  │  Indoor dial (1fr)│  ← row 1: main + gauge
-├─────────────────┴───────────────────┤
-│       6-Day Forecast (tappable)     │  ← row 2: fc fc
-├─────────────────────────────────────┤
-│  Humidity  Wind  Sunrise  Sunset    │  ← row 3: stats stats
-└─────────────────────────────────────┘
+┌─────────────────────────────────────┬──────────────┐
+│ 🏠 MILTONHAUS Weather      [clock]  │              │  ← top bar
+├──────────────────┬──────────────────┤              │
+│  Weather (2fr)   │ Indoor dial (1fr)│  Benedict    │
+├──────────────────┴──────────────────┤  Evangelina  │
+│       6-Day Forecast (tappable)     │  Gianna      │
+├─────────────────────────────────────┤  Patrick     │
+│  Humidity  Wind  Sunrise  Sunset    │  Clementine  │
+│  Chicken LEDs                       │  Adelaide    │
+└─────────────────────────────────────┴──────────────┘
+          LEFT (3fr)                     RIGHT (2fr)
 ```
 
-Grid: `grid-template-rows: 1.3fr 1fr 0.72fr` — no 4th row anymore.
+Outer grid: `grid-template-columns: 3fr 2fr`, `grid-template-areas: "left right"`
+Left panel (`.left-panel`): nested grid `2fr 1fr`, rows `1.3fr 1fr 0.72fr`, areas `"main gauge" "fc fc" "stats stats"`
+Right panel (`.right-panel`): flex column, 6 `.kid-card` divs (each `flex: 1`)
 
-**Forecast tiles:** cursor:pointer, hover darkens to #cfc0a0, active scales to 0.96. Click → `showDayDetail(day)`.
+**Kid cards:** name + "Tap to view" subtitle. Tap → `showKid(i)` → overlay with chores + schedule fetched from ThinkCentre.
 
 **Overlays (full-screen, z-index 100):**
 - Hourly — tap Conditions card, `showHourly()` / `closeHourly()`
-- Day detail — tap any forecast tile, `showDayDetail(day)` / `closeDayDetail()` (NEW)
+- Day detail — tap any forecast tile, `showDayDetail(day)` / `closeDayDetail()`
+- Kid detail — tap any kid card, `showKid(i)` / `closeKid()` — data from `http://192.168.12.136:8181/kids`
 
 ## WiFi Hardening (do not change)
 
@@ -260,6 +290,7 @@ Note: array key is `forecast`, item keys are `day`/`desc`/`hi`/`lo` (not `fc`/`d
 - [x] FreeRTOS weather task — 3s boot time (2026-06-14)
 - [x] World Cup scores REMOVED (2026-06-16)
 - [x] Forecast day tiles → tap for day detail overlay (2026-06-16)
+- [x] Kids column — 6 tappable cards on right, chores/schedule editor on ThinkCentre (2026-06-20)
 - [ ] Order Amazon Fire HD 8 tablet (32GB) as dedicated display
 - [ ] Order tablet stand for countertop
 - [ ] Gift wrap for Rosemary
@@ -269,4 +300,4 @@ Note: array key is `forecast`, item keys are `day`/`desc`/`hi`/`lo` (not `fc`/`d
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-06-16*
+*Created: 2026-04-26 | Updated: 2026-06-20*
