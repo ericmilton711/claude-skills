@@ -1,9 +1,23 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-06-16** — World Cup scores REMOVED. Forecast day tiles now tap for detail. See "What Changed 2026-06-16" first if you're picking this up mid-project.
+> **⚠ CURRENT AS OF 2026-06-20** — Chicken LED control card added to stats strip. See "What Changed 2026-06-20" first if you're picking this up mid-project.
 
-**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). BLE removed. DHT11 wired and reading. OLED removed. Gift for Rosemary.
-**Last Updated:** 2026-06-16
+**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Chicken LED status + control in stats strip.
+**Last Updated:** 2026-06-20
+
+---
+
+## What Changed 2026-06-20 (DEPLOYED — flash: 57% / RAM: 16%)
+
+**Chicken LED control card added to stats strip**
+- Stats strip expanded from 4 to 5 columns — Humidity, Wind, Sunrise, Sunset, **Chicken LEDs**
+- Shows live ON/OFF status (green=ON, brown=OFF, gray=Offline), polls every 5 seconds
+- ON and OFF buttons control the chicken LEDs at 192.168.12.241 directly from the dashboard
+- Three new proxy endpoints added to weather ESP32 firmware:
+  - `GET /chicken-status` → returns `{"on": true/false, "ok": true/false}`
+  - `GET /chicken-on` → sends leds-on to chicken ESP32
+  - `GET /chicken-off` → sends leds-off to chicken ESP32
+- Proxy uses plain HTTP `HTTPClient` (not secure) on LAN — 1.5s timeout so a dead chicken ESP32 doesn't slow the dashboard
 
 ---
 

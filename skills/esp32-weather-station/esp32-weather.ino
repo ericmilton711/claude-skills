@@ -348,7 +348,11 @@ const char page[] PROGMEM = R"rawliteral(
     .pill { display: inline-block; padding: clamp(3px,0.7vh,6px) clamp(10px,1.4vw,16px); border-radius: 20px; font-size: clamp(0.66rem,1.5vh,0.85rem); color: #fff; background: #a0522d; }
     .pill.ok { background: #2e7d5b; }
     /* ---- Stats strip ---- */
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px,1vw,12px); align-items: center; }
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: clamp(6px,1vw,12px); align-items: center; }
+    .led-btn { font-family: inherit; font-size: clamp(0.5rem,1.2vh,0.68rem); border: none; border-radius: 10px; padding: clamp(2px,0.5vh,4px) clamp(5px,0.8vw,9px); cursor: pointer; font-weight: 700; margin: 1px; }
+    .on-btn { background: #2e7d5b; color: #fff; } .off-btn { background: #a0522d; color: #fff; }
+    .on-btn:active, .off-btn:active { transform: scale(0.93); }
+    .chi-on { color: #2e7d5b; } .chi-off { color: #a0522d; } .chi-none { color: #7a6f5f; }
     .stat { text-align: center; }
     .stat .slabel { font-size: clamp(0.6rem, min(1.5vh,2.2vw), 0.78rem); color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
     .stat .sval { font-size: clamp(1rem, min(3.4vh,4.4vw), 1.8rem); font-weight: 700; margin: clamp(1px,0.4vh,4px) 0; line-height: 1.1; }
@@ -421,6 +425,7 @@ const char page[] PROGMEM = R"rawliteral(
         <div class="stat"><div class="slabel">Wind</div><div class="sval wind"><span id="oWind">--</span></div><div class="sunit">mph</div></div>
         <div class="stat"><div class="slabel">Sunrise</div><div class="sval sun time" id="sunrise">--:--</div></div>
         <div class="stat"><div class="slabel">Sunset</div><div class="sval sun time" id="sunset">--:--</div></div>
+        <div class="stat"><div class="slabel">Chicken LEDs</div><div class="sval chi-none" id="chickenStat">--</div><div style="display:flex;gap:3px;justify-content:center;margin-top:2px;"><button class="led-btn on-btn" onclick="chickenOn()">ON</button><button class="led-btn off-btn" onclick="chickenOff()">OFF</button></div></div>
       </div>
     </div>
   </div>
@@ -447,6 +452,10 @@ const char page[] PROGMEM = R"rawliteral(
   function closeHourly(){document.getElementById('hourlyOverlay').className='overlay';}
   function showDayDetail(day){document.getElementById('dayOverlay').className='overlay open';document.getElementById('dayOverlayTitle').textContent='Loading...';document.getElementById('dayDetail').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json();}).then(function(d){var periods=d.properties.periods.filter(function(p){return p.name.substring(0,3)===day;});if(!periods.length){document.getElementById('dayDetail').innerHTML='<div class="overlay-loading">No data available</div>';return;}document.getElementById('dayOverlayTitle').textContent=periods[0].name.split(' ')[0]+' Forecast';var h=periods.map(function(p){var precip=(p.probabilityOfPrecipitation&&p.probabilityOfPrecipitation.value!=null)?p.probabilityOfPrecipitation.value+'%':'--';var humidity=(p.relativeHumidity&&p.relativeHumidity.value!=null)?Math.round(p.relativeHumidity.value)+'%':'--';return'<div class="day-period"><div class="dp-name">'+p.name+'</div><div class="dp-temp">'+p.temperature+'\xB0F</div><div class="dp-detail">'+p.detailedForecast+'</div><div class="dp-stats"><span>Wind: '+p.windDirection+' '+p.windSpeed+'</span><span>Precip: '+precip+'</span><span>Humidity: '+humidity+'</span></div></div>';}).join('');document.getElementById('dayDetail').innerHTML=h;}).catch(function(){document.getElementById('dayDetail').innerHTML='<div class="overlay-loading">Failed to load day detail</div>';});}
   function closeDayDetail(){document.getElementById('dayOverlay').className='overlay';}
+  function chickenOn(){fetch('/chicken-on').then(function(){setTimeout(updateChicken,600);});}
+  function chickenOff(){fetch('/chicken-off').then(function(){setTimeout(updateChicken,600);});}
+  function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var el=document.getElementById('chickenStat');if(!d.ok){el.textContent='Offline';el.className='sval chi-none';}else{el.textContent=d.on?'ON':'OFF';el.className='sval '+(d.on?'chi-on':'chi-off');}}).catch(function(){var el=document.getElementById('chickenStat');el.textContent='Offline';el.className='sval chi-none';});}
+  setInterval(updateChicken,5000);updateChicken();
   function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
   document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
   document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
@@ -523,6 +532,30 @@ void handleData() {
   server.send(200, "application/json", buf);
 }
 
+String chickenGet(const String& path) {
+  HTTPClient http;
+  http.begin("http://192.168.12.241" + path);
+  http.setConnectTimeout(1500);
+  http.setTimeout(1500);
+  int code = http.GET();
+  String body = "";
+  if (code == 200) body = http.getString();
+  http.end();
+  return body;
+}
+
+void handleChickenStatus() {
+  String raw = chickenGet("/status");
+  bool on = raw.indexOf("leds:  on") >= 0;
+  bool ok = raw.length() > 0;
+  char buf[48];
+  snprintf(buf, sizeof(buf), "{\"on\":%s,\"ok\":%s}", on ? "true" : "false", ok ? "true" : "false");
+  server.send(200, "application/json", buf);
+}
+
+void handleChickenOn()  { chickenGet("/leds-on");  server.send(200, "text/plain", "ok"); }
+void handleChickenOff() { chickenGet("/leds-off"); server.send(200, "text/plain", "ok"); }
+
 void setup() {
   Serial.begin(115200);
   Serial.println("\n=== MILTONHAUS Weather Station ===");
@@ -573,6 +606,9 @@ void setup() {
 
   server.on("/", handleRoot);
   server.on("/data", handleData);
+  server.on("/chicken-status", handleChickenStatus);
+  server.on("/chicken-on", handleChickenOn);
+  server.on("/chicken-off", handleChickenOff);
 
   server.on("/update", HTTP_GET, []() {
     size_t totalLen = strlen(otaPage);
