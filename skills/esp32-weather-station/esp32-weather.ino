@@ -282,8 +282,11 @@ const char page[] PROGMEM = R"rawliteral(
     :fullscreen .fs-btn, :-webkit-full-screen .fs-btn { display: none; }
     /* ---- Layout: fills the viewport, never scrolls ---- */
     .wrap { flex: 1 1 auto; min-height: 0; padding: clamp(8px,1.6vh,18px) clamp(10px,2vw,20px); display: flex; }
-    .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
+    .grid { flex: 1; min-height: 0; width: 100%; max-width: 1400px; margin: 0 auto;
       display: grid; gap: clamp(8px,1.5vh,16px);
+      grid-template-columns: 3fr 2fr;
+      grid-template-areas: "left right"; }
+    .left-panel { grid-area: left; display: grid; gap: clamp(8px,1.5vh,16px);
       grid-template-columns: 2fr 1fr;
       grid-template-rows: 1.3fr 1fr 0.72fr;
       grid-template-areas: "main gauge" "fc fc" "stats stats"; }
@@ -291,6 +294,14 @@ const char page[] PROGMEM = R"rawliteral(
     .gauge-card { grid-area: gauge; }
     .forecast-card { grid-area: fc; }
     .stats { grid-area: stats; }
+    .right-panel { grid-area: right; display: flex; flex-direction: column; gap: clamp(6px,1vh,12px); }
+    .kid-card { flex: 1; display: flex; align-items: center; gap: clamp(10px,1.8vw,22px);
+      padding: clamp(8px,1.6vh,18px) clamp(12px,1.8vw,22px);
+      cursor: pointer; transition: background 0.15s; min-height: 0; }
+    .kid-card:hover { background: #ddcdb2; }
+    .kid-card:active { transform: scale(0.98); }
+    .kid-card-name { font-size: clamp(0.9rem, min(2.6vh,2.8vw), 1.6rem); font-weight: 700; color: #3b3225; }
+    .kid-card-sub { font-size: clamp(0.6rem,1.3vh,0.78rem); color: #8b5e3c; margin-top: 3px; }
     .card { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 16px;
       padding: clamp(10px,1.8vh,18px) clamp(12px,1.6vw,18px); min-height: 0; overflow: hidden; }
     .section { font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
@@ -359,13 +370,24 @@ const char page[] PROGMEM = R"rawliteral(
     .stat .sval.time { font-size: clamp(0.85rem, min(2.6vh,3.2vw), 1.35rem); }
     .stat .sunit { font-size: clamp(0.5rem,1.1vh,0.62rem); color: #7a6f5f; }
     .hum { color: #00b35a; } .wind { color: #0090cc; } .sun { color: #e8a000; }
+    /* ---- Kid detail overlay content ---- */
+    .kid-section { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
+    .kid-section-title { font-size: clamp(0.75rem,1.8vh,0.95rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 12px; }
+    .chore-item { color: #3b3225; font-size: clamp(0.9rem,2vh,1.1rem); padding: 8px 0; border-bottom: 1px solid #d4c4a4; line-height: 1.3; }
+    .chore-item:last-child { border-bottom: none; }
+    .schedule-text p { color: #3b3225; font-size: clamp(0.9rem,2vh,1.1rem); line-height: 1.8; margin: 0; }
     /* ---- Footer ---- */
     .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
     .footer a { color: #8b5e3c; }
-    /* ---- Narrow phones: give the gauge a bit more room ---- */
-    @media (max-width: 460px) {
-      .grid { grid-template-columns: 3fr 2fr; gap: 8px; }
-      .tb-title { letter-spacing: 0; }
+    @media (max-width: 768px) {
+      body { overflow: auto; height: auto; min-height: 100dvh; }
+      .wrap { flex: none; padding: 8px; }
+      .grid { grid-template-columns: 1fr; grid-template-areas: "left"; gap: 8px; }
+      .right-panel { display: none; }
+      .left-panel { grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+        grid-template-areas: "main" "gauge" "fc" "stats"; gap: 8px; }
+      .stats { grid-template-columns: repeat(3, 1fr); }
     }
     /* ---- Hourly overlay (its own scroll) ---- */
     .overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
@@ -393,39 +415,49 @@ const char page[] PROGMEM = R"rawliteral(
   </div>
   <div class="wrap">
     <div class="grid">
-      <div class="card weather-main">
-        <div class="wm-head">
-          <div class="section">Willow Street, PA</div>
-          <button class="hourly-btn" onclick="showHourly()">&#9201; Hourly &raquo;</button>
-        </div>
-        <div class="wm-top">
-          <div class="wm-cond-row"><span class="wm-icon" id="oIcon">&#127780;&#65039;</span><span class="wm-cond" id="oCond">Loading...</span></div>
-          <div class="wm-temp"><span id="oTemp">--</span><span class="u">&deg;F</span></div>
-          <div class="wm-hl" id="oHL">H: -- / L: --</div>
-        </div>
-      </div>
-      <div class="card gauge-card">
-        <div class="gauge-title">Indoor</div>
-        <div class="gauge">
-          <div class="gauge-ring" id="gaugeRing"></div>
-          <div class="gauge-center">
-            <div class="gauge-temp"><span id="tempF">--</span><span class="u">&deg;F</span></div>
-            <div class="gauge-sub"><span id="tempC">--</span>&deg;C</div>
-            <div class="gauge-hum"><span id="dhtH">--</span>% humidity</div>
+      <div class="left-panel">
+        <div class="card weather-main">
+          <div class="wm-head">
+            <div class="section">Willow Street, PA</div>
+            <button class="hourly-btn" onclick="showHourly()">&#9201; Hourly &raquo;</button>
+          </div>
+          <div class="wm-top">
+            <div class="wm-cond-row"><span class="wm-icon" id="oIcon">&#127780;&#65039;</span><span class="wm-cond" id="oCond">Loading...</span></div>
+            <div class="wm-temp"><span id="oTemp">--</span><span class="u">&deg;F</span></div>
+            <div class="wm-hl" id="oHL">H: -- / L: --</div>
           </div>
         </div>
-        <div class="status"><span class="pill" id="status">Loading...</span></div>
+        <div class="card gauge-card">
+          <div class="gauge-title">Indoor</div>
+          <div class="gauge">
+            <div class="gauge-ring" id="gaugeRing"></div>
+            <div class="gauge-center">
+              <div class="gauge-temp"><span id="tempF">--</span><span class="u">&deg;F</span></div>
+              <div class="gauge-sub"><span id="tempC">--</span>&deg;C</div>
+              <div class="gauge-hum"><span id="dhtH">--</span>% humidity</div>
+            </div>
+          </div>
+          <div class="status"><span class="pill" id="status">Loading...</span></div>
+        </div>
+        <div class="card forecast-card">
+          <div class="section">6-Day Forecast</div>
+          <div class="fc-strip" id="forecast"></div>
+        </div>
+        <div class="card stats">
+          <div class="stat"><div class="slabel">Humidity</div><div class="sval hum"><span id="oHum">--</span></div><div class="sunit">%</div></div>
+          <div class="stat"><div class="slabel">Wind</div><div class="sval wind"><span id="oWind">--</span></div><div class="sunit">mph</div></div>
+          <div class="stat"><div class="slabel">Sunrise</div><div class="sval sun time" id="sunrise">--:--</div></div>
+          <div class="stat"><div class="slabel">Sunset</div><div class="sval sun time" id="sunset">--:--</div></div>
+          <div class="stat"><div class="slabel">Chicken LEDs</div><div class="sval chi-none" id="chickenStat">--</div><div style="display:flex;gap:3px;justify-content:center;margin-top:2px;"><button class="led-btn on-btn" onclick="chickenOn()">ON</button><button class="led-btn off-btn" onclick="chickenOff()">OFF</button></div></div>
+        </div>
       </div>
-      <div class="card forecast-card">
-        <div class="section">6-Day Forecast</div>
-        <div class="fc-strip" id="forecast"></div>
-      </div>
-      <div class="card stats">
-        <div class="stat"><div class="slabel">Humidity</div><div class="sval hum"><span id="oHum">--</span></div><div class="sunit">%</div></div>
-        <div class="stat"><div class="slabel">Wind</div><div class="sval wind"><span id="oWind">--</span></div><div class="sunit">mph</div></div>
-        <div class="stat"><div class="slabel">Sunrise</div><div class="sval sun time" id="sunrise">--:--</div></div>
-        <div class="stat"><div class="slabel">Sunset</div><div class="sval sun time" id="sunset">--:--</div></div>
-        <div class="stat"><div class="slabel">Chicken LEDs</div><div class="sval chi-none" id="chickenStat">--</div><div style="display:flex;gap:3px;justify-content:center;margin-top:2px;"><button class="led-btn on-btn" onclick="chickenOn()">ON</button><button class="led-btn off-btn" onclick="chickenOff()">OFF</button></div></div>
+      <div class="right-panel">
+        <div class="card kid-card" onclick="showKid(0)"><div class="kid-card-name">Benedict</div><div class="kid-card-sub">Tap to view schedule &amp; chores</div></div>
+        <div class="card kid-card" onclick="showKid(1)"><div class="kid-card-name">Evangelina</div><div class="kid-card-sub">Tap to view schedule &amp; chores</div></div>
+        <div class="card kid-card" onclick="showKid(2)"><div class="kid-card-name">Gianna</div><div class="kid-card-sub">Tap to view schedule &amp; chores</div></div>
+        <div class="card kid-card" onclick="showKid(3)"><div class="kid-card-name">Patrick</div><div class="kid-card-sub">Tap to view schedule &amp; chores</div></div>
+        <div class="card kid-card" onclick="showKid(4)"><div class="kid-card-name">Clementine</div><div class="kid-card-sub">Tap to view schedule &amp; chores</div></div>
+        <div class="card kid-card" onclick="showKid(5)"><div class="kid-card-name">Adelaide</div><div class="kid-card-sub">Tap to view schedule &amp; chores</div></div>
       </div>
     </div>
   </div>
@@ -444,6 +476,16 @@ const char page[] PROGMEM = R"rawliteral(
     </div>
     <div class="overlay-body" id="dayDetail"><div class="overlay-loading">Loading...</div></div>
   </div>
+  <div class="overlay" id="kidOverlay">
+    <div class="overlay-header">
+      <h2 id="kidOverlayName">...</h2>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <a href="http://192.168.12.136:8181/kids-admin" target="_blank" style="color:#8b5e3c;font-size:0.85rem;text-decoration:none;">&#9998; Edit</a>
+        <button class="close-btn" onclick="closeKid()">Back</button>
+      </div>
+    </div>
+    <div class="overlay-body" id="kidDetail"><div class="overlay-loading">Loading...</div></div>
+  </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});},1000)}());
     void(function(){var u=function(){fetch('/data').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('status');if(d.sensor){s.textContent='Sensor Online';s.className='pill ok';document.getElementById('tempF').textContent=d.tempF.toFixed(1);document.getElementById('tempC').textContent=d.tempC.toFixed(1);document.getElementById('dhtH').textContent=d.dhtH.toFixed(0);var fr=Math.max(0,Math.min(1,(d.tempF-40)/50));document.getElementById('gaugeRing').style.setProperty('--deg',(fr*270)+'deg')}else{s.textContent='Sensor Not Connected';s.className='pill';document.getElementById('tempF').textContent='--';document.getElementById('tempC').textContent='--';document.getElementById('dhtH').textContent='--';document.getElementById('gaugeRing').style.setProperty('--deg','0deg')}document.getElementById('oTemp').textContent=d.oTemp;document.getElementById('oHL').textContent='H: '+d.oHigh+'° / L: '+d.oLow+'°';document.getElementById('oHum').textContent=d.oHum;document.getElementById('oWind').textContent=d.oWind;var parts=d.oDesc.split(' ');document.getElementById('oIcon').innerHTML=parts.shift();document.getElementById('oCond').textContent=parts.join(' ');document.getElementById('sunrise').textContent=d.sunrise;document.getElementById('sunset').textContent=d.sunset;var fc=document.getElementById('forecast');var h='';for(var i=0;i<d.forecast.length;i++){var f=d.forecast[i];var ic=f.desc.split(' ')[0];h+='<div class="fc-item" onclick="showDayDetail(\''+f.day+'\')"><div class="fc-day">'+f.day+'</div><div class="fc-icon">'+ic+'</div><div class="fc-hi">'+f.hi+'°</div><div class="fc-lo">'+f.lo+'°</div></div>'}fc.innerHTML=h}).catch(function(){document.getElementById('status').textContent='Connection Lost';document.getElementById('status').className='pill'})};u();setInterval(u,5000)}());
@@ -456,6 +498,11 @@ const char page[] PROGMEM = R"rawliteral(
   function chickenOff(){fetch('/chicken-off').then(function(){setTimeout(updateChicken,600);});}
   function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var el=document.getElementById('chickenStat');if(!d.ok){el.textContent='Offline';el.className='sval chi-none';}else{el.textContent=d.on?'ON':'OFF';el.className='sval '+(d.on?'chi-on':'chi-off');}}).catch(function(){var el=document.getElementById('chickenStat');el.textContent='Offline';el.className='sval chi-none';});}
   setInterval(updateChicken,5000);updateChicken();
+  var kidsData=[];
+  function loadKids(){fetch('http://192.168.12.136:8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[]}).catch(function(){});}
+  loadKids();setInterval(loadKids,120000);
+  function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c){return'<div class="chore-item">'+c+'</div>'}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
+  function closeKid(){document.getElementById('kidOverlay').className='overlay';}
   function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
   document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
   document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
