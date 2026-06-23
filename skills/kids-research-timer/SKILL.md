@@ -38,6 +38,37 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
   'docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id IN (1,2,3,8,9,11,12,13);" && docker exec pihole pihole reloaddns'
 ```
 
+### Step 1b — Flush DNS on all Windows devices (REQUIRED after opening)
+
+Without this, devices still have cached blocked entries — google.com loads but links don't work.
+
+```python
+import subprocess, pexpect
+
+# Eva's laptop — key auth (username has a space, must be quoted)
+subprocess.run([
+    'ssh', '-i', '/home/ericmilton/.ssh/id_ed25519',
+    '-o', 'StrictHostKeyChecking=no',
+    'eva milton@192.168.12.202', 'ipconfig /flushdns'
+])
+
+# Patrick's laptop (.249) and Benedict's laptop (.239) — password auth
+for ip in ['192.168.12.249', '192.168.12.239']:
+    child = pexpect.spawn(f'ssh -o StrictHostKeyChecking=no themi@{ip}')
+    child.expect('password:')
+    child.sendline('1229')
+    child.expect(r'\$|>')
+    child.sendline('ipconfig /flushdns')
+    child.expect(r'\$|>')
+    print(child.before.decode())
+    child.close()
+```
+
+Or as a one-liner for Eva's laptop only:
+```bash
+ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no "eva milton@192.168.12.202" 'ipconfig /flushdns'
+```
+
 ### Step 2 — Schedule restore at a specific time (e.g. 3pm)
 ```bash
 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "echo \"docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \\\"INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (1,1),(2,2),(3,3),(8,6),(9,7),(11,7),(12,8),(13,9);\\\" && docker exec pihole pihole reloaddns\" | at 3pm"
