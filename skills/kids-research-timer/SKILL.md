@@ -128,6 +128,82 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 \
 
 ---
 
+## Pi-hole API Method (Manual, Per-Device)
+
+**Preferred for one-off manual use.** No SSH to ThinkCentre needed — runs directly from Eric's terminal.
+
+> `groups:[]` = fully open (no rules), `groups:[N]` = locked back to assigned group
+
+### Step 1 — Get a session ID (run once per session)
+```bash
+SID=$(curl -s -X POST http://192.168.12.136/api/auth \
+  -H "Content-Type: application/json" \
+  -d '{"password":"645866"}' | python3 -c \
+  "import sys,json; print(json.load(sys.stdin)['session']['sid'])")
+```
+
+### Per-Device Lift / Restore
+
+| Device | IP | Group |
+|--------|----|-------|
+| Patrick's laptop | 192.168.12.249 | 2 |
+| Benedict's laptop | 192.168.12.239 | 3 |
+| Eva's laptop | 192.168.12.202 | 9 |
+| Gianna's laptop | 192.168.12.226 | 8 |
+| Tower of Gondor | 192.168.12.160 | 7 |
+| YTI Chromebook | 192.168.12.219 | 7 |
+| Ev's Chromebook | 192.168.12.194 | 6 |
+| Mac Mini | 192.168.12.163 | 1 |
+
+Replace `<IP>` and `<GROUP>` below:
+
+**LIFT:**
+```bash
+curl -s -X PUT http://192.168.12.136/api/clients/<IP> \
+  -H "sid: $SID" -H "Content-Type: application/json" \
+  -d '{"groups":[]}'
+```
+
+**RESTORE:**
+```bash
+curl -s -X PUT http://192.168.12.136/api/clients/<IP> \
+  -H "sid: $SID" -H "Content-Type: application/json" \
+  -d '{"groups":[<GROUP>]}'
+```
+
+### Lift ALL Devices at Once
+```bash
+for IP in 192.168.12.249 192.168.12.239 192.168.12.202 \
+          192.168.12.226 192.168.12.160 192.168.12.219 \
+          192.168.12.194 192.168.12.163; do
+  curl -s -X PUT http://192.168.12.136/api/clients/$IP \
+    -H "sid: $SID" -H "Content-Type: application/json" \
+    -d '{"groups":[]}'
+done
+```
+
+### Restore ALL Devices at Once
+```bash
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.249 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[2]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.239 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[3]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.202 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[9]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.226 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[8]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.160 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[7]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.219 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[7]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.194 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[6]}'
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.163 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[1]}'
+```
+
+### After Lifting — Flush DNS on Windows Laptops
+```bash
+ssh -i ~/.ssh/id_ed25519 "eva milton@192.168.12.202" 'ipconfig /flushdns'
+```
+Patrick, Benedict, Gianna: run `ipconfig /flushdns` in their own cmd terminal.
+
+> **WARNING:** `groups:[0]` is NOT unrestricted — group 0 is Pi-hole's default group and still blocks most sites. Always use `groups:[]` (empty) to fully open a device.
+
+---
+
 ## How the Commands Work
 
 Each command has two parts:
