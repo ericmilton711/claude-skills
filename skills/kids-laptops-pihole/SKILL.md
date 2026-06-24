@@ -1,6 +1,6 @@
 # Kids Laptops — Pi-hole Parental Controls
 
-**Last Updated:** 2026-06-01
+**Last Updated:** 2026-06-23
 **Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ Tower of Gondor (Kids Research) ✅ Gianna ✅ complete. Ev's Chromebook pending.
 
 ---
@@ -12,6 +12,111 @@ Each device has its own Pi-hole group with a custom whitelist.
 The block-all regex (`.*`) is assigned to each group — only whitelisted domains resolve.
 
 **Key rule:** Pi-hole blocks DNS only. Direct IP access (like WireGuard IPs) still works.
+
+---
+
+## Remote Management Workflow (SSH + Pi-hole)
+
+Kids laptops are behind Pi-hole default-deny. To do remote work (install software, run commands), you must temporarily lift Pi-hole restrictions first — otherwise winget and other downloads will fail with DNS errors.
+
+**ThinkCentre server:** `milton@192.168.12.136` (key auth, requires `-tt` flag)
+**Pi-hole API:** `http://192.168.12.136/api` (password: 645866)
+
+### Step 1 — Authenticate with Pi-hole API
+```bash
+SID=$(curl -s -X POST http://192.168.12.136/api/auth \
+  -H "Content-Type: application/json" \
+  -d '{"password":"645866"}' | python3 -c \
+  "import sys,json; print(json.load(sys.stdin)['session']['sid'])")
+```
+
+### Step 2 — Open the device (move to group 6 = unrestricted)
+
+| Device | IP | Normal Group |
+|--------|----|-------------|
+| Patrick's laptop (kids1) | 192.168.12.249 | 2 |
+| Benedict's laptop (kids2) | 192.168.12.239 | 3 |
+| Tower of Gondor | 192.168.12.160 | 7 |
+
+```bash
+curl -s -X PUT http://192.168.12.136/api/clients/<IP> \
+  -H "sid: $SID" -H "Content-Type: application/json" \
+  -d '{"groups":[6]}'
+```
+
+Then reload Pi-hole DNS:
+```bash
+timeout 20 ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+  milton@192.168.12.136 "docker exec pihole pihole reloaddns" 2>&1
+```
+
+### Step 3 — SSH into the Windows laptop (pexpect, base64 PowerShell)
+
+**Never try interactive prompt matching** — the Windows console prompt hangs. Always pass the command directly to SSH:
+
+```python
+import pexpect, base64
+
+ps_cmd = r'Your-PowerShell-Command-Here'
+encoded = base64.b64encode(ps_cmd.encode('utf-16-le')).decode()
+child = pexpect.spawn(
+    f'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 themi@<IP> powershell -EncodedCommand {encoded}',
+    timeout=60
+)
+child.expect('[Pp]assword')
+child.sendline('1229')
+child.expect(pexpect.EOF, timeout=60)
+print(child.before.decode('utf-8', errors='replace').strip())
+```
+
+**Credentials:**
+- Patrick's laptop (.249): `themi` / `1229`
+- Benedict's laptop (.239): `themi` / `1229`
+- Tower of Gondor (.160): `user` / `645866`
+
+**Avoid backslash escape issues in ps_cmd:** Use raw strings (`r'...'`) or string concatenation when building paths. Python will raise a SyntaxError on `\U`, `\N`, `\x` if not using raw strings.
+
+### Step 4 — Restore restrictions
+```bash
+curl -s -X PUT http://192.168.12.136/api/clients/<IP> \
+  -H "sid: $SID" -H "Content-Type: application/json" \
+  -d '{"groups":[<NORMAL_GROUP>]}'
+
+timeout 20 ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
+  milton@192.168.12.136 "docker exec pihole pihole reloaddns" 2>&1
+```
+
+### Full Example — Install LibreOffice on Benedict's laptop
+```python
+import pexpect, base64, subprocess, os
+
+# Step 1: Open via Pi-hole API
+os.system("""
+SID=$(curl -s -X POST http://192.168.12.136/api/auth -H "Content-Type: application/json" -d '{"password":"645866"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['session']['sid'])")
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.239 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[6]}'
+""")
+subprocess.run(['ssh', '-tt', '-i', '/home/ericmilton/.ssh/id_ed25519',
+                '-o', 'StrictHostKeyChecking=no', 'milton@192.168.12.136',
+                'docker exec pihole pihole reloaddns'])
+
+# Step 2: Install via winget
+ps_cmd = 'winget install --id TheDocumentFoundation.LibreOffice --source winget --accept-package-agreements --accept-source-agreements --silent'
+encoded = base64.b64encode(ps_cmd.encode('utf-16-le')).decode()
+child = pexpect.spawn(f'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 themi@192.168.12.239 powershell -EncodedCommand {encoded}', timeout=300)
+child.expect('[Pp]assword')
+child.sendline('1229')
+child.expect(pexpect.EOF, timeout=300)
+print(child.before.decode('utf-8', errors='replace').strip())
+
+# Step 3: Restore restrictions
+os.system("""
+SID=$(curl -s -X POST http://192.168.12.136/api/auth -H "Content-Type: application/json" -d '{"password":"645866"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['session']['sid'])")
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.239 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[3]}'
+""")
+subprocess.run(['ssh', '-tt', '-i', '/home/ericmilton/.ssh/id_ed25519',
+                '-o', 'StrictHostKeyChecking=no', 'milton@192.168.12.136',
+                'docker exec pihole pihole reloaddns'])
+```
 
 ---
 
@@ -160,12 +265,36 @@ ssh themi@192.168.12.249
 - Username: themi
 - Password: 1229
 - Pi-hole group: `kids2` (Group ID: 3)
+- **LibreOffice 26.2.4.2 installed** (2026-06-23, via winget)
 
 ### SSH Access
+
+**CRITICAL:** Do NOT try to run an interactive pexpect session with a prompt loop — the Windows prompt matching hangs. Always pass the PowerShell command directly to SSH via base64 encoding:
+
+```python
+import pexpect, base64
+
+ps_cmd = 'Your-PowerShell-Command-Here'
+encoded = base64.b64encode(ps_cmd.encode('utf-16-le')).decode()
+child = pexpect.spawn(f'ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 themi@192.168.12.239 powershell -EncodedCommand {encoded}', timeout=30)
+child.expect('[Pp]assword')
+child.sendline('1229')
+child.expect(pexpect.EOF)
+print(child.before.decode('utf-8', errors='replace').strip())
+```
+
+**Important:** Avoid `\U`, `\N`, `\x` in the ps_cmd string — Python interprets these as unicode escapes. Build the string with raw strings (`r'...'`) or string concatenation when paths are involved.
+
+**If installing software:** Benedict's laptop is behind Pi-hole (group 3) and can't reach download servers. Temporarily move to group 6 first, then restore:
 ```bash
-ssh themi@192.168.12.239
-# password: 1229
-# (use pexpect from Eric's laptop — key auth not set up, sshpass banned)
+# Open (API method — no SSH needed):
+SID=$(curl -s -X POST http://192.168.12.136/api/auth -H "Content-Type: application/json" -d '{"password":"645866"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['session']['sid'])")
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.239 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[6]}'
+ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "docker exec pihole pihole reloaddns" 2>&1
+# ... install ...
+# Restore:
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.239 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups":[3]}'
+ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "docker exec pihole pihole reloaddns" 2>&1
 ```
 
 ### Allowed Sites

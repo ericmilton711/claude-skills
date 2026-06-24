@@ -1,7 +1,7 @@
 # Kids Research Timer — Timed Pi-hole Unrestrict
 
-**Last Updated:** 2026-06-17
-**Status:** Live — YTI Chromebook daily 7-8:30pm cron active, updated 2026-06-18
+**Last Updated:** 2026-06-23
+**Status:** Live — YTI Chromebook daily 7-8:30pm cron active. Eva (.202) + Benedict (.239) one-time 1pm-4pm window set for 2026-06-24.
 
 ---
 
@@ -12,6 +12,8 @@ All timers run on the ThinkCentre via `at` or cron — survives Claude session c
 
 **ThinkCentre:** `milton@192.168.12.136`
 **Pi-hole DB:** `docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db`
+
+> **CRITICAL (2026-06-23):** ThinkCentre SSH now requires the `-tt` flag — it hangs silently without it. All SSH commands to ThinkCentre must use `ssh -tt -i ~/.ssh/id_ed25519 ...`
 
 ---
 
@@ -72,6 +74,40 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no "eva milton@192.168.12.202"
 ### Step 2 — Schedule restore at a specific time (e.g. 3pm)
 ```bash
 ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "echo \"docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \\\"INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (1,1),(2,2),(3,3),(8,6),(9,7),(11,7),(12,8),(13,9);\\\" && docker exec pihole pihole reloaddns\" | at 3pm"
+```
+
+---
+
+## One-Time Future Window (Specific Date + Time)
+
+Use this when you want a window to open and close on a specific future date — e.g. "1pm to 4pm tomorrow." Uses cron with a full `minute hour day month *` spec.
+
+### Step 1 — SSH to ThinkCentre and add the two cron entries
+```bash
+timeout 20 ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "
+(crontab -l 2>/dev/null; echo '';
+ echo '# Eva + Benedict unrestricted 1-4pm 2026-06-24';
+ echo '0 13 24 6 * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"DELETE FROM client_by_group WHERE client_id IN (13,3); INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,6),(3,6);\" && docker exec pihole pihole reloaddns # open';
+ echo '0 16 24 6 * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db \"DELETE FROM client_by_group WHERE client_id IN (13,3); INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,9),(3,3);\" && docker exec pihole pihole reloaddns # close') | crontab -
+echo DONE
+" 2>&1
+```
+
+**Cron date format:** `minute hour day month *` — e.g. `0 13 24 6 *` = 1:00pm on June 24.
+
+**Important:** The "open" command moves devices to group 6 (ev-temp-unrestricted) rather than using `groups:[]`. This is intentional — group 6 has no adlists and only 4 cosmetic deny rules (Google Fonts, rhymezone), making it effectively unrestricted while keeping devices in a named group. The "close" command restores each device to its original group.
+
+### Verify cron was added
+```bash
+timeout 20 ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "crontab -l | tail -5" 2>&1
+```
+
+### If you need to open them immediately AND restore via cron
+Open both devices now via Pi-hole API (see API section below), then add only the close cron entry.
+
+### Remove one-time cron entries after they've fired
+```bash
+timeout 20 ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "crontab -l | grep -v '# open\|# close' | crontab -" 2>&1
 ```
 
 ---
@@ -200,7 +236,7 @@ ssh -i ~/.ssh/id_ed25519 "eva milton@192.168.12.202" 'ipconfig /flushdns'
 ```
 Patrick, Benedict, Gianna: run `ipconfig /flushdns` in their own cmd terminal.
 
-> **WARNING:** `groups:[0]` is NOT unrestricted — group 0 is Pi-hole's default group and still blocks most sites. Always use `groups:[]` (empty) to fully open a device.
+> **WARNING:** `groups:[0]` is NOT unrestricted — group 0 is Pi-hole's default group and still blocks most sites. Use `groups:[]` (empty) to fully open a device, OR `groups:[6]` to put it in the `ev-temp-unrestricted` group (no adlists, only 4 cosmetic deny rules — effectively open and preferred for kids devices).
 
 ---
 
@@ -246,6 +282,7 @@ The SSH part is the delivery truck, the quoted part is the package.
 | Device | Open | Close | Added |
 |--------|------|-------|-------|
 | YTI Chromebook (client 11, .219) | 7:00pm daily | 8:30pm daily | 2026-06-18 |
+| Eva (.202) + Benedict (.239) | 1:00pm 2026-06-24 (one-time) | 4:00pm 2026-06-24 (one-time) | 2026-06-23 |
 
 Cron entries on ThinkCentre (`crontab -l`):
 ```
