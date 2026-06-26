@@ -1,13 +1,13 @@
 # Firefox Browser Lock — Password-Gated Browser Launch
 
-Locks Firefox (or any browser) behind a password prompt on Fedora/Linux. Uses a 30-minute session unlock so the password is only needed once per session.
+Locks Firefox (or any browser) behind a password prompt on Fedora/Linux. Password is required every time Firefox is launched. The session file is deleted when Firefox closes, so closing and reopening always requires the password again.
 
 ## How It Works
 
 1. A wrapper script at `~/.local/bin/browser-unlock` checks for a session token in `/tmp/`
-2. If unlocked within 30 minutes, launches Firefox directly
+2. If a session token exists (Firefox already running, opened a link mid-session), launches Firefox directly
 3. Otherwise shows a `zenity` password dialog
-4. On success, writes the current timestamp to the session file and launches Firefox
+4. On success, writes a session token, launches Firefox, and deletes the token when Firefox closes
 5. A `.desktop` override in `~/.local/share/applications/` replaces the system Firefox launcher
 
 ## Setup Steps
@@ -47,7 +47,8 @@ HASH=$(echo -n "$PASSWORD" | sha256sum | cut -d' ' -f1)
 
 if [ "$HASH" = "$STORED_HASH" ]; then
     date +%s > "$SESSION_FILE"
-    exec "$BROWSER" "$@"
+    "$BROWSER" "$@"
+    rm -f "$SESSION_FILE"
 else
     zenity --error --title="Access Denied" --text="Incorrect password." --width=200 2>/dev/null
     exit 1
