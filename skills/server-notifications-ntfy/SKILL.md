@@ -4,47 +4,51 @@ Two-way push notifications using [ntfy.sh](https://ntfy.sh) — no account requi
 
 ## Topics
 
-| Direction | Topic | Purpose |
-|-----------|-------|---------|
-| Server/Laptop → Phone | `MILTONHAUS-Reminders` | Reminders, alerts from ThinkCentre or laptop |
-| Phone → All Devices | `MILTONHAUS-Laptop` | Messages from Eric's phone to all computers |
+| Topic | Direction | Device |
+|-------|-----------|--------|
+| `MILTONHAUS-Reminders` | Server/Laptop → Phone | Eric's phone |
+| `MILTONHAUS-Laptop` | Phone → Device | Eric's laptop (.220) |
+| `MILTONHAUS-Tower` | Phone → Device | Tower of Gondor (.160) |
+| `MILTONHAUS-Eva` | Phone → Device | Eva's MSI (.202) |
+| `MILTONHAUS-Gianna` | Phone → Device | Gianna's Acer (.226) |
+| `MILTONHAUS-Patrick` | Phone → Device | Patrick's laptop (.249) |
+| `MILTONHAUS-Benedict` | Phone → Device | Benedict's laptop (.239) |
+
+**Phone setup:** Subscribe to each topic in the ntfy app. Publish to whichever device you want to reach.
 
 ## Devices — Listener Deployment
 
-| Device | IP | OS | SSH Auth | Status |
-|--------|----|----|----------|--------|
-| Eric's laptop | .220 | Windows | — | **DEPLOYED** |
-| Tower of Gondor | .160 | Windows | Password (`user` / `645866`) | PENDING |
-| Eva's MSI | .202 | Windows | SSH key | PENDING |
-| Gianna's Acer | .226 | Fedora | SSH key | PENDING |
-| Patrick's laptop | .249 | Windows | Password (`themi` / `1229`) | PENDING |
-| Benedict's laptop | .239 | Windows | Password (`themi` / `1229`) | PENDING |
+| Device | IP | OS | SSH Auth | Topic | Status |
+|--------|----|----|----------|-------|--------|
+| Eric's laptop | .220 | Windows | — | `MILTONHAUS-Laptop` | **DEPLOYED** |
+| Tower of Gondor | .160 | Windows | Password (`user` / `645866`) | `MILTONHAUS-Tower` | PENDING |
+| Eva's MSI | .202 | Windows | SSH key | `MILTONHAUS-Eva` | PENDING |
+| Gianna's Acer | .226 | Fedora | SSH key | `MILTONHAUS-Gianna` | PENDING |
+| Patrick's laptop | .249 | Windows | Password (`themi` / `1229`) | `MILTONHAUS-Patrick` | PENDING |
+| Benedict's laptop | .239 | Windows | Password (`themi` / `1229`) | `MILTONHAUS-Benedict` | PENDING |
 
 ## Phone → Devices (Listener)
 
-All devices subscribe to the same `MILTONHAUS-Laptop` topic. One message from the phone pops up on every screen.
+Each device runs a listener on its own topic. The scripts accept the topic as a parameter.
 
 ### Windows Listener — `ntfy-listener.ps1`
 
 Shows a dark always-on-top popup in the bottom-right corner that **stays on screen until clicked to dismiss**.
 
 **Script location (Eric's laptop):** `C:\Users\ericm\ntfy-listener.ps1`
+**Usage:** `powershell -File ntfy-listener.ps1 -Topic MILTONHAUS-Tower`
+**Default topic (no param):** `MILTONHAUS-Laptop`
+
 **Auto-start:** Startup shortcut at `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\ntfy-listener.lnk`
 
 ```powershell
-# Startup shortcut creation (run once per machine):
+# Startup shortcut creation (run once per machine, set -Topic to match the device):
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\ntfy-listener.lnk")
 $shortcut.TargetPath = "powershell.exe"
-$shortcut.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$env:USERPROFILE\ntfy-listener.ps1`""
+$shortcut.Arguments = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$env:USERPROFILE\ntfy-listener.ps1`" -Topic MILTONHAUS-DEVICENAME"
 $shortcut.WorkingDirectory = $env:USERPROFILE
 $shortcut.Save()
-```
-
-**Deploy to a Windows machine via SCP + SSH:**
-```bash
-scp ~/ntfy-listener.ps1 USER@IP:C:/Users/USER/ntfy-listener.ps1
-ssh USER@IP "powershell -Command \"$shell = New-Object -ComObject WScript.Shell; $sc = $shell.CreateShortcut('$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\ntfy-listener.lnk'); $sc.TargetPath = 'powershell.exe'; $sc.Arguments = '-WindowStyle Hidden -ExecutionPolicy Bypass -File C:\\Users\\USER\\ntfy-listener.ps1'; $sc.WorkingDirectory = '$env:USERPROFILE'; $sc.Save()\""
 ```
 
 ### Linux Listener — `ntfy-listener.sh`
@@ -52,20 +56,21 @@ ssh USER@IP "powershell -Command \"$shell = New-Object -ComObject WScript.Shell;
 Uses `notify-send -u critical -t 0` so notifications persist until dismissed (on GNOME/XFCE).
 
 **Script location (Eric's laptop, for deployment):** `C:\Users\ericm\ntfy-listener.sh`
+**Usage:** `./ntfy-listener.sh MILTONHAUS-Gianna`
+**Default topic (no arg):** `MILTONHAUS-Laptop`
 
 **Deploy to a Linux machine:**
 ```bash
 scp ~/ntfy-listener.sh USER@IP:~/ntfy-listener.sh
 ssh USER@IP "chmod +x ~/ntfy-listener.sh"
-# Create autostart entry:
-ssh USER@IP "mkdir -p ~/.config/autostart && cat > ~/.config/autostart/ntfy-listener.desktop << 'EOF'
+ssh USER@IP "mkdir -p ~/.config/autostart && cat > ~/.config/autostart/ntfy-listener.desktop << 'DEOF'
 [Desktop Entry]
 Type=Application
 Name=ntfy Listener
-Exec=/home/USER/ntfy-listener.sh
+Exec=/home/USER/ntfy-listener.sh MILTONHAUS-DEVICENAME
 Hidden=false
 X-GNOME-Autostart-enabled=true
-EOF"
+DEOF"
 ```
 
 ### Behavior
@@ -73,10 +78,6 @@ EOF"
 - Reconnects automatically if connection drops
 - If a device is asleep/off, messages queue on ntfy's server for 12 hours and appear when the listener reconnects
 - Multiple popups can stack if several messages arrive before being dismissed
-
-## Phone Setup
-
-In the ntfy app, subscribe to `MILTONHAUS-Laptop` (case-sensitive). Tap into the topic and use the publish button to send.
 
 ## Server/Laptop → Phone
 
