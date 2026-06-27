@@ -62,6 +62,7 @@ String nwsDescToEmoji(const String& desc) {
 }
 
 bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr) {
+  esp_task_wdt_reset();
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
@@ -72,6 +73,7 @@ bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr
   http.setTimeout(8000);
   http.useHTTP10(true);
   int code = http.GET();
+  esp_task_wdt_reset();
   bool ok = false;
   if (code == 200) {
     DeserializationError err = filter
@@ -170,6 +172,7 @@ void fetchForecast(WxData& d) {
 }
 
 void fetchSunriseSunset(WxData& d) {
+  esp_task_wdt_reset();
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
@@ -233,8 +236,11 @@ void fetchWeather() {
 }
 
 void weatherTask(void* param) {
+  esp_task_wdt_add(NULL);
   for (;;) {
+    esp_task_wdt_reset();
     fetchWeather();
+    esp_task_wdt_reset();
     vTaskDelay(pdMS_TO_TICKS(600000));
   }
 }
