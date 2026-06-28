@@ -1,9 +1,31 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-06-20 (v2)** — Kids section added as right-side column. See "What Changed 2026-06-20 v2" first if you're picking this up mid-project.
+> **⚠ CURRENT AS OF 2026-06-27** — Core 0 watchdog fix. See "What Changed 2026-06-27" first if you're picking this up mid-project.
 
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right. Chicken LED control in stats strip.
-**Last Updated:** 2026-06-20
+**Last Updated:** 2026-06-27
+
+---
+
+## What Changed 2026-06-27 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Core 0 weatherTask watchdog fix — prevents web server deadlock**
+
+### Problem
+The `weatherTask` on core 0 had no watchdog. When a `WiFiClientSecure` TLS handshake hung (known ESP32 bug where timeouts don't apply to TLS), it blocked the lwIP TCP stack. Result: ESP32 was pingable but port 80 never responded. The `loop()` watchdog on core 1 couldn't help because `loop()` kept running fine, it just never received TCP connections.
+
+OTA flashing was impossible (web server dead). Required USB serial flash to fix.
+
+### Fix
+- `weatherTask` now calls `esp_task_wdt_add(NULL)` on entry to register with the hardware watchdog
+- `esp_task_wdt_reset()` called before and after `fetchWeather()` in the task loop
+- `nwsFetch()` calls `esp_task_wdt_reset()` before and after `http.GET()` (the call most likely to hang)
+- `fetchSunriseSunset()` calls `esp_task_wdt_reset()` at entry
+
+If any HTTPS fetch hangs for >30 seconds, the watchdog resets the chip instead of deadlocking the web server.
+
+### Lesson learned
+OTA is useless when the web server is the thing that's broken. Keep a micro-USB data cable accessible near the ESP32 for emergencies. The CP210x shows up as COM15 on Eric's Windows laptop.
 
 ---
 
@@ -184,18 +206,22 @@ Right panel (`.right-panel`): flex column, 6 `.kid-card` divs (each `flex: 1`)
 - `WxData` struct holds all weather fields; replaces individual globals
 - `wxMutex` protects `wx` — fetch task builds local `WxData fresh`, swaps atomically (~1-2ms hold)
 - `handleData()` takes mutex to read safely
-- `esp_task_wdt_reset()` removed from `fetchWeather()` — loop() pets the watchdog freely
+- `esp_task_wdt_reset()` called in `nwsFetch()` and `fetchSunriseSunset()` — weatherTask pets its own watchdog during long HTTPS fetches
 - `fetchWeather()` removed from WiFi reconnect path — weatherTask handles it on next cycle
 
 **Result:** Dashboard reachable in ~3s. Shows `--` briefly while first fetch completes on core 0.
 
-## Hardware Watchdog 2026-06-04 (DEPLOYED)
+## Hardware Watchdog 2026-06-04 + 2026-06-27 (DEPLOYED)
 
-**Symptom:** ESP32 went completely unreachable (no ping), only manual power-cycle recovered it.
+**Symptom (2026-06-04):** ESP32 went completely unreachable (no ping), only manual power-cycle recovered it.
 
 **Root cause:** Soft heap-watchdog in `loop()` never ran when a `WiFiClientSecure` TLS handshake blocked past its timeout — a known ESP32 core bug.
 
-**Fix:** `esp_task_wdt` hardware watchdog (30s). Resets the chip if `loop()` doesn't pet it. Fed at top of `loop()`, and inside the OTA upload callback (uploads take >30s).
+**Fix (2026-06-04):** `esp_task_wdt` hardware watchdog (30s). Resets the chip if `loop()` doesn't pet it. Fed at top of `loop()`, and inside the OTA upload callback (uploads take >30s).
+
+**Symptom (2026-06-27):** ESP32 pingable but web server on port 80 completely unresponsive. Hung TLS handshake on core 0 blocked the lwIP TCP stack, preventing core 1's web server from accepting connections.
+
+**Fix (2026-06-27):** `weatherTask` on core 0 now registered with the same hardware watchdog via `esp_task_wdt_add(NULL)`. Watchdog fed before/after HTTPS fetches. Both cores are now protected.
 
 ## Crash / Reliability Fixes 2026-06-04 (DEPLOYED)
 
@@ -240,11 +266,18 @@ curl --max-time 90 --form "update=@/tmp/esp32-build/esp32-weather.ino.bin;type=a
 ### Via USB (when board is physically connected)
 
 ```bash
+# Linux
 arduino-cli compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
 arduino-cli upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port /dev/ttyUSB0 ~/esp32-weather
+
+# Windows (COM15 on Eric's laptop — CP210x driver)
+arduino-cli.exe compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather
+arduino-cli.exe upload --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs --port COM15 ~/esp32-weather
 ```
 
 If upload fails: hold BOOT, press+release EN/RST, release BOOT, upload within a few seconds.
+
+**Important:** OTA is useless when the web server itself is hung. Keep a micro-USB data cable accessible near the ESP32.
 
 **NEVER use `esptool erase_flash`** — wipes NVS, causes boot loops, loses network state.
 
