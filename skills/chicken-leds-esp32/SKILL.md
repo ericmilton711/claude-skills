@@ -1,7 +1,7 @@
 # Chicken LEDs — ESP32 Controller
 
-**Last Updated:** 2026-06-20
-**Status:** ✅ Fully deployed. OTA enabled. Blink endpoint live. Dashboard integrated. Timezone correct.
+**Last Updated:** 2026-06-28
+**Status:** ✅ Fully deployed. OTA enabled. Blink endpoint live. Dashboard integrated. Timezone correct. Manual override + ntfy phone notifications active.
 
 ---
 
@@ -136,13 +136,19 @@ curl http://192.168.12.241/blink-stop     # cancel blink early
 
 Status response example:
 ```
-leds:  on
-clock: ntp
-time:  20:31:14
-ip:    192.168.12.241
+leds:     on
+clock:    ntp
+time:     20:31:14
+ip:       192.168.12.241
+override: no
 ```
 
 `clock:` will show `ntp`, `rtc`, or `none` depending on time source.
+`override:` will show `yes` when a manual command has suppressed the schedule check.
+
+### Manual Override
+
+`/leds-on` and `/leds-off` set an internal `manualOverride` flag that prevents the 30-second schedule check from reverting the state. The override clears automatically at the next schedule boundary (e.g. 8am→OFF, 6pm→ON). You do not need to do anything to release it — just let the schedule tick over.
 
 ### Why /blink instead of rapid on/off curls
 Sending 240 curl requests in 2 minutes crashes the ESP32 web server. `/blink` runs the entire sequence as a FreeRTOS task internally — one HTTP request, no crashes.
@@ -152,6 +158,21 @@ Sending 240 curl requests in 2 minutes crashes the ESP32 web server. `/blink` ru
 ## MILTONHAUS Weather Dashboard
 
 The dashboard at `http://192.168.12.240/` shows live Chicken LED status and has ON/OFF buttons in the stats strip. It polls `/chicken-status` every 5 seconds via proxy endpoints on the weather ESP32. Control works from any browser on the LAN.
+
+---
+
+## Phone Notifications (ntfy)
+
+The ThinkCentre polls `/status` every minute via `/home/milton/chicken-led-notify.sh` and sends an ntfy push notification to Eric's phone on any state change (scheduled or manual).
+
+**Quiet hours:** 10pm–7am — no notifications (state still tracked silently so no false positives when quiet resumes).
+
+**Crontab entry on ThinkCentre:**
+```
+* * * * * /home/milton/chicken-led-notify.sh
+```
+
+**Script:** `/home/milton/chicken-led-notify.sh`
 
 ---
 
@@ -188,6 +209,12 @@ Edit `applySchedule()` in the `.ino`:
 ```cpp
 // ON 5am–8am, ON 6pm–midnight
 bool shouldBeOn = (h >= 5 && h < 8) || (h >= 18);
+// Schedule transitions clear manualOverride automatically
+if (shouldBeOn != lastScheduleState) {
+    lastScheduleState = shouldBeOn;
+    manualOverride = false;
+}
+if (!manualOverride && shouldBeOn != ledsOn) setLeds(shouldBeOn);
 ```
 
 ---
