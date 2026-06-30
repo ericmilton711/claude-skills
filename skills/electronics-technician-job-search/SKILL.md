@@ -41,7 +41,7 @@ The 2-page version in Documents is the one to use. As of 2026-06-29 it has:
 |---------|----------|-----|-------------|--------------|
 | **Advanced Cooling Technologies (ACT)** | Lancaster, 1046 New Holland Ave | Aerospace/defense thermal tech; Lockheed, Northrop, Boeing clients; top workplace; R&D Technician roles | [1-act.com/careers](https://www.1-act.com/careers/) | $30–40/hr likely |
 | **Photonis Defense** | Lancaster, 1000 New Holland Ave | Night vision/defense imaging, DoD contractor, veteran-friendly | [photonis.com/careers](https://www.photonis.com/careers-our-facilities/photonis-defense) | $30+/hr likely |
-| **Woodstream Corporation** | Lititz, PA | Had Electrical/Electronics Technician at $40/hr (2nd shift) — check if still open | [woodstream.com/open-positions](https://www.woodstream.com/careers/open-positions) | ~$40/hr |
+| **Woodstream Corporation** | Lititz, PA | Had Electrical/Electronics Technician listing (2nd shift) — check if still open | [woodstream.com/open-positions](https://www.woodstream.com/careers/open-positions) | Unknown |
 | **DentalEZ** | Lancaster, PA | Medical device/dental equipment manufacturer | Search dentalez.com/careers | $28–35/hr typical |
 
 ### Already Ruled Out
@@ -74,7 +74,7 @@ The 2-page version in Documents is the one to use. As of 2026-06-29 it has:
 
 ## Next Steps
 1. Check ACT (Advanced Cooling Technologies) open positions at 1-act.com/careers — strongest lead
-2. Check Woodstream open positions — had $40/hr role
+2. Check Woodstream open positions
 3. Check Photonis Defense careers
 4. Check DentalEZ careers
 5. Update resume summary with electronics-focused version (optional but recommended)
