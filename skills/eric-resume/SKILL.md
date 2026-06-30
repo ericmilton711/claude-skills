@@ -1,6 +1,6 @@
 # Eric C. Milton — Resume
 
-**Source file:** `C:\Users\ericm\OneDrive\Desktop\school stuff\Eric C Milton 2026 Resume.docx`
+**Source file:** `/home/ericmilton/Documents/Eric C Milton 2026 Resume.docx`
 
 ---
 
