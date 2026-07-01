@@ -1,6 +1,6 @@
 # Electronics Technician Job Search
 
-**Last Updated:** 2026-06-29
+**Last Updated:** 2026-06-30
 **Status:** In progress — resume polished, companies identified, applications not yet submitted
 
 ---
@@ -37,15 +37,28 @@ The 2-page version in Documents is the one to use. As of 2026-06-29 it has:
 
 ## Target Companies (Direct Career Pages)
 
+### Defense / Aerospace
 | Company | Location | Why | Career Page | Pay Estimate |
 |---------|----------|-----|-------------|--------------|
 | **Advanced Cooling Technologies (ACT)** | Lancaster, 1046 New Holland Ave | Aerospace/defense thermal tech; Lockheed, Northrop, Boeing clients; top workplace; R&D Technician roles | [1-act.com/careers](https://www.1-act.com/careers/) | $30–40/hr likely |
 | **Photonis Defense** | Lancaster, 1000 New Holland Ave | Night vision/defense imaging, DoD contractor, veteran-friendly | [photonis.com/careers](https://www.photonis.com/careers-our-facilities/photonis-defense) | $30+/hr likely |
 | **Woodstream Corporation** | Lititz, PA | Had Electrical/Electronics Technician listing (2nd shift) — check if still open | [woodstream.com/open-positions](https://www.woodstream.com/careers/open-positions) | Unknown |
-| **DentalEZ** | Lancaster, PA | Medical device/dental equipment manufacturer | Search dentalez.com/careers | $28–35/hr typical |
+
+### Medical — BMET (Biomedical Equipment Technician, hospital-based)
+| Company | Location | Why | Career Page | Pay Estimate |
+|---------|----------|-----|-------------|--------------|
+| **Penn State Health** | Lancaster Medical Center | BMET II confirmed open as of 2026-06-30 — day shift 7:30am–4pm; 341-bed hospital | [pennstatehealth.org/careers](https://www.pennstatehealth.org/careers) | $28–38/hr |
+| **WellSpan Health** | York, PA | Large regional health system; multiple BMET openings in PA | [joinwellspan.org](https://www.joinwellspan.org/SearchResults.aspx) | $25–37/hr |
+| **TRIMEDX** | Lititz, PA | Third-party biomedical servicer contracted with many local hospitals; hires frequently | [trimedx.com/careers](https://trimedx.com/careers) | $24–38/hr |
+
+### Medical — Device Manufacturing (factory-based)
+| Company | Location | Why | Career Page | Pay Estimate |
+|---------|----------|-----|-------------|--------------|
+| **MDI (Medical Devices Inc.)** | Lancaster area | Precision orthopedic/medical device contract manufacturer | Search Indeed — "MDI Lancaster PA" | $25–35/hr |
 
 ### Already Ruled Out
 - **Sechan Electronics** — Lititz, PA. Defense electronics but pays only $18/hr. Skip.
+- **DentalEZ** — Lancaster, PA. Dental device manufacturer. Bad employee reviews — skip.
 
 ---
 
@@ -58,6 +71,10 @@ The 2-page version in Documents is the one to use. As of 2026-06-29 it has:
 - [ZipRecruiter — Electrical jobs, Lancaster](https://www.ziprecruiter.com/Jobs/Electrical/-in-Lancaster,PA) — $26–$61/hr range
 - [Glassdoor — Defense jobs, Lancaster](https://www.glassdoor.com/Job/lancaster-defense-jobs-SRCH_IL.0,9_IC1152360_KO10,17.htm) — 175 listings
 - [Glassdoor — Medical device, York County](https://www.glassdoor.com/Job/york-pa-medical-device-companies-jobs-SRCH_IL.0,7_IC1153468_KO8,32.htm) — 502 listings
+- [Indeed — Medical Device, Lancaster](https://www.indeed.com/q-medical-device-l-lancaster,-pa-jobs.html)
+- [Glassdoor — BMET, Lancaster](https://www.glassdoor.com/Job/lancaster-biomedical-technician-jobs-SRCH_IL.0,9_IC1152360_KO10,31.htm)
+- [LinkedIn — BMET, Lancaster](https://www.linkedin.com/jobs/biomedical-equipment-technician-jobs-lancaster-pa)
+- [ZipRecruiter — Medical Device, Lancaster](https://www.ziprecruiter.com/Jobs/Medical-Device/-in-Lancaster,PA) — $34–50/hr
 
 ---
 
@@ -73,8 +90,10 @@ The 2-page version in Documents is the one to use. As of 2026-06-29 it has:
 ---
 
 ## Next Steps
-1. Check ACT (Advanced Cooling Technologies) open positions at 1-act.com/careers — strongest lead
-2. Check Woodstream open positions
-3. Check Photonis Defense careers
-4. Check DentalEZ careers
-5. Update resume summary with electronics-focused version (optional but recommended)
+1. Check Penn State Health careers for BMET II opening — confirmed active 2026-06-30, strongest lead
+2. Check ACT (Advanced Cooling Technologies) open positions at 1-act.com/careers
+3. Check TRIMEDX careers (Lititz, PA)
+4. Check WellSpan Health careers (York)
+5. Check Photonis Defense careers
+6. Check Woodstream open positions
+7. Update resume summary with electronics-focused version (optional but recommended)
