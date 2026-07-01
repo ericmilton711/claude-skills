@@ -373,8 +373,10 @@ const char page[] PROGMEM = R"rawliteral(
     /* ---- Kid detail overlay content ---- */
     .kid-section { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 14px; padding: 16px 20px; margin-bottom: 12px; }
     .kid-section-title { font-size: clamp(0.75rem,1.8vh,0.95rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 12px; }
-    .chore-item { color: #3b3225; font-size: clamp(0.9rem,2vh,1.1rem); padding: 8px 0; border-bottom: 1px solid #d4c4a4; line-height: 1.3; }
+    .chore-item { display: flex; align-items: center; gap: 14px; color: #3b3225; font-size: clamp(0.9rem,2vh,1.1rem); padding: 10px 2px; border-bottom: 1px solid #d4c4a4; line-height: 1.3; cursor: pointer; }
     .chore-item:last-child { border-bottom: none; }
+    .chore-check { width: 24px; height: 24px; flex-shrink: 0; accent-color: #8b5e3c; cursor: pointer; }
+    .chore-done span { text-decoration: line-through; color: #9a8d7a; }
     .schedule-text p { color: #3b3225; font-size: clamp(0.9rem,2vh,1.1rem); line-height: 1.8; margin: 0; }
     /* ---- Footer ---- */
     .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
@@ -494,9 +496,13 @@ const char page[] PROGMEM = R"rawliteral(
   function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var el=document.getElementById('chickenStat');if(!d.ok){el.textContent='Offline';el.className='sval chi-none';}else{el.textContent=d.on?'ON':'OFF';el.className='sval '+(d.on?'chi-on':'chi-off');}}).catch(function(){var el=document.getElementById('chickenStat');el.textContent='Offline';el.className='sval chi-none';});}
   setInterval(updateChicken,5000);updateChicken();
   var kidsData=[];
-  function loadKids(){fetch('http://192.168.12.136:8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[]}).catch(function(){});}
+  var kidsWeekStart='';
+  function mondayKey(d){var day=d.getDay();var diff=(day===0?-6:1-day);var m=new Date(d);m.setDate(d.getDate()+diff);return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0');}
+  function saveKids(){fetch('http://192.168.12.136:8181/kids/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kids:kidsData,weekStart:kidsWeekStart})}).catch(function(){});}
+  function loadKids(){fetch('http://192.168.12.136:8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[];var wk=mondayKey(new Date());if(d.weekStart!==wk){kidsData.forEach(function(k){k.choreDone={};});kidsWeekStart=wk;saveKids();}else{kidsWeekStart=wk;}}).catch(function(){});}
   loadKids();setInterval(loadKids,120000);
-  function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c){return'<div class="chore-item">'+c+'</div>'}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
+  function toggleChore(ki,ci,el){var k=kidsData[ki];if(!k)return;var chore=k.chores[ci];if(!k.choreDone)k.choreDone={};k.choreDone[chore]=el.checked;saveKids();}
+  function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c,ci){var done=k.choreDone&&k.choreDone[c];return'<label class="chore-item'+(done?' chore-done':'')+'"><input type="checkbox" class="chore-check"'+(done?' checked':'')+' onchange="toggleChore('+i+','+ci+',this)"><span>'+c+'</span></label>';}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
   function closeKid(){document.getElementById('kidOverlay').className='overlay';}
   function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
   document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});

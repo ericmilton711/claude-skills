@@ -1,13 +1,36 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-06-30** — Chicken-status proxy parsing fix. See "What Changed 2026-06-30" first if you're picking this up mid-project.
+> **⚠ CURRENT AS OF 2026-06-30** — Chore checkboxes added to kid overlay. See "What Changed 2026-06-30 v2" first if you're picking this up mid-project.
 
-**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right. Chicken LED control in stats strip.
+**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right (now with tappable chore checkboxes). Chicken LED control in stats strip.
 **Last Updated:** 2026-06-30
 
 ---
 
-## What Changed 2026-06-30 (DEPLOYED — flash: 58% / RAM: 16%)
+## What Changed 2026-06-30 v2 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Daily Chores are now checkboxes — kids can tap to mark them done, resets every Sunday night**
+
+### What changed
+In the kid detail overlay, `showKid()` now renders each chore as a checkbox row (`.chore-item` is a `<label>` wrapping an `<input type="checkbox">` + `<span>`) instead of a plain `<div>`. Checked chores get struck through (`.chore-done span`). Checkboxes are 24×24px for easy tapping on the Fire tablet.
+
+### Where the state lives — no ThinkCentre code change needed
+This was built entirely client-side, without touching `kids-dashboard/app.py`, because `/kids/save` has no schema validation — it just `json.dump()`s whatever JSON it's given. So the dashboard JS itself now manages two extra fields that ride along in the same `kids.json`:
+- Each kid object gets a `choreDone` object: `{"<chore text>": true/false}`, keyed by the chore's exact text (not index, so edits/reorders in `/kids-admin` don't misalign it — though renaming a chore does lose its checked state, which is an acceptable tradeoff)
+- Top-level `weekStart`: the ISO date (`YYYY-MM-DD`) of the most recent Monday, used to detect when a week has rolled over
+
+### Weekly reset logic (`mondayKey()` in the dashboard JS)
+On every `loadKids()` poll (every 2 minutes), the dashboard computes the current week's Monday date. If it doesn't match the `weekStart` stored in `kids.json`, every kid's `choreDone` is cleared and the new `weekStart` is POSTed back via `/kids/save` — so completed chores stay checked all week and clear automatically Sunday night → Monday morning.
+
+### Toggling
+`toggleChore(kidIndex, choreIndex, checkboxEl)` looks up the chore text from `kidsData` (not from a DOM attribute, to avoid HTML-escaping issues with chore text), flips `choreDone[chore]`, and POSTs the whole `kidsData` array + current `weekStart` back to `/kids/save`.
+
+### Known tradeoff
+If a parent edits the chores list via `/kids-admin` (served by `app.py`, which only sends `{name, chores, schedule}` on save), that save overwrites the kids array and drops `choreDone`/`weekStart` for everyone — so an admin edit resets all check-state for that day. Acceptable since chore edits are infrequent; a proper fix would move this tracking server-side into `app.py` (see `project_thinkcentre_ssh_exec_hang` memory — deferred because SSH exec was down on the ThinkCentre when this was built).
+
+---
+
+## What Changed 2026-06-30 v1 (DEPLOYED — flash: 58% / RAM: 16%)
 
 **Fixed: dashboard always showed chicken LEDs as OFF, even when they were ON**
 
