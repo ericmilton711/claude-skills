@@ -60,8 +60,8 @@ ThinkCentre or MILTONHAUS Weather Dashboard can override via HTTP at any time.
 | Time | State |
 |------|-------|
 | 12:00am | OFF |
-| 5:00am | ON |
-| 8:00am | OFF |
+| 4:00am | ON |
+| 9:00am | OFF |
 | 6:00pm | ON |
 
 ---
@@ -207,8 +207,8 @@ curl --max-time 90 \
 ### To change the schedule
 Edit `applySchedule()` in the `.ino`:
 ```cpp
-// ON 5am–8am, ON 6pm–midnight
-bool shouldBeOn = (h >= 5 && h < 8) || (h >= 18);
+// ON 4am–9am, ON 6pm–midnight
+bool shouldBeOn = (h >= 4 && h < 9) || (h >= 18);
 // Schedule transitions clear manualOverride automatically
 if (shouldBeOn != lastScheduleState) {
     lastScheduleState = shouldBeOn;
