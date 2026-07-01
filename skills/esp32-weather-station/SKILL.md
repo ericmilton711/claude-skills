@@ -1,9 +1,29 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-06-27** — Core 0 watchdog fix. See "What Changed 2026-06-27" first if you're picking this up mid-project.
+> **⚠ CURRENT AS OF 2026-06-30** — Chicken-status proxy parsing fix. See "What Changed 2026-06-30" first if you're picking this up mid-project.
 
 **Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right. Chicken LED control in stats strip.
-**Last Updated:** 2026-06-27
+**Last Updated:** 2026-06-30
+
+---
+
+## What Changed 2026-06-30 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Fixed: dashboard always showed chicken LEDs as OFF, even when they were ON**
+
+### Problem
+`handleChickenStatus()` parsed the chicken ESP32's `/status` text by checking for the literal substring `"leds:  on"` (exactly 2 spaces). The chicken firmware (`chicken-leds-esp32.ino`) actually formats that line with 5 spaces of padding (`"leds:     %s\n"`), so the substring never matched. Result: `on` was always `false` — the dashboard tile and buttons showed OFF/gray regardless of the real LED state.
+
+### Fix
+`handleChickenStatus()` now finds the `leds:` line, then checks that line for `"off"`/`"on"` instead of matching an exact padded string — immune to whitespace changes on either firmware:
+```cpp
+int lp = raw.indexOf("leds:");
+String ledsLine = lp >= 0 ? raw.substring(lp, raw.indexOf('\n', lp)) : "";
+bool on = ledsLine.indexOf("off") < 0 && ledsLine.indexOf("on") >= 0;
+```
+
+### Lesson learned
+Don't parse a status line with an exact-whitespace substring match across two independently-edited firmware files — a padding tweak on one side silently breaks the other. Verified by comparing `curl http://192.168.12.241/status` directly against `curl http://192.168.12.240/chicken-status` and confirming they agree after the fix.
 
 ---
 

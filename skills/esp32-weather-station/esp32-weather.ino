@@ -62,7 +62,6 @@ String nwsDescToEmoji(const String& desc) {
 }
 
 bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr) {
-  esp_task_wdt_reset();
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
@@ -73,7 +72,6 @@ bool nwsFetch(const char* url, JsonDocument& doc, JsonDocument* filter = nullptr
   http.setTimeout(8000);
   http.useHTTP10(true);
   int code = http.GET();
-  esp_task_wdt_reset();
   bool ok = false;
   if (code == 200) {
     DeserializationError err = filter
@@ -172,7 +170,6 @@ void fetchForecast(WxData& d) {
 }
 
 void fetchSunriseSunset(WxData& d) {
-  esp_task_wdt_reset();
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
@@ -236,11 +233,8 @@ void fetchWeather() {
 }
 
 void weatherTask(void* param) {
-  esp_task_wdt_add(NULL);
   for (;;) {
-    esp_task_wdt_reset();
     fetchWeather();
-    esp_task_wdt_reset();
     vTaskDelay(pdMS_TO_TICKS(600000));
   }
 }
@@ -385,15 +379,10 @@ const char page[] PROGMEM = R"rawliteral(
     /* ---- Footer ---- */
     .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
     .footer a { color: #8b5e3c; }
-    @media (max-width: 768px) {
-      body { overflow: auto; height: auto; min-height: 100dvh; }
-      .wrap { flex: none; padding: 8px; }
-      .grid { grid-template-columns: 1fr; grid-template-areas: "left"; gap: 8px; }
-      .right-panel { display: none; }
-      .left-panel { grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto;
-        grid-template-areas: "main" "gauge" "fc" "stats"; gap: 8px; }
-      .stats { grid-template-columns: repeat(3, 1fr); }
+    /* ---- Narrow phones: give the gauge a bit more room ---- */
+    @media (max-width: 460px) {
+      .grid { grid-template-columns: 3fr 2fr; gap: 8px; }
+      .tb-title { letter-spacing: 0; }
     }
     /* ---- Hourly overlay (its own scroll) ---- */
     .overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
@@ -599,7 +588,9 @@ String chickenGet(const String& path) {
 
 void handleChickenStatus() {
   String raw = chickenGet("/status");
-  bool on = raw.indexOf("leds:  on") >= 0;
+  int lp = raw.indexOf("leds:");
+  String ledsLine = lp >= 0 ? raw.substring(lp, raw.indexOf('\n', lp)) : "";
+  bool on = ledsLine.indexOf("off") < 0 && ledsLine.indexOf("on") >= 0;
   bool ok = raw.length() > 0;
   char buf[48];
   snprintf(buf, sizeof(buf), "{\"on\":%s,\"ok\":%s}", on ? "true" : "false", ok ? "true" : "false");
