@@ -1,9 +1,30 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-06-30** — Chore checkboxes added to kid overlay. See "What Changed 2026-06-30 v2" first if you're picking this up mid-project.
+> **⚠ CURRENT AS OF 2026-07-01** — Mobile layout fix added. See "What Changed 2026-07-01" first if you're picking this up mid-project.
 
-**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right (now with tappable chore checkboxes). Chicken LED control in stats strip.
-**Last Updated:** 2026-06-30
+**Status:** Deployed at 192.168.12.240. NWS weather (real station obs). DHT11 reading. Kids column on right (now with tappable chore checkboxes). Chicken LED control in stats strip. Stacks to single column on phone-width screens.
+**Last Updated:** 2026-07-01
+
+---
+
+## What Changed 2026-07-01 (DEPLOYED — flash: 87% / RAM: 16%)
+
+**Fixed: dashboard was unusable on phones — content clipped instead of reflowing**
+
+### Problem
+The layout is a fixed two-column CSS grid (`.grid { grid-template-columns: 3fr 2fr }`) built for the Fire tablet's wide landscape screen, inside a no-scroll kiosk body (`overflow: hidden`, fixed `100dvh` height). The only mobile media query (`max-width: 460px`) kept the same 2-column split and only tweaked letter-spacing. On a phone in portrait, both columns (and the nested `.left-panel` sub-grid: weather card + indoor gauge side by side) got squeezed into a narrow width — text and cards were clipped at the edge instead of wrapping, and the 5-column stats strip (Humidity/Wind/Sunrise/Sunset/Chicken) did the same.
+
+### Fix
+Replaced the old 460px query with a `max-width: 700px` query that switches to a stacked, scrollable mobile layout:
+- `body` gets `height: auto; overflow-y: auto` instead of the fixed-height no-scroll kiosk mode
+- `.grid` and `.left-panel` switch from `display: grid` to `display: flex; flex-direction: column` — weather card, indoor gauge, forecast, and stats stack vertically instead of squeezing side by side
+- `.kid-card` gets `flex: none; min-height: 56px` so cards don't collapse now that `.right-panel` isn't height-constrained
+- `.stats` drops to a 3-column grid so the 5 stat tiles wrap to two rows instead of clipping
+
+Tablet/kiosk layout (>700px) is untouched — this only affects narrow phone widths.
+
+### Lesson learned
+The single `@media (max-width: 460px)` query looked like mobile support existed, but it never actually changed the grid shape — worth checking what a media query *actually does*, not just that one exists, when a "responsive" layout still breaks on a real device.
 
 ---
 

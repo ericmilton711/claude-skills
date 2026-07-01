@@ -381,9 +381,15 @@ const char page[] PROGMEM = R"rawliteral(
     /* ---- Footer ---- */
     .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
     .footer a { color: #8b5e3c; }
-    /* ---- Narrow phones: give the gauge a bit more room ---- */
-    @media (max-width: 460px) {
-      .grid { grid-template-columns: 3fr 2fr; gap: 8px; }
+    /* ---- Narrow phones: stack weather above kids, allow scroll ---- */
+    @media (max-width: 700px) {
+      body { height: auto; min-height: 100dvh; overflow-y: auto; }
+      .wrap { display: block; }
+      .grid { display: flex; flex-direction: column; max-width: 600px; gap: 12px; }
+      .left-panel { display: flex; flex-direction: column; gap: 12px; }
+      .right-panel { gap: 8px; }
+      .kid-card { flex: none; min-height: 56px; }
+      .stats { grid-template-columns: repeat(3, 1fr); row-gap: 12px; }
       .tb-title { letter-spacing: 0; }
     }
     /* ---- Hourly overlay (its own scroll) ---- */
