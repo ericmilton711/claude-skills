@@ -43,6 +43,15 @@ Google Calendar events for `themiltonfam@gmail.com` now display in the "Today â€
 - **Dashboard JS:** Fetches `http://192.168.12.136:8182/calendar` every 5 minutes, populates `#calEvents` with event time + title rows.
 - **Libraries installed on ThinkCentre:** `icalendar`, `recurring-ical-events`
 
+### ThinkCentre Dashboard Kiosk
+Firefox auto-launches the weather dashboard in fullscreen kiosk mode on every boot:
+- **Autostart:** `~/.config/autostart/miltonhaus-dashboard.desktop` â€” waits 10s, dismisses GNOME overview via ydotool, then launches `firefox --kiosk http://192.168.12.240`
+- **GNOME config:** Single workspace (dynamic-workspaces=false, num-workspaces=1), `no-overview@fthx` extension enabled (skips Activities screen on login)
+- **ydotool:** Installed + enabled on boot for remote keystroke simulation. Passwordless sudo via `/etc/sudoers.d/ydotool`.
+- **Weekly reboot:** Saturday 3 AM via root crontab: `0 3 * * 6 /usr/bin/killall firefox; /bin/sleep 3; /sbin/reboot`. Kills Firefox first for clean shutdown (avoids BIOS warning from force reboot, avoids Firefox inhibitor blocking normal reboot).
+- **To exit kiosk remotely:** `sudo ydotool key 56:1 62:1 62:0 56:0` (Alt+F4)
+- **To launch Firefox on ThinkCentre monitor remotely:** `WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus firefox --kiosk http://192.168.12.240`
+
 ### Notes
 - Events refresh daily automatically (poller always queries today's date).
 - Shows "No events today" when the calendar is empty, "Calendar offline" if the ThinkCentre is unreachable.

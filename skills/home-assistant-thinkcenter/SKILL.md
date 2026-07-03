@@ -1,7 +1,7 @@
 # Home Assistant on Lenovo ThinkCentre M700 Tiny
 
-**Last Updated:** 2026-03-28
-**Status:** SSD replaced (Samsung 870 EVO 1TB). Fresh Fedora install. Home Assistant, Pi-hole, and WireGuard running via Docker. Static IP: 192.168.12.136. Pi-hole group management active for Mac Mini.
+**Last Updated:** 2026-07-03
+**Status:** SSD replaced (Samsung 870 EVO 1TB). Fedora 43. Home Assistant, Pi-hole, Tandoor Recipes, and WireGuard running via Docker. Kids dashboard (port 8181), family calendar poller (port 8182), weather proxy (port 8240). Dashboard kiosk on monitor. Weekly reboot Saturday 3 AM. Static IP: 192.168.12.136.
 
 ---
 
@@ -11,6 +11,11 @@ Central home server running all network services:
 - **Home Assistant** — smart home automation (ESP32 closet lights, etc.)
 - **Pi-hole** — DNS-based parental controls / ad blocking
 - **WireGuard** — VPN tunnel to Lambert network (192.168.0.x)
+- **Tandoor Recipes** — recipe manager (Docker)
+- **Kids Dashboard** — Flask app on port 8181 (`~/kids-dashboard/app.py`), serves kids' chores/schedules
+- **Family Calendar Poller** — Flask app on port 8182 (`~/family-calendar/app.py`), fetches Google Calendar iCal feed every 10 min
+- **Weather Proxy** — reverse proxy on port 8240 for Tailscale remote access to ESP32 weather dashboard
+- **Dashboard Kiosk** — Firefox `--kiosk` auto-launches weather dashboard fullscreen on the connected monitor
 
 ---
 
@@ -290,6 +295,53 @@ PersistentKeepalive = 25
 
 ---
 
+## Dashboard Kiosk (added 2026-07-03)
+
+Firefox auto-launches the MILTONHAUS Weather dashboard in fullscreen kiosk mode on every boot.
+
+**Autostart:** `~/.config/autostart/miltonhaus-dashboard.desktop`
+```
+Exec=bash -c 'sleep 10; sudo ydotool key 125:1 125:0 || true; sleep 2; firefox --kiosk http://192.168.12.240'
+```
+
+**GNOME config:**
+- Single workspace: `dynamic-workspaces=false`, `num-workspaces=1`
+- `no-overview@fthx` extension enabled (skips Activities screen on login)
+- `gnome-shell-extension-no-overview` package installed
+
+**ydotool:** Wayland keystroke simulation, enabled on boot (`ydotool.service`). Passwordless sudo via `/etc/sudoers.d/ydotool`.
+
+**Weekly reboot:** Saturday 3 AM via root crontab:
+```
+0 3 * * 6 /usr/bin/killall firefox; /bin/sleep 3; /sbin/reboot
+```
+Kills Firefox first (it inhibits shutdown), then clean reboot. Avoids BIOS warning from `reboot -f`.
+
+**Remote control:**
+```bash
+# Launch Firefox on the monitor
+WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus firefox --kiosk http://192.168.12.240
+
+# Send keystrokes (e.g. F11 for fullscreen)
+sudo ydotool key 87:1 87:0
+
+# Exit kiosk (Alt+F4)
+sudo ydotool key 56:1 62:1 62:0 56:0
+```
+
+---
+
+## Family Calendar Poller (added 2026-07-03)
+
+Flask app at `/home/milton/family-calendar/app.py`, systemd service `family-calendar.service`.
+
+- Fetches Google Calendar iCal feed (themiltonfam@gmail.com primary calendar) every 10 minutes
+- Serves today's events as JSON at `GET http://192.168.12.136:8182/calendar`
+- ESP32 weather dashboard JS fetches this every 5 minutes
+- Python packages: `icalendar`, `recurring-ical-events`
+
+---
+
 ## Next Steps
 
 - ✅ Set static IP to 192.168.12.136
@@ -301,5 +353,6 @@ PersistentKeepalive = 25
 
 ## Related Projects
 
+- ESP32 Weather Station (`~/.claude/skills/esp32-weather-station/`)
 - ESP32 Closet Lights (`~/.claude/skills/esp32-closet-lights/`)
 - MILTONHAUS Network (`~/.claude/skills/miltonhaus-network/SKILL.md`)
