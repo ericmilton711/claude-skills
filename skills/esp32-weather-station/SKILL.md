@@ -1,9 +1,9 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-07-02** — Full dashboard redesign (dark "Forest" palette via taste-skill). See "What Changed 2026-07-02" first if you're picking this up mid-project. Family calendar integration is a paused TODO.
+> **⚠ CURRENT AS OF 2026-07-03** — Family calendar integration complete. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
-**Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02, was warm earth-tone). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. "Today — Family Calendar" section present but not wired to real data yet.
-**Last Updated:** 2026-07-02
+**Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182.
+**Last Updated:** 2026-07-03
 
 ---
 
@@ -28,8 +28,25 @@ Worked with Eric using the `taste-skill` design-taste skill (an anti-slop *front
 - **Rollback workflow that worked:** before flashing, copy the working `.ino` to `~/esp32-weather-backups/esp32-weather.classic-backup.ino`. Revert = recompile that backup + OTA-flash (~90s), no code archaeology needed.
 - **Device dropped completely off the network once after an OTA flash** — unreachable even to `ping`, not just "web server hung." Recovered cleanly after a physical power cycle. Root cause unconfirmed (no WiFi/watchdog C++ was touched, only `page[]`), so it may recur — get it on USB serial to check for a crash loop before assuming new page content is the cause.
 
-### TODO — Family calendar (themiltonfam@gmail.com)
-Google deprecated password-based API sign-in in 2022, so the account password Eric offered can't be used (and shouldn't be stored anywhere regardless). Plan: get the calendar's **secret address in iCal format** — Google Calendar → gear icon (top-right) → "See all settings" → click the calendar under "Settings for my calendars" in the left sidebar → "Integrate calendar" section → "Secret address in iCal format." No OAuth needed for read-only. A small poller on the ThinkCentre (same pattern as `kids-dashboard/app.py` on port 8181) would fetch/parse the ICS feed and serve simplified JSON for `.hero-events` to consume. Paused mid-session 2026-07-02 — Eric couldn't locate "Integrate calendar" in the settings UI, picking back up later.
+---
+
+## What Changed 2026-07-03 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Family calendar integration — DONE**
+
+Google Calendar events for `themiltonfam@gmail.com` now display in the "Today — Family Calendar" section on the dashboard.
+
+### Architecture
+- **ThinkCentre poller:** Flask app at `/home/milton/family-calendar/app.py`, port 8182. Fetches the Google Calendar iCal feed every 10 minutes, parses today's events, serves JSON at `GET /calendar`.
+- **Systemd service:** `family-calendar.service` — enabled, starts on boot, auto-restarts.
+- **iCal URL:** Secret address from Google Calendar settings (themiltonfam@gmail.com primary calendar). No OAuth needed.
+- **Dashboard JS:** Fetches `http://192.168.12.136:8182/calendar` every 5 minutes, populates `#calEvents` with event time + title rows.
+- **Libraries installed on ThinkCentre:** `icalendar`, `recurring-ical-events`
+
+### Notes
+- Events refresh daily automatically (poller always queries today's date).
+- Shows "No events today" when the calendar is empty, "Calendar offline" if the ThinkCentre is unreachable.
+- Two empty "Family" sub-calendars also exist in the Google account but have no events. The primary `themiltonfam@gmail.com` calendar is the one with data.
 
 ---
 
