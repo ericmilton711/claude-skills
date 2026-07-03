@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MILTONHAUS Weather (preview)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Comfortaa', sans-serif; background: #d2c6a5; color: #3b3225;
+      height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+    }
+    /* ---- Top bar ---- */
+    .topbar { flex: 0 0 auto; background: linear-gradient(90deg, #8b5e3c, #6d4a2e);
+      padding: clamp(6px,1.3vh,12px) clamp(12px,2vw,20px); display: flex; justify-content: space-between; align-items: center; }
+    .tb-title { font-weight: 700; font-size: clamp(0.95rem,2.4vh,1.25rem); letter-spacing: 1px; color: #fff; }
+    .tb-clock { color: #f0e6d2; text-align: right; font-size: clamp(0.85rem,2vh,1.1rem); line-height: 1.15; }
+    .tb-clock .t { font-weight: 700; }
+    .tb-clock .d { font-size: 0.72em; color: #d8c9a8; display: block; }
+    /* ---- Layout: fills the viewport, never scrolls ---- */
+    .wrap { flex: 1 1 auto; min-height: 0; padding: clamp(8px,1.6vh,18px) clamp(10px,2vw,20px); display: flex; }
+    .grid { flex: 1; min-height: 0; width: 100%; max-width: 1200px; margin: 0 auto;
+      display: grid; gap: clamp(8px,1.5vh,16px);
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: 1.3fr 1fr 0.72fr;
+      grid-template-areas: "main gauge" "fc fc" "stats stats"; }
+    .weather-main { grid-area: main; }
+    .gauge-card { grid-area: gauge; }
+    .forecast-card { grid-area: fc; }
+    .stats { grid-area: stats; }
+    .card { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 16px;
+      padding: clamp(10px,1.8vh,18px) clamp(12px,1.6vw,18px); min-height: 0; overflow: hidden; }
+    .section { font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    /* ---- Weather main card ---- */
+    .weather-main { display: flex; flex-direction: column; }
+    .wm-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: clamp(4px,1vh,12px); }
+    .hourly-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px;
+      padding: clamp(8px,1.4vh,16px) clamp(16px,2.4vw,40px); font-family: inherit; font-size: clamp(0.95rem,2.1vh,1.4rem);
+      font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); white-space: nowrap; }
+    .hourly-btn:active { transform: scale(0.96); }
+    .wm-top { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .wm-cond-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .wm-icon { font-size: clamp(1.6rem, min(5vh,7vw), 2.8rem); line-height: 1; }
+    .wm-cond { font-size: clamp(1.1rem, min(3.4vh,4.6vw), 1.9rem); font-weight: 700; }
+    .wm-temp { font-size: clamp(2.4rem, min(13vh,17vw), 6.2rem); font-weight: 700; line-height: 1; color: #3b3225; margin: clamp(2px,0.6vh,8px) 0; }
+    .wm-temp .u { font-size: 0.3em; color: #7a6f5f; vertical-align: super; }
+    .wm-hl { font-size: clamp(0.85rem, min(2.4vh,3.2vw), 1.25rem); color: #7a6f5f; }
+    /* ---- 6-day forecast ---- */
+    .forecast-card { display: flex; flex-direction: column; }
+    .forecast-card .section { margin-bottom: clamp(4px,1vh,10px); }
+    .fc-strip { flex: 1; display: flex; gap: clamp(4px,0.8vw,8px); }
+    .fc-item { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #ddcdb2; border-radius: 12px; padding: clamp(4px,1vh,12px) 2px; }
+    .fc-day { font-size: clamp(0.62rem, min(1.7vh,2.4vw), 0.9rem); color: #7a6f5f; font-weight: 700; margin-bottom: clamp(2px,0.6vh,8px); }
+    .fc-icon { font-size: clamp(1.1rem, min(3vh,4.2vw), 1.9rem); margin-bottom: clamp(2px,0.6vh,8px); }
+    .fc-hi { font-weight: 700; color: #e81e00; font-size: clamp(0.78rem, min(2vh,2.8vw), 1.15rem); }
+    .fc-lo { font-size: clamp(0.68rem, min(1.7vh,2.4vw), 0.95rem); color: #7a6f5f; }
+    /* ---- Indoor gauge ---- */
+    .gauge-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(4px,1vh,10px); }
+    .gauge-title { align-self: flex-start; font-size: clamp(0.62rem,1.4vh,0.78rem); color: #8b5e3c; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; }
+    .gauge { position: relative; width: var(--g); height: var(--g); --g: clamp(96px, min(30vh,40vw), 200px); }
+    .gauge-ring {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: conic-gradient(from 225deg,
+        #e8a000 0deg, #e81e00 var(--deg, 0deg),
+        #cdbf9f var(--deg, 0deg), #cdbf9f 270deg,
+        transparent 270deg);
+      -webkit-mask: radial-gradient(transparent 62%, #000 63%);
+      mask: radial-gradient(transparent 62%, #000 63%); }
+    .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-temp { font-size: clamp(1.4rem, min(7vh,9vw), 2.8rem); font-weight: 700; color: #3b3225; line-height: 1.05; }
+    .gauge-temp .u { font-size: 0.4em; color: #7a6f5f; vertical-align: super; }
+    .gauge-sub { font-size: clamp(0.7rem, min(1.8vh,2.4vw), 0.95rem); color: #7a6f5f; }
+    .gauge-hum { font-size: clamp(0.72rem, min(1.9vh,2.6vw), 1rem); color: #00b35a; }
+    .status { margin-top: clamp(2px,0.8vh,8px); }
+    .pill { display: inline-block; padding: clamp(3px,0.7vh,6px) clamp(10px,1.4vw,16px); border-radius: 20px; font-size: clamp(0.66rem,1.5vh,0.85rem); color: #fff; background: #a0522d; }
+    .pill.ok { background: #2e7d5b; }
+    /* ---- Stats strip ---- */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(6px,1vw,12px); align-items: center; }
+    .stat { text-align: center; }
+    .stat .slabel { font-size: clamp(0.6rem, min(1.5vh,2.2vw), 0.78rem); color: #7a6f5f; text-transform: uppercase; letter-spacing: 1px; }
+    .stat .sval { font-size: clamp(1rem, min(3.4vh,4.4vw), 1.8rem); font-weight: 700; margin: clamp(1px,0.4vh,4px) 0; line-height: 1.1; }
+    .stat .sval.time { font-size: clamp(0.85rem, min(2.6vh,3.2vw), 1.35rem); }
+    .stat .sunit { font-size: clamp(0.5rem,1.1vh,0.62rem); color: #7a6f5f; }
+    .hum { color: #00b35a; } .wind { color: #0090cc; } .sun { color: #e8a000; }
+    /* ---- Footer ---- */
+    .footer { flex: 0 0 auto; text-align: center; padding: clamp(3px,0.8vh,8px) 0; color: #9a8d7a; font-size: clamp(0.6rem,1.3vh,0.78rem); }
+    .footer a { color: #8b5e3c; }
+    /* ---- Narrow phones: give the gauge a bit more room ---- */
+    @media (max-width: 460px) {
+      .grid { grid-template-columns: 3fr 2fr; gap: 8px; }
+      .tb-title { letter-spacing: 0; }
+    }
+    /* ---- Hourly overlay (its own scroll) ---- */
+    .overlay { display: none; position: fixed; inset: 0; background: #d2c6a5; z-index: 100; overflow-y: auto; padding: 18px; }
+    .overlay.open { display: block; }
+    .overlay-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; max-width: 1200px; margin-left: auto; margin-right: auto; }
+    .overlay-header h2 { color: #8b5e3c; font-size: clamp(1rem,2.4vh,1.3rem); }
+    .close-btn { background: linear-gradient(135deg, #ff9d2e, #e8590c); color: #fff; border: none; border-radius: 30px; padding: clamp(10px,1.6vh,18px) clamp(24px,3vw,48px); font-family: inherit; font-size: clamp(1rem,2.2vh,1.5rem); font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(180,80,10,0.4); }
+    .close-btn:active { transform: scale(0.96); }
+    .overlay-body { max-width: 1200px; margin: 0 auto; }
+    .hourly-row { background: #e8dcc8; border: 1px solid #c4b494; border-radius: 12px; padding: 11px 16px; margin-bottom: 7px; display: flex; justify-content: space-between; align-items: center; font-size: 1em; }
+    .hourly-row .hr-time { font-weight: 700; min-width: 80px; }
+    .hourly-row .hr-desc { color: #6b6050; font-size: 0.88em; flex: 1; text-align: center; }
+    .hourly-row .hr-temp { color: #e81e00; font-weight: 700; }
+    .hourly-row .hr-wind { color: #0090cc; font-size: 0.88em; min-width: 70px; text-align: right; }
+    .overlay-loading { text-align: center; color: #7a6f5f; padding: 40px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="tb-title">&#127968; MILTONHAUS Weather</div>
+    <div class="tb-clock"><span class="t">3:42 PM</span><span class="d">Thu, Jun 4</span></div>
+  </div>
+  <div class="wrap">
+    <div class="grid">
+      <div class="card weather-main">
+        <div class="wm-head">
+          <div class="section">Willow Street, PA</div>
+          <button class="hourly-btn" onclick="showHourly()">&#9201; Hourly &raquo;</button>
+        </div>
+        <div class="wm-top">
+          <div class="wm-cond-row"><span class="wm-icon">&#9728;&#65039;</span><span class="wm-cond">Clear</span></div>
+          <div class="wm-temp"><span>55.4</span><span class="u">&deg;F</span></div>
+          <div class="wm-hl">H: 87° / L: 59°</div>
+        </div>
+      </div>
+      <div class="card gauge-card">
+        <div class="gauge-title">Indoor</div>
+        <div class="gauge">
+          <div class="gauge-ring" style="--deg: 202deg;"></div>
+          <div class="gauge-center">
+            <div class="gauge-temp"><span>77.5</span><span class="u">&deg;F</span></div>
+            <div class="gauge-sub"><span>25.3</span>&deg;C</div>
+            <div class="gauge-hum"><span>44</span>% humidity</div>
+          </div>
+        </div>
+        <div class="status"><span class="pill ok">Sensor Online</span></div>
+      </div>
+      <div class="card forecast-card">
+        <div class="section">6-Day Forecast</div>
+        <div class="fc-strip">
+          <div class="fc-item"><div class="fc-day">Fri</div><div class="fc-icon">&#9728;&#65039;</div><div class="fc-hi">90°</div><div class="fc-lo">66°</div></div>
+          <div class="fc-item"><div class="fc-day">Sat</div><div class="fc-icon">&#9728;&#65039;</div><div class="fc-hi">91°</div><div class="fc-lo">66°</div></div>
+          <div class="fc-item"><div class="fc-day">Sun</div><div class="fc-icon">&#9889;</div><div class="fc-hi">87°</div><div class="fc-lo">62°</div></div>
+          <div class="fc-item"><div class="fc-day">Mon</div><div class="fc-icon">&#9728;&#65039;</div><div class="fc-hi">81°</div><div class="fc-lo">57°</div></div>
+          <div class="fc-item"><div class="fc-day">Tue</div><div class="fc-icon">&#9728;&#65039;</div><div class="fc-hi">82°</div><div class="fc-lo">61°</div></div>
+          <div class="fc-item"><div class="fc-day">Wed</div><div class="fc-icon">&#127783;&#65039;</div><div class="fc-hi">86°</div><div class="fc-lo">65°</div></div>
+        </div>
+      </div>
+      <div class="card stats">
+        <div class="stat"><div class="slabel">Humidity</div><div class="sval hum"><span>82</span></div><div class="sunit">%</div></div>
+        <div class="stat"><div class="slabel">Wind</div><div class="sval wind"><span>0.0</span></div><div class="sunit">mph</div></div>
+        <div class="stat"><div class="slabel">Sunrise</div><div class="sval sun time">5:35 AM</div></div>
+        <div class="stat"><div class="slabel">Sunset</div><div class="sval sun time">8:31 PM</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">NWS Weather every 10 min &bull; <a href="#">OTA Update</a></div>
+  <div class="overlay" id="hourlyOverlay">
+    <div class="overlay-header">
+      <h2>Hourly Forecast &mdash; Next 24 Hours</h2>
+      <button class="close-btn" onclick="closeHourly()">Back</button>
+    </div>
+    <div class="overlay-body" id="hourlyList"><div class="overlay-loading">Loading...</div></div>
+  </div>
+  <script>
+  function descEmoji(d){d=d.toLowerCase();if(d.indexOf('thunder')>=0)return'⚡';if(d.indexOf('snow')>=0||d.indexOf('blizzard')>=0)return'\u{1F328}️';if(d.indexOf('rain')>=0||d.indexOf('shower')>=0||d.indexOf('drizzle')>=0)return'\u{1F327}️';if(d.indexOf('fog')>=0||d.indexOf('mist')>=0)return'\u{1F32B}️';if(d.indexOf('cloud')>=0||d.indexOf('overcast')>=0)return'⛅';if(d.indexOf('sunny')>=0||d.indexOf('clear')>=0)return'☀️';return'\u{1F324}️';}
+  function showHourly(){document.getElementById('hourlyOverlay').className='overlay open';document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Loading...</div>';fetch('https://api.weather.gov/gridpoints/CTP/128,27/forecast/hourly',{headers:{'Accept':'application/geo+json'}}).then(function(r){return r.json()}).then(function(d){var p=d.properties.periods;var h='';var count=Math.min(p.length,24);for(var i=0;i<count;i++){var t=new Date(p[i].startTime);var hr=t.getHours();var ampm=hr>=12?'PM':'AM';if(hr===0)hr=12;else if(hr>12)hr-=12;var timeStr=hr+':00 '+ampm;var e=descEmoji(p[i].shortForecast);h+='<div class="hourly-row"><div class="hr-time">'+timeStr+'</div><div class="hr-desc">'+e+' '+p[i].shortForecast+'</div><div class="hr-temp">'+p[i].temperature+'°</div><div class="hr-wind">'+p[i].windSpeed+'</div></div>'}document.getElementById('hourlyList').innerHTML=h}).catch(function(){document.getElementById('hourlyList').innerHTML='<div class="overlay-loading">Failed to load hourly forecast</div>'});}
+  function closeHourly(){document.getElementById('hourlyOverlay').className='overlay';}
+  </script>
+</body>
+</html>
