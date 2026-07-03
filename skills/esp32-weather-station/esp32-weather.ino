@@ -394,6 +394,9 @@ const char page[] PROGMEM = R"rawliteral(
     .chore-check { width: 24px; height: 24px; flex-shrink: 0; accent-color: #d8b45c; cursor: pointer; }
     .chore-done span { text-decoration: line-through; color: #6c8074; }
     .schedule-text p { color: #eef1ea; font-size: clamp(0.9rem,2vh,1.1rem); line-height: 1.8; margin: 0; }
+    .cam-btn { background: none; border: 1px solid rgba(216,180,92,0.4); color: #d8b45c; border-radius: 20px; padding: 4px 12px; font-family: inherit; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; }
+    .cam-btn:active { transform: scale(0.96); }
+    .cam-btn .icon { width: 14px; height: 14px; }
   </style>
 </head>
 <body>
@@ -456,7 +459,7 @@ const char page[] PROGMEM = R"rawliteral(
       </div>
     </div>
   </div>
-  <div class="footer">NWS Weather every 10 min &bull; <a href="/update">OTA Update</a></div>
+  <div class="footer">NWS Weather every 10 min &bull; <button class="cam-btn" onclick="showCam()"><svg class="icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Camera</button> &bull; <a href="/update">OTA Update</a></div>
   <div class="overlay" id="hourlyOverlay">
     <div class="overlay-header">
       <h2>Hourly Forecast &mdash; Next 24 Hours</h2>
@@ -480,6 +483,13 @@ const char page[] PROGMEM = R"rawliteral(
       </div>
     </div>
     <div class="overlay-body" id="kidDetail"><div class="overlay-loading">Loading...</div></div>
+  </div>
+  <div class="overlay" id="camOverlay">
+    <div class="overlay-header">
+      <h2><svg class="icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> PiCam Live</h2>
+      <button class="close-btn" onclick="closeCam()">Back</button>
+    </div>
+    <div class="overlay-body" style="text-align:center;"><img id="camStream" style="max-width:100%;max-height:80vh;border-radius:12px;border:2px solid rgba(255,255,255,0.1);" /></div>
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});},1000)}());
@@ -512,6 +522,8 @@ const char page[] PROGMEM = R"rawliteral(
   function toggleChore(ki,ci,el){var k=kidsData[ki];if(!k)return;var chore=k.chores[ci];if(!k.choreDone)k.choreDone={};k.choreDone[chore]=el.checked;saveKids();}
   function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c,ci){var done=k.choreDone&&k.choreDone[c];return'<label class="chore-item'+(done?' chore-done':'')+'"><input type="checkbox" class="chore-check"'+(done?' checked':'')+' onchange="toggleChore('+i+','+ci+',this)"><span>'+c+'</span></label>';}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
   function closeKid(){document.getElementById('kidOverlay').className='overlay';}
+  function showCam(){document.getElementById('camOverlay').className='overlay open';document.getElementById('camStream').src='http://192.168.12.211:8080/';}
+  function closeCam(){document.getElementById('camOverlay').className='overlay';document.getElementById('camStream').src='';}
   function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
   document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
   document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
