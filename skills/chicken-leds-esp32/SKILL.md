@@ -1,6 +1,6 @@
 # Chicken LEDs — ESP32 Controller
 
-**Last Updated:** 2026-06-28
+**Last Updated:** 2026-07-03
 **Status:** ✅ Fully deployed. OTA enabled. Blink endpoint live. Dashboard integrated. Timezone correct. Manual override + ntfy phone notifications active.
 
 ---
@@ -59,7 +59,7 @@ ThinkCentre or MILTONHAUS Weather Dashboard can override via HTTP at any time.
 
 | Time | State |
 |------|-------|
-| 12:00am | OFF |
+| 1:30am | OFF |
 | 4:00am | ON |
 | 9:00am | OFF |
 | 6:00pm | ON |
@@ -207,8 +207,8 @@ curl --max-time 90 \
 ### To change the schedule
 Edit `applySchedule()` in the `.ino`:
 ```cpp
-// ON 4am–9am, ON 6pm–midnight
-bool shouldBeOn = (h >= 4 && h < 9) || (h >= 18);
+// ON 4am–9am, ON 6pm–1:30am
+bool shouldBeOn = (h >= 4 && h < 9) || (h >= 18) || (h == 0) || (h == 1 && m < 30);
 // Schedule transitions clear manualOverride automatically
 if (shouldBeOn != lastScheduleState) {
     lastScheduleState = shouldBeOn;
