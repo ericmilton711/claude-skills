@@ -36,6 +36,7 @@ SID=$(curl -s -X POST http://192.168.12.136/api/auth \
 |--------|----|-------------|
 | Patrick's laptop (kids1) | 192.168.12.249 | 2 |
 | Benedict's laptop (kids2) | 192.168.12.239 | 3 |
+| Eva's MSI laptop | 192.168.12.202 | 9 |
 | Tower of Gondor | 192.168.12.160 | 7 |
 
 ```bash
@@ -121,6 +122,7 @@ Register-ScheduledTask -TaskName "RestoreBenedictPihole" -Action $action -Trigge
 |--------|----|-------------|---------|
 | Kids1 (Patrick) | 192.168.12.249 | 2 | `api/clients/192.168.12.249` |
 | Kids2 (Benedict) | 192.168.12.239 | 3 | `api/clients/192.168.12.239` |
+| Eva's MSI | 192.168.12.202 | 9 | `api/clients/192.168.12.202` |
 | Tower of Gondor | 192.168.12.160 | 7 | `api/clients/192.168.12.160` |
 
 **Key notes:**
@@ -199,6 +201,7 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
 | 7 | tower-of-gondor | Tower of Gondor + YTI Chromebook | 192.168.12.160, .219 | default-allow, blocks Google/Spotify/Apple Music |
 | 8 | gianna-laptop | Gianna's Fedora laptop | 192.168.12.226 | **default-allow** — blocks Google + YouTube only, Gmail allowed |
+| 9 | eva-laptop | Eva's MSI laptop | 192.168.12.202 | standard kids + Gmail + Britannica (similar to kids2) |
 
 ---
 

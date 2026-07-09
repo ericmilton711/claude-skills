@@ -30,7 +30,8 @@ type: reference
 | 192.168.12.166 | 60-6d-c7-84-e9-77 | BRW606DC784E977.lan | Brother device | Brother device #2 |
 | 192.168.12.177 | cc-b1-48-0d-2d-f4 | TMOBILE_MESH_AP_V2.lan | T-Mobile mesh AP | T-Mobile hardware |
 | 192.168.12.189 | 34-36-3b-c6-bc:70 | — | MacBook Pro (Fedora) | SSH: `ssh -i ~/.ssh/id_ed25519 ericmilton@192.168.12.189` |
-| 192.168.12.194 | e8-84-a5-82-df-fc | — | Chromebook (ChromeOS) | Eva's Chromebook — WireGuard installed (Android app); also on Tailscale at 100.115.92.195 |
+| 192.168.12.194 | e8-84-a5-82-df-fc | — | Chromebook (ChromeOS) | Chromebook (NOT Eva's) — WireGuard installed (Android app); also on Tailscale at 100.115.92.195 |
+| 192.168.12.202 | — | Eva | MSI Modern 14 A10M-1029US (Windows) | Eva's laptop. SSH: `ssh "eva milton"@192.168.12.202` (key auth). Pi-hole client_id 13, group 9 (eva-laptop). DNS: 192.168.12.136. |
 | 192.168.12.215 | 3e-e7-96-3e-55-e9 (random) | iPhone.lan | iPhone | Rosemary's iPhone |
 | 192.168.12.220 | — | Eric.lan | Windows 11 PC | Eric's main PC (was .219, DHCP drifted to .220 as of 2026-05-05) |
 | 192.168.12.219 | b0-47-e9-e3-78-d0 | — | Chromebook (ChromeOS) | YTI Chromebook. **Static IP set on device 2026-06-18** — will not drift. Pi-hole client_id 11, group 7 (tower-of-gondor). DNS: 192.168.12.136. Secure DNS (DoH) disabled. |
@@ -43,7 +44,7 @@ type: reference
 ### Tailscale Node
 | Tailscale IP | Device | Notes |
 |--------------|--------|-------|
-| 100.115.92.195 | Eva's Chromebook | On Tailscale — regular IP is 192.168.12.194 |
+| 100.115.92.195 | Chromebook (.194) | On Tailscale — regular IP is 192.168.12.194 (NOT Eva's Chromebook) |
 
 ---
 
