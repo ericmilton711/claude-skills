@@ -1,6 +1,6 @@
 # Electronics Technician Job Search
 
-**Last Updated:** 2026-07-02
+**Last Updated:** 2026-07-09
 **Status:** Active search — entry-level BMET and medical device tech roles
 
 ---
@@ -14,7 +14,7 @@
 **Entry-Level Electronics / Biomedical Equipment Technician**
 - BMET I or entry-level only (NOT BMET II — just graduated)
 - Minimum pay: $28/hour
-- Location: Lancaster / York County PA area (up to ~60 mi commute)
+- Location: Lancaster / York County PA area (up to ~60 mi commute) — **strictly enforced, Eric confirmed he will not drive to Philadelphia**
 - Preference: Apply directly to company websites
 
 ---
@@ -48,17 +48,11 @@ CNC experience is a direct match. Right in Lancaster.
 https://spitrexorthopedics.com/careers/
 Phone: 717-945-7451
 
-**4. Sodexo BMET 1 — Philadelphia** (truly entry-level)
-Works under senior techs. Military background accepted.
-https://jobs.us.sodexo.com/biomedical-equipment-technician-1/job/89F6990D3D896D8538C8E9061C726712
-
-**5. Penn Medicine BMET I — Philadelphia + Lancaster General**
-Multiple openings. 1 year electromechanical OR completed program with internship.
-- https://careers.pennmedicine.org/jobs/16665198-biomedical-equipment-technician-i-ii-and-iii
-- https://careers.pennmedicine.org/jobs/17753638-biomedical-equipment-tech-i-ii-iii-or-iv
+**5. Penn Medicine BMET I — Lancaster General**
+1 year electromechanical OR completed program with internship.
 - https://careers.pennmedicine.org/search/jobs/in/lancaster
 
-**6. TRIMEDX BMET I — Harrisburg/York**
+**6. TRIMEDX BMET I — Harrisburg/York** — **APPLIED 2026-07-09, awaiting response**
 3 months experience preferred, not required. Military-friendly.
 https://trimedx.wd1.myworkdayjobs.com/TMX
 
@@ -73,6 +67,7 @@ https://careers.upmc.com
 **9. Integra LifeSciences — York, PA** (medical device manufacturing)
 Entry-level manufacturing. Surgical instruments/implants.
 https://jobs.integralife.com/
+**Blocked (2026-07-09):** application flow puts an AI chat widget in front of the direct application form — Eric couldn't get past it. Needs another look (try applying from a different device/browser, or call directly).
 
 ### Companies to Monitor (hire periodically)
 
@@ -104,6 +99,7 @@ https://jobs.integralife.com/
 - **Sechan Electronics** — Lititz, PA. $18/hr. Skip.
 - **DentalEZ** — Lancaster, PA. Bad reviews. Skip.
 - **Any BMET II role** — requires 3+ years experience Eric doesn't have yet.
+- **Sodexo BMET 1 — Philadelphia** — outside commute range, Eric declined. Any other Philadelphia-based listing is ruled out for the same reason.
 
 ---
 
