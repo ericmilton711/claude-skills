@@ -86,6 +86,52 @@ timeout 20 ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no \
   milton@192.168.12.136 "docker exec pihole pihole reloaddns" 2>&1
 ```
 
+### Quick Unrestrict — PowerShell-Native (No Bash/Curl Needed)
+
+Use this from Eric's Windows PC to temporarily remove all Pi-hole restrictions on a device with an auto-restore scheduled task.
+
+**Step 1 — Authenticate and move to group 6 (unrestricted):**
+```powershell
+# Authenticate
+$auth = Invoke-RestMethod -Uri "http://192.168.12.136/api/auth" -Method Post -ContentType "application/json" -Body '{"password":"645866"}'
+$SID = $auth.session.sid
+
+# Move device to group 6 (unrestricted) — change IP for different devices
+$headers = @{ "sid" = $SID; "Content-Type" = "application/json" }
+Invoke-RestMethod -Uri "http://192.168.12.136/api/clients/192.168.12.239" -Method Put -Headers $headers -Body '{"groups":[6]}'
+```
+
+**Step 2 — Reload Pi-hole DNS:**
+```powershell
+ssh -i $env:USERPROFILE\.ssh\id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "echo 645866 | sudo -S docker exec pihole pihole reloaddns 2>/dev/null"
+```
+
+**Step 3 — Schedule auto-restore (replace time/IP/group as needed):**
+```powershell
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument @'
+-NoProfile -Command "try { $auth = Invoke-RestMethod -Uri 'http://192.168.12.136/api/auth' -Method Post -ContentType 'application/json' -Body '{\"password\":\"645866\"}'; $sid = $auth.session.sid; $headers = @{ 'sid' = $sid; 'Content-Type' = 'application/json' }; Invoke-RestMethod -Uri 'http://192.168.12.136/api/clients/192.168.12.239' -Method Put -Headers $headers -Body '{\"groups\":[3]}'; ssh -i $env:USERPROFILE\.ssh\id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'echo 645866 | sudo -S docker exec pihole pihole reloaddns 2>/dev/null' } catch { $_ | Out-File $env:USERPROFILE\Desktop\pihole-restore-error.log }"
+'@
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date -Hour 22 -Minute 10 -Second 0)
+Register-ScheduledTask -TaskName "RestoreBenedictPihole" -Action $action -Trigger $trigger -Description "Restore Benedict laptop to Pi-hole group 3" -Force
+```
+
+**Device reference for quick unrestrict:**
+
+| Device | IP | Normal Group | API URL |
+|--------|----|-------------|---------|
+| Kids1 (Patrick) | 192.168.12.249 | 2 | `api/clients/192.168.12.249` |
+| Kids2 (Benedict) | 192.168.12.239 | 3 | `api/clients/192.168.12.239` |
+| Tower of Gondor | 192.168.12.160 | 7 | `api/clients/192.168.12.160` |
+
+**Key notes:**
+- Group 6 = fully unrestricted (no deny rules)
+- PowerShell `Invoke-RestMethod` works directly from Windows, no curl/bash needed
+- `pihole reloaddns` (not `restartdns reload-lists`) is the correct command inside Docker
+- The scheduled task runs under the current user, so SSH key auth works
+- Clean up old tasks: `Unregister-ScheduledTask -TaskName "RestoreBenedictPihole" -Confirm:$false`
+
+---
+
 ### Full Example — Install LibreOffice on Benedict's laptop
 ```python
 import pexpect, base64, subprocess, os
