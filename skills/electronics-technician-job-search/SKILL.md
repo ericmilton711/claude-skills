@@ -60,7 +60,7 @@ https://trimedx.wd1.myworkdayjobs.com/TMX
 Imaging equipment (X-ray, C-arm, ultrasound). Stretch role but worth applying.
 https://lensa.com/job-v1/trimedx/york-pa/imaging-technician/80e7d69802757c2228c9c4f5addbe148
 
-**8. UPMC BMET — Harrisburg**
+**8. UPMC BMET — Harrisburg** — **Teams meeting scheduled Thu 2026-07-16 @ 2:30 PM** with Director of Military and Veterans Affairs
 Multiple UPMC Pinnacle hospitals.
 https://careers.upmc.com
 
