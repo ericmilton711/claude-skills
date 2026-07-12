@@ -5,7 +5,8 @@
 **IP:** 192.168.12.172 (static, configured on device)
 **MAC:** b6-7f-2b-ae-24-3a (randomized)
 **Role:** Weather dashboard display in Firefox (sideloaded), showing http://192.168.12.240/
-**Pi-hole group:** 10 (fire-tablet) — default-deny, weather dependencies whitelisted
+**Pi-hole group:** 10 (fire-tablet) — default-deny, weather dependencies whitelisted. Currently in group 0 (unrestricted) while setting up Google Voice.
+**Google Voice:** Web app at voice.google.com, accessed via "Voice" button in dashboard footer. Account: ericmilton711@gmail.com, number: (856) 354-5644. ID verification pending as of 2026-07-12.
 **Android SDK:** 30 (Android 11), ARM64
 **Lock screen PIN:** 645866
 
@@ -139,6 +140,28 @@ To access: Settings > Device Options > Developer Options
 
 ---
 
+## Google Voice (Added 2026-07-12)
+
+Google Voice runs as a web app in Firefox on the tablet (no Google Play Services needed).
+
+- **Account:** ericmilton711@gmail.com
+- **Number:** (856) 354-5644
+- **Access:** "Voice" button in weather dashboard footer opens voice.google.com in a new tab
+- **Status:** ID verification pending as of 2026-07-12. Once approved, sign in at voice.google.com on the tablet.
+- **Note:** Google Play Services cannot be sideloaded on this Fire tablet (APK download sites block automated access, Silk browser too old for Cloudflare). Web app is the working solution.
+
+### Opening Firefox with a specific URL via ADB
+
+```powershell
+& $adb -s 192.168.12.172:<PORT> shell "am start -a android.intent.action.VIEW -d 'https://voice.google.com' --activity-clear-task org.mozilla.firefox/org.mozilla.fenix.IntentReceiverActivity"
+```
+
+The `--activity-clear-task` flag and `IntentReceiverActivity` component are required, otherwise Firefox restores its previous session (the dashboard) instead of opening the URL.
+
+---
+
 ## Pi-hole (Group 10)
 
 Default-deny. See `miltonhaus-pihole-rules` skill for allowed domains. Firefox's captive portal check (`detectportal.firefox.com`) is blocked but the weather dashboard loads fine since it's a direct IP (http://192.168.12.240/).
+
+**Note:** As of 2026-07-12, the Fire tablet is temporarily in group 0 (unrestricted) for Google Voice setup. Move back to group 10 once voice.google.com domains are whitelisted.
