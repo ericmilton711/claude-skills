@@ -586,6 +586,7 @@ docker exec pihole pihole reloaddns
 - **Off-network = no internet** — resolv.conf is hardcoded to Pi-hole IP, unreachable outside MILTONHAUS.
 - Unlike Windows laptops, IPv6 bypass hasn't been checked yet on this Fedora install.
 - Changed from group 3 (kids2, default-deny) to group 8 (gianna-laptop, default-allow) on 2026-06-01.
+- **2026-07-13: Found the google/youtube deny regexes (domainlist ids 216, 245-249) were never actually linked to group 8** in `domainlist_by_group` — only the Gmail/Docs allow-rules were linked, so Google search and YouTube were NOT actually being blocked despite this doc saying "Complete." Fixed by inserting the missing `domainlist_by_group` rows for group 8 and reloading DNS. **When adding deny/allow rules to a group in the future, always verify the link landed in `domainlist_by_group` — don't just trust that the INSERT ran.**
 
 ---
 
