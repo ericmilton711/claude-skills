@@ -1,6 +1,6 @@
-# Firefox Browser Lock — Password-Gated Browser Launch
+# Browser Lock — Password-Gated Browser Launch
 
-Locks Firefox (or any browser) behind a password prompt. Password is required every time Firefox is launched. The session file is deleted when Firefox closes, so closing and reopening always requires the password again. 30-minute session window so links opened mid-browsing don't re-prompt.
+Locks browsers (Firefox, Safari) behind a password prompt. Password is required every time the browser is launched. The session file is deleted when the browser closes, so closing and reopening always requires the password again. 30-minute session window so links opened mid-browsing don't re-prompt.
 
 **Password hash:** `1e4ea3ac36db7cc72af8f0942409942b4fe9c3c79937c6905527c2032ed67504`
 
@@ -17,6 +17,13 @@ Locks Firefox (or any browser) behind a password prompt. Password is required ev
 - **Script:** `~/.local/bin/browser-unlock`
 - **Desktop override:** `~/.local/share/applications/org.mozilla.firefox.desktop`
 - **Deployed:** 2026-06-26
+
+### Rosemary's MacBook Pro — macOS (192.168.12.109)
+- **Script:** `~/.local/bin/browser-unlock`
+- **Wrapper apps:** `~/Applications/SafariLocked.app`, `~/Applications/FirefoxLocked.app`
+- **Browsers locked:** Safari + Firefox
+- **Dock:** Safari and Firefox icons replaced with locked wrappers
+- **Deployed:** 2026-07-13
 
 ---
 
@@ -234,6 +241,123 @@ rm ~/.local/share/applications/org.mozilla.firefox.desktop
 update-desktop-database ~/.local/share/applications/
 ```
 
+## macOS Version (Rosemary's MacBook)
+
+### How It Works
+
+1. Bash script at `~/.local/bin/browser-unlock` takes browser name as first arg (`safari` or `firefox`)
+2. Checks for a session token in `/tmp/`
+3. If session is active, launches the browser directly via `open -a`
+4. Otherwise shows a native macOS password dialog (`osascript`)
+5. On correct password, writes session token, launches browser, deletes token when browser closes
+6. Wrapper `.app` bundles in `~/Applications/` replace the Dock icons
+
+### Script (`browser-unlock`)
+
+```bash
+#!/bin/bash
+
+SESSION_FILE="/tmp/browser_unlocked_$(whoami)"
+SESSION_DURATION=1800
+STORED_HASH="1e4ea3ac36db7cc72af8f0942409942b4fe9c3c79937c6905527c2032ed67504"
+
+BROWSER_NAME="$1"
+shift
+
+if [ -f "$SESSION_FILE" ]; then
+    UNLOCK_TIME=$(cat "$SESSION_FILE")
+    NOW=$(date +%s)
+    ELAPSED=$((NOW - UNLOCK_TIME))
+    if [ "$ELAPSED" -lt "$SESSION_DURATION" ]; then
+        if [ "$BROWSER_NAME" = "safari" ]; then
+            open -a Safari "$@"
+        else
+            open -a Firefox "$@"
+        fi
+        exit 0
+    fi
+fi
+
+PASSWORD=$(osascript -e 'display dialog "Enter password to open browser:" default answer "" with hidden answer buttons {"Cancel", "OK"} default button "OK" with title "Browser Access"' -e 'text returned of result' 2>/dev/null)
+
+if [ $? -ne 0 ]; then
+    exit 1
+fi
+
+HASH=$(echo -n "$PASSWORD" | shasum -a 256 | cut -d' ' -f1)
+
+if [ "$HASH" = "$STORED_HASH" ]; then
+    date +%s > "$SESSION_FILE"
+    if [ "$BROWSER_NAME" = "safari" ]; then
+        open -a Safari "$@"
+    else
+        open -a Firefox "$@"
+    fi
+    sleep 2
+    if [ "$BROWSER_NAME" = "safari" ]; then
+        while pgrep -x Safari > /dev/null; do sleep 5; done
+    else
+        while pgrep -x firefox > /dev/null; do sleep 5; done
+    fi
+    rm -f "$SESSION_FILE"
+else
+    osascript -e 'display dialog "Incorrect password." buttons {"OK"} default button "OK" with title "Access Denied" with icon stop' 2>/dev/null
+    exit 1
+fi
+```
+
+### Wrapper App Setup
+
+Each browser gets a minimal `.app` bundle in `~/Applications/`:
+
+```bash
+# SafariLocked.app
+mkdir -p ~/Applications/SafariLocked.app/Contents/{MacOS,Resources}
+cat > ~/Applications/SafariLocked.app/Contents/MacOS/SafariLocked << 'EOF'
+#!/bin/bash
+~/.local/bin/browser-unlock safari "$@" &
+disown
+EOF
+chmod +x ~/Applications/SafariLocked.app/Contents/MacOS/SafariLocked
+cp /Applications/Safari.app/Contents/Resources/AppIcon.icns ~/Applications/SafariLocked.app/Contents/Resources/AppIcon.icns
+
+# FirefoxLocked.app
+mkdir -p ~/Applications/FirefoxLocked.app/Contents/{MacOS,Resources}
+cat > ~/Applications/FirefoxLocked.app/Contents/MacOS/FirefoxLocked << 'EOF'
+#!/bin/bash
+~/.local/bin/browser-unlock firefox "$@" &
+disown
+EOF
+chmod +x ~/Applications/FirefoxLocked.app/Contents/MacOS/FirefoxLocked
+cp /Applications/Firefox.app/Contents/Resources/firefox.icns ~/Applications/FirefoxLocked.app/Contents/Resources/AppIcon.icns
+```
+
+### Dock Replacement
+
+Use Python to swap the Dock entries, then restart the Dock:
+
+```python
+import plistlib, os
+dock_plist = os.path.expanduser('~/Library/Preferences/com.apple.dock.plist')
+with open(dock_plist, 'rb') as f:
+    dock = plistlib.load(f)
+# ... modify persistent-apps entries ...
+with open(dock_plist, 'wb') as f:
+    plistlib.dump(dock, f)
+```
+Then: `killall Dock`
+
+### Removing It (macOS)
+
+```bash
+rm -rf ~/Applications/SafariLocked.app ~/Applications/FirefoxLocked.app
+rm ~/.local/bin/browser-unlock
+# Re-add real browsers to Dock manually or via defaults write
+killall Dock
+```
+
+---
+
 ## Claude Code — Bypass the Lock
 
 When Claude Code needs to open a URL, call Firefox directly to skip the password prompt:
@@ -252,6 +376,6 @@ firefox "http://example.com"
 
 - Only locks **GUI launchers** (shortcuts/desktop entries). Running `firefox` from a terminal bypasses it.
 - Session token is cleared on reboot (lives in temp directory)
-- Windows version uses Windows Forms for the dialog. Linux version uses zenity (pre-installed on Fedora/GNOME).
+- Windows version uses Windows Forms for the dialog. Linux version uses zenity (pre-installed on Fedora/GNOME). macOS version uses `osascript` (native AppleScript dialog).
 - To lock terminal launches too: add a shell alias pointing to the wrapper script
 - Adaptable to Chromium/Chrome by changing the browser path and targeting the correct shortcut/desktop file
