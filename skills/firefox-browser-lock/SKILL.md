@@ -20,9 +20,10 @@ Locks browsers (Firefox, Safari) behind a password prompt. Password is required 
 
 ### Rosemary's MacBook Pro — macOS (192.168.12.109)
 - **Script:** `~/.local/bin/browser-unlock`
-- **Wrapper apps:** `~/Applications/SafariLocked.app`, `~/Applications/FirefoxLocked.app`
+- **Wrapper apps:** `~/Applications/Safari.app`, `~/Applications/Firefox.app`
 - **Browsers locked:** Safari + Firefox
 - **Dock:** Safari and Firefox icons replaced with locked wrappers
+- **Password:** Different from other machines (hash: `a36bfa3cafb40c3d89ad4b8a9d6e2bdb14a8a97fbcd92780ab5fe87163bd1dbe`)
 - **Deployed:** 2026-07-13
 
 ---
@@ -259,21 +260,25 @@ update-desktop-database ~/.local/share/applications/
 
 SESSION_FILE="/tmp/browser_unlocked_$(whoami)"
 SESSION_DURATION=1800
-STORED_HASH="1e4ea3ac36db7cc72af8f0942409942b4fe9c3c79937c6905527c2032ed67504"
+STORED_HASH="a36bfa3cafb40c3d89ad4b8a9d6e2bdb14a8a97fbcd92780ab5fe87163bd1dbe"
 
 BROWSER_NAME="$1"
 shift
+
+if [ "$BROWSER_NAME" = "safari" ]; then
+    BROWSER_PATH="/Applications/Safari.app"
+    BROWSER_PROC="Safari"
+else
+    BROWSER_PATH="/Applications/Firefox.app"
+    BROWSER_PROC="firefox"
+fi
 
 if [ -f "$SESSION_FILE" ]; then
     UNLOCK_TIME=$(cat "$SESSION_FILE")
     NOW=$(date +%s)
     ELAPSED=$((NOW - UNLOCK_TIME))
     if [ "$ELAPSED" -lt "$SESSION_DURATION" ]; then
-        if [ "$BROWSER_NAME" = "safari" ]; then
-            open -a Safari "$@"
-        else
-            open -a Firefox "$@"
-        fi
+        open "$BROWSER_PATH" --args "$@"
         exit 0
     fi
 fi
@@ -288,17 +293,9 @@ HASH=$(echo -n "$PASSWORD" | shasum -a 256 | cut -d' ' -f1)
 
 if [ "$HASH" = "$STORED_HASH" ]; then
     date +%s > "$SESSION_FILE"
-    if [ "$BROWSER_NAME" = "safari" ]; then
-        open -a Safari "$@"
-    else
-        open -a Firefox "$@"
-    fi
+    open "$BROWSER_PATH" --args "$@"
     sleep 2
-    if [ "$BROWSER_NAME" = "safari" ]; then
-        while pgrep -x Safari > /dev/null; do sleep 5; done
-    else
-        while pgrep -x firefox > /dev/null; do sleep 5; done
-    fi
+    while pgrep -x "$BROWSER_PROC" > /dev/null; do sleep 5; done
     rm -f "$SESSION_FILE"
 else
     osascript -e 'display dialog "Incorrect password." buttons {"OK"} default button "OK" with title "Access Denied" with icon stop' 2>/dev/null
@@ -308,28 +305,26 @@ fi
 
 ### Wrapper App Setup
 
-Each browser gets a minimal `.app` bundle in `~/Applications/`:
+Each browser gets a minimal `.app` bundle in `~/Applications/` (named `Safari.app` and `Firefox.app` so the Dock shows clean labels):
 
 ```bash
-# SafariLocked.app
-mkdir -p ~/Applications/SafariLocked.app/Contents/{MacOS,Resources}
-cat > ~/Applications/SafariLocked.app/Contents/MacOS/SafariLocked << 'EOF'
+# Safari wrapper
+mkdir -p ~/Applications/Safari.app/Contents/{MacOS,Resources}
+cat > ~/Applications/Safari.app/Contents/MacOS/Safari << 'EOF'
 #!/bin/bash
-~/.local/bin/browser-unlock safari "$@" &
-disown
+exec ~/.local/bin/browser-unlock safari
 EOF
-chmod +x ~/Applications/SafariLocked.app/Contents/MacOS/SafariLocked
-cp /Applications/Safari.app/Contents/Resources/AppIcon.icns ~/Applications/SafariLocked.app/Contents/Resources/AppIcon.icns
+chmod +x ~/Applications/Safari.app/Contents/MacOS/Safari
+cp /Applications/Safari.app/Contents/Resources/AppIcon.icns ~/Applications/Safari.app/Contents/Resources/AppIcon.icns
 
-# FirefoxLocked.app
-mkdir -p ~/Applications/FirefoxLocked.app/Contents/{MacOS,Resources}
-cat > ~/Applications/FirefoxLocked.app/Contents/MacOS/FirefoxLocked << 'EOF'
+# Firefox wrapper
+mkdir -p ~/Applications/Firefox.app/Contents/{MacOS,Resources}
+cat > ~/Applications/Firefox.app/Contents/MacOS/Firefox << 'EOF'
 #!/bin/bash
-~/.local/bin/browser-unlock firefox "$@" &
-disown
+exec ~/.local/bin/browser-unlock firefox
 EOF
-chmod +x ~/Applications/FirefoxLocked.app/Contents/MacOS/FirefoxLocked
-cp /Applications/Firefox.app/Contents/Resources/firefox.icns ~/Applications/FirefoxLocked.app/Contents/Resources/AppIcon.icns
+chmod +x ~/Applications/Firefox.app/Contents/MacOS/Firefox
+cp /Applications/Firefox.app/Contents/Resources/firefox.icns ~/Applications/Firefox.app/Contents/Resources/AppIcon.icns
 ```
 
 ### Dock Replacement
@@ -350,7 +345,7 @@ Then: `killall Dock`
 ### Removing It (macOS)
 
 ```bash
-rm -rf ~/Applications/SafariLocked.app ~/Applications/FirefoxLocked.app
+rm -rf ~/Applications/Safari.app ~/Applications/Firefox.app
 rm ~/.local/bin/browser-unlock
 # Re-add real browsers to Dock manually or via defaults write
 killall Dock
