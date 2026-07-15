@@ -88,37 +88,32 @@ hosts: files myhostname mdns4_minimal [NOTFOUND=return] dns
 
 ## Pi-hole Status
 
-- **Pi-hole client ID:** 12
-- **Pi-hole group:** `kids2` (Group ID: 3)
-- **Allowed sites:**
-  - Gmail, Google Chat, Google Accounts
-  - Duolingo
-  - Typing.com
-  - Bulk Apothecary (bulkapothecary.com)
-  - LEO Dictionary (leo.org)
-  - Sally's Baking Addiction (sallysbakingaddiction.com)
-  - AccuWeather (accuweather.com)
-  - USCCB Catechism (usccb.cld.bz, pages.cld.bz)
-  - Suno (suno.com)
-  - KWeather app (api.met.no, geonames.org)
-  - Britannica, Kiddle, Rhymezone
-  - Zoom, Homeschool Connections, Teaching Textbooks
-  - Supporting CDNs (cloudfront, amazonaws, gstatic, googleapis)
-  - Firefox captive portal (detectportal.firefox.com)
-  - Fedora system (fedoraproject.org, fedora.pool.ntp.org)
-- **Blocked:** Everything else (Google Search, YouTube, social media, Amazon, etc.)
+**Corrected 2026-07-14** — this section previously said client 12 was in `kids2` (group 3). That was wrong: she is actually in her own dedicated group, `gianna-laptop` (group 8), described as "allow all, block Google and YouTube."
 
-### To temporarily unrestrict:
+- **Pi-hole client ID:** 12
+- **Pi-hole group:** `gianna-laptop` (Group ID: 8) — **default-allow**, not default-deny like kids1/kids2
+- **Model:** Everything is allowed EXCEPT domains explicitly denied for group 8 (currently Google search + YouTube + associated CDNs). Gmail/Docs/Drive/Chat/Accounts are explicitly allow-listed so they survive the Google-search block.
+- **Denied for group 8:** `google.com`, `youtube.com`, `youtu.be`, `ytimg.com`, `googlevideo.com`, `yt3.ggpht.com`
+- **Allowed for group 8 (carve-outs):** `mail.google.com`, `gmail.com`, `accounts.google.com`, `googleapis.com`, `gstatic.com`, `googleusercontent.com`, `docs.google.com`, `drive.google.com`, `chat.google.com`
+
+### 2026-07-14 incident — Google/YouTube access bypass, fixed
+Two independent bugs let her reach Google and YouTube:
+1. **DNS bypass:** her laptop's `/etc/resolv.conf` had drifted to public resolvers (1.1.1.1, 8.8.8.8, plus IPv6 DNS), bypassing Pi-hole entirely. Fixed by re-pointing `ipv4.dns` to `192.168.12.136`, disabling IPv6 on the connection, and re-locking `/etc/resolv.conf` immutable (`chattr +i`) — see the DNS section above for the exact commands, same pattern as the original setup.
+2. **Missing group wiring:** the "Block YouTube"/"Block Google" domain rules existed in Pi-hole but were only assigned to group 0 (Default) — never to group 8. Her group's own description ("block Google and YouTube") was never actually implemented. Fixed via the Pi-hole REST API (`PUT /api/domains/deny/regex/<domain>`) by adding group 8 to each rule's `groups` array, then `POST /api/action/gravity` + `POST /api/action/restartdns` to apply.
+
+Fixed via the API (no SSH needed) — see [[reference_pihole_api]]. Note: SSH to the ThinkCentre (192.168.12.136) was hitting the known exec-hang bug during this incident (see `project_thinkcentre_ssh_exec_hang` memory) — the REST API worked fine as a fallback.
+
+### To temporarily unrestrict (allow literally everything):
 ```bash
-ssh -i ~/.ssh/id_ed25519 milton@192.168.12.136
-docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id = 12;"
-docker exec pihole pihole reloaddns
+# Via API — remove group 8 membership
+SID=$(curl -s -X POST http://192.168.12.136/api/auth -H "Content-Type: application/json" -d '{"password":"645866"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['sid'])")
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.226 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups": []}'
 ```
 
-### To restore restrictions (back to kids2):
+### To restore restrictions (back to gianna-laptop, group 8):
 ```bash
-docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (12, 3);"
-docker exec pihole pihole reloaddns
+SID=$(curl -s -X POST http://192.168.12.136/api/auth -H "Content-Type: application/json" -d '{"password":"645866"}' | python3 -c "import sys,json;print(json.load(sys.stdin)['session']['sid'])")
+curl -s -X PUT http://192.168.12.136/api/clients/192.168.12.226 -H "sid: $SID" -H "Content-Type: application/json" -d '{"groups": [8]}'
 ```
 
 ---
