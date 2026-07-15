@@ -95,6 +95,7 @@ hosts: files myhostname mdns4_minimal [NOTFOUND=return] dns
 - **Model:** Everything is allowed EXCEPT domains explicitly denied for group 8 (currently Google search + YouTube + associated CDNs). Gmail/Docs/Drive/Chat/Accounts are explicitly allow-listed so they survive the Google-search block.
 - **Denied for group 8:** `google.com`, `youtube.com`, `youtu.be`, `ytimg.com`, `googlevideo.com`, `yt3.ggpht.com`
 - **Allowed for group 8 (carve-outs):** `mail.google.com`, `gmail.com`, `accounts.google.com`, `googleapis.com`, `gstatic.com`, `googleusercontent.com`, `docs.google.com`, `drive.google.com`, `chat.google.com`
+- **TEMPORARY denied for group 8:** `duckduckgo.com` (rule id 338, added 2026-07-14, comment "unblock when told") — Eric asked for this to stay blocked until he says otherwise. Remove via `POST /api/domains/deny/regex` delete or `DELETE /api/domains/deny/regex/(^|[.])duckduckgo[.]com$` (URL-encoded), then gravity + restartdns, when he gives the go-ahead.
 
 ### 2026-07-14 incident — Google/YouTube access bypass, fixed
 Two independent bugs let her reach Google and YouTube:
