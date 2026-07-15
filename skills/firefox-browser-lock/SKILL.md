@@ -2,7 +2,9 @@
 
 Locks browsers (Firefox, Safari) behind a password prompt. Password is required every time the browser is launched. The session file is deleted when the browser closes, so closing and reopening always requires the password again. 30-minute session window so links opened mid-browsing don't re-prompt.
 
-**Password hash:** `1e4ea3ac36db7cc72af8f0942409942b4fe9c3c79937c6905527c2032ed67504`
+**Password hash:** `b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b` (changed 2026-07-14)
+
+**Sync status (2026-07-14):** MacBook Pro — Fedora (.190) and Windows laptop (.220) both updated to the new hash. Rosemary's MacBook (.109) is unaffected — it uses its own separate password/hash.
 
 ---
 
@@ -47,7 +49,7 @@ Add-Type -AssemblyName System.Drawing
 
 $SessionFile = "$env:TEMP\browser_unlocked_$env:USERNAME"
 $SessionDuration = 1800
-$StoredHash = "1e4ea3ac36db7cc72af8f0942409942b4fe9c3c79937c6905527c2032ed67504"
+$StoredHash = "b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b"
 $Browser = "C:\Program Files\Mozilla Firefox\firefox.exe"
 
 if (Test-Path $SessionFile) {
@@ -173,7 +175,7 @@ $lnk.Save()
 
 SESSION_FILE="/tmp/browser_unlocked_$(whoami)"
 SESSION_DURATION=1800
-STORED_HASH="1e4ea3ac36db7cc72af8f0942409942b4fe9c3c79937c6905527c2032ed67504"
+STORED_HASH="b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b"
 BROWSER="/usr/bin/firefox"
 
 if [ -f "$SESSION_FILE" ]; then
@@ -215,15 +217,48 @@ update-desktop-database ~/.local/share/applications/
 
 ---
 
-## Generating a New Password Hash
+## Changing the Password
 
+The script never stores the real password — only a SHA256 hash of it. To change it, generate a new hash and drop it into the `STORED_HASH` (Linux) / `$StoredHash` (Windows) line.
+
+### Linux/Fedora — step by step
+
+1. Hash the new password:
+   ```bash
+   echo -n 'YourNewPassword' | sha256sum
+   ```
+   Copy the long hex string (ignore the trailing `-`).
+2. Open the script: `nano ~/.local/bin/browser-unlock`
+3. Find the line `STORED_HASH="..."` and replace the string between the quotes with the new hash.
+4. Save and exit: `Ctrl+O`, `Enter`, `Ctrl+X`.
+
+One-liner that does steps 2-4 automatically:
 ```bash
-# Linux
-echo -n "YOUR_PASSWORD" | sha256sum | cut -d' ' -f1
-
-# PowerShell
-[System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("YOUR_PASSWORD"))).Replace("-","").ToLower()
+NEW_HASH=$(echo -n 'YourNewPassword' | sha256sum | cut -d' ' -f1)
+sed -i "s/STORED_HASH=\".*\"/STORED_HASH=\"$NEW_HASH\"/" ~/.local/bin/browser-unlock
 ```
+
+### Windows — step by step
+
+1. Hash the new password:
+   ```powershell
+   $hash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes("YourNewPassword"))).Replace("-","").ToLower()
+   $hash
+   ```
+2. Open the script: `notepad "C:\Users\ericm\.claude\hooks\browser-unlock.ps1"`
+3. Find the line `$StoredHash = "..."` and replace the string between the quotes with the new hash.
+4. Save (`Ctrl+S`) and close Notepad.
+
+One-liner that does steps 2-4 automatically:
+```powershell
+(Get-Content "C:\Users\ericm\.claude\hooks\browser-unlock.ps1") -replace '\$StoredHash = ".*"', '$StoredHash = "NEW_HASH_HERE"' | Set-Content "C:\Users\ericm\.claude\hooks\browser-unlock.ps1"
+```
+
+### macOS (Rosemary's MacBook)
+
+Same idea, but hash with `shasum -a 256` and edit `~/.local/bin/browser-unlock`, line `STORED_HASH="..."`.
+
+**Remember:** Eric's Windows laptop and Fedora machine share the same password — update both when changing it. Rosemary's MacBook uses its own separate password.
 
 ## Removing It
 
