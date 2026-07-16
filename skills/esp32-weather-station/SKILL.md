@@ -1,9 +1,40 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-07-03** — Family calendar integration complete. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-07-16** — WiFi reconnect watchdog fix deployed (self-heals total-network-dropout crashes). See "What Changed 2026-07-16" below. Family calendar integration complete. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
 **Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182.
-**Last Updated:** 2026-07-03
+**Last Updated:** 2026-07-16
+
+---
+
+## What Changed 2026-07-16 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Fixed: ESP32 going totally unreachable (not even pingable) requiring a physical power cycle — recurring issue, root cause found**
+
+### Problem
+Symptom: dashboard shows stale/frozen data (e.g. "Mostly Clear" hours after skies turned cloudy/smoky), and the device doesn't respond to `ping` or port 80 at all — a harder failure than the 2026-06-27 "pingable but web server dead" case.
+
+Root cause: in `loop()`'s WiFi-reconnect block, `wifiFailCount` was incremented on every failed reconnect attempt but **never checked against anything** — the code just kept looping `WiFi.disconnect()` + `WiFi.begin()` every 30s forever. If the WiFi/lwIP driver gets into a wedged state (a known ESP32 issue, not necessarily a router problem), a software-level disconnect/reconnect can't fix it — only a full chip reboot resets the driver. Since `loop()` itself never hangs during this (it's still calling `esp_task_wdt_reset()` every pass), the hardware task watchdog stays satisfied and never intervenes either. Nothing escalates → device spins on a broken WiFi stack indefinitely until someone physically power-cycles it.
+
+### Fix
+After 5 consecutive failed reconnect attempts (~2.5 min), force `ESP.restart()` instead of retrying forever:
+```cpp
+} else {
+  wifiFailCount++;
+  Serial.printf("WiFi reconnect failed (%d)\n", wifiFailCount);
+  if (wifiFailCount >= 5) {
+    Serial.println("WiFi reconnect failed 5x in a row - forcing reboot");
+    delay(100);
+    ESP.restart();
+  }
+}
+```
+
+### Lesson learned
+A failure counter that's incremented but never read is worse than useless — it looks like error handling exists but does nothing. When `loop()` stays alive and keeps petting the hardware watchdog, a wedged WiFi/lwIP driver can persist forever with no automatic recovery unless something explicitly escalates to a full restart. Verified by confirming the current condition (`/data` → `oDesc`) matched the real live NWS station observation immediately after the fix, both before flashing (device unreachable) and after (matched reality).
+
+### Open question: remote power-cycle for harder crashes
+Discussed adding a ThinkCentre-side health check that could power-cycle the ESP32 via a smart plug for crash modes this software fix can't self-heal (e.g. a genuine hard hang/panic loop that never gets back to running `loop()`). Eric has a Feit Electric (Tuya-based) WiFi smart plug already, currently used for basement grow lights (see `home-assistant-plant-monitoring` skill) — undecided whether to repurpose/share it or get a dedicated one for the ESP32. Deferred as of 2026-07-16, no action taken yet.
 
 ---
 
@@ -459,4 +490,4 @@ Note: array key is `forecast`, item keys are `day`/`desc`/`hi`/`lo` (not `fc`/`d
 
 ---
 
-*Created: 2026-04-26 | Updated: 2026-06-20*
+*Created: 2026-04-26 | Updated: 2026-07-16*

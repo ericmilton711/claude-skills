@@ -394,9 +394,6 @@ const char page[] PROGMEM = R"rawliteral(
     .chore-check { width: 24px; height: 24px; flex-shrink: 0; accent-color: #d8b45c; cursor: pointer; }
     .chore-done span { text-decoration: line-through; color: #6c8074; }
     .schedule-text p { color: #eef1ea; font-size: clamp(0.9rem,2vh,1.1rem); line-height: 1.8; margin: 0; }
-    .cam-btn { background: none; border: 1px solid rgba(216,180,92,0.4); color: #d8b45c; border-radius: 20px; padding: 4px 12px; font-family: inherit; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; }
-    .cam-btn:active { transform: scale(0.96); }
-    .cam-btn .icon { width: 14px; height: 14px; }
   </style>
 </head>
 <body>
@@ -422,7 +419,7 @@ const char page[] PROGMEM = R"rawliteral(
       </div>
       <div class="hero-events">
         <div class="hero-events-label">Today &mdash; Family Calendar</div>
-        <div id="calEvents"><div class="event-row placeholder"><span class="event-title">Loading...</span></div></div>
+        <div class="event-row placeholder"><span class="event-title">Not connected yet</span></div>
       </div>
       <div class="fc-strip" id="forecast"></div>
     </div>
@@ -443,6 +440,7 @@ const char page[] PROGMEM = R"rawliteral(
         <div class="stat-line"><div class="lbl"><svg class="icon" viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3M3 16h15a3 3 0 1 1-3 3M3 12h9"/></svg>Wind</div><div class="val"><span id="oWind">--</span> mph</div></div>
         <div class="stat-line"><div class="lbl"><svg class="icon" viewBox="0 0 24 24"><path d="M12 2v4M4.9 6.9l2.8 2.8M2 16h3M19 16h3M16.3 9.7l2.8-2.8M6 16a6 6 0 0 1 12 0"/></svg>Sunrise</div><div class="val" id="sunrise">--:--</div></div>
         <div class="stat-line"><div class="lbl"><svg class="icon" viewBox="0 0 24 24"><path d="M6 16a6 6 0 0 1 12 0M2 16h3M19 16h3M12 2v4"/></svg>Sunset</div><div class="val" id="sunset">--:--</div></div>
+        <div class="stat-line"><div class="lbl"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="18" height="10" rx="2"/><path d="M22 10v4"/></svg>Battery</div><div class="val"><svg class="icon" id="battBolt" viewBox="0 0 24 24" style="display:none;color:#5fce8b;width:14px;height:14px;margin-right:3px;"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg><span id="battVal">--</span></div></div>
         <div class="stat-line" style="border-bottom:none;padding-bottom:0;"><div class="lbl"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.45 1 1.15 1 1.95V16h5.2v-.25c0-.8.4-1.5 1-1.95A6 6 0 0 0 12 3Z"/></svg>Chicken Lights <span id="chiOffline" style="display:none;color:#d8836b;font-size:0.62rem;margin-left:4px;">(offline)</span></div></div>
         <div class="led-toggle">
           <button class="led-btn" id="ledOnBtn" onclick="chickenOn()">ON</button>
@@ -459,7 +457,7 @@ const char page[] PROGMEM = R"rawliteral(
       </div>
     </div>
   </div>
-  <div class="footer">NWS Weather every 10 min &bull; <button class="cam-btn" onclick="showCam()"><svg class="icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Camera</button> &bull; <button class="cam-btn" onclick="window.open('https://voice.google.com','_blank')"><svg class="icon" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Voice</button> &bull; <a href="/update">OTA Update</a></div>
+  <div class="footer">NWS Weather every 10 min &bull; <a href="/update">OTA Update</a></div>
   <div class="overlay" id="hourlyOverlay">
     <div class="overlay-header">
       <h2>Hourly Forecast &mdash; Next 24 Hours</h2>
@@ -484,13 +482,6 @@ const char page[] PROGMEM = R"rawliteral(
     </div>
     <div class="overlay-body" id="kidDetail"><div class="overlay-loading">Loading...</div></div>
   </div>
-  <div class="overlay" id="camOverlay">
-    <div class="overlay-header">
-      <h2><svg class="icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> PiCam Live</h2>
-      <button class="close-btn" onclick="closeCam()">Back</button>
-    </div>
-    <div class="overlay-body" style="text-align:center;"><img id="camStream" style="max-width:100%;max-height:80vh;border-radius:12px;border:2px solid rgba(255,255,255,0.1);" /></div>
-  </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});},1000)}());
     var ICONS={
@@ -509,7 +500,7 @@ const char page[] PROGMEM = R"rawliteral(
   function closeDayDetail(){document.getElementById('dayOverlay').className='overlay';}
   function chickenOn(){fetch('/chicken-on').then(function(){setTimeout(updateChicken,600);});}
   function chickenOff(){fetch('/chicken-off').then(function(){setTimeout(updateChicken,600);});}
-  function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var onBtn=document.getElementById('ledOnBtn'),offBtn=document.getElementById('ledOffBtn'),tag=document.getElementById('chiOffline');if(!d.ok){onBtn.classList.remove('active');offBtn.classList.remove('active');tag.style.display='inline';}else{tag.style.display='none';onBtn.classList.toggle('active',d.on);offBtn.classList.toggle('active',!d.on);}}).catch(function(){document.getElementById('ledOnBtn').classList.remove('active');document.getElementById('ledOffBtn').classList.remove('active');document.getElementById('chiOffline').style.display='inline';});}
+  function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var onBtn=document.getElementById('ledOnBtn'),offBtn=document.getElementById('ledOffBtn'),tag=document.getElementById('chiOffline'),bv=document.getElementById('battVal'),bolt=document.getElementById('battBolt');if(!d.ok){onBtn.classList.remove('active');offBtn.classList.remove('active');tag.style.display='inline';bv.textContent='--';bv.style.color='';bolt.style.display='none';}else{tag.style.display='none';onBtn.classList.toggle('active',d.on);offBtn.classList.toggle('active',!d.on);if(d.battPct>=0){bv.textContent=d.battPct+'% ('+d.battV.toFixed(1)+'V)';bv.style.color=d.battPct<20?'#e2703a':'';bolt.style.display=d.charging?'inline-block':'none';}else{bv.textContent='--';bv.style.color='';bolt.style.display='none';}}}).catch(function(){document.getElementById('ledOnBtn').classList.remove('active');document.getElementById('ledOffBtn').classList.remove('active');document.getElementById('chiOffline').style.display='inline';document.getElementById('battVal').textContent='--';document.getElementById('battBolt').style.display='none';});}
   setInterval(updateChicken,5000);updateChicken();
   var kidsData=[];
   var kidsWeekStart='';
@@ -517,13 +508,9 @@ const char page[] PROGMEM = R"rawliteral(
   function saveKids(){fetch('http://192.168.12.136:8181/kids/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kids:kidsData,weekStart:kidsWeekStart})}).catch(function(){});}
   function loadKids(){fetch('http://192.168.12.136:8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[];var wk=mondayKey(new Date());if(d.weekStart!==wk){kidsData.forEach(function(k){k.choreDone={};});kidsWeekStart=wk;saveKids();}else{kidsWeekStart=wk;}}).catch(function(){});}
   loadKids();setInterval(loadKids,120000);
-  function loadCalendar(){fetch('http://192.168.12.136:8182/calendar').then(function(r){return r.json()}).then(function(d){var el=document.getElementById('calEvents');if(!d.events||!d.events.length){el.innerHTML='<div class="event-row placeholder"><span class="event-title">No events today</span></div>';return;}var h='';for(var i=0;i<d.events.length;i++){var ev=d.events[i];h+='<div class="event-row"><span class="event-time">'+ev.time+'</span><span class="event-title">'+ev.title+'</span></div>';}el.innerHTML=h;}).catch(function(){document.getElementById('calEvents').innerHTML='<div class="event-row placeholder"><span class="event-title">Calendar offline</span></div>';});}
-  loadCalendar();setInterval(loadCalendar,300000);
   function toggleChore(ki,ci,el){var k=kidsData[ki];if(!k)return;var chore=k.chores[ci];if(!k.choreDone)k.choreDone={};k.choreDone[chore]=el.checked;saveKids();}
   function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c,ci){var done=k.choreDone&&k.choreDone[c];return'<label class="chore-item'+(done?' chore-done':'')+'"><input type="checkbox" class="chore-check"'+(done?' checked':'')+' onchange="toggleChore('+i+','+ci+',this)"><span>'+c+'</span></label>';}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
   function closeKid(){document.getElementById('kidOverlay').className='overlay';}
-  function showCam(){document.getElementById('camOverlay').className='overlay open';document.getElementById('camStream').src='http://192.168.12.211:8080/';}
-  function closeCam(){document.getElementById('camOverlay').className='overlay';document.getElementById('camStream').src='';}
   function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
   document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
   document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
@@ -618,8 +605,25 @@ void handleChickenStatus() {
   String ledsLine = lp >= 0 ? raw.substring(lp, raw.indexOf('\n', lp)) : "";
   bool on = ledsLine.indexOf("off") < 0 && ledsLine.indexOf("on") >= 0;
   bool ok = raw.length() > 0;
-  char buf[48];
-  snprintf(buf, sizeof(buf), "{\"on\":%s,\"ok\":%s}", on ? "true" : "false", ok ? "true" : "false");
+
+  float battV = -1;
+  int battPct = -1;
+  int bp = raw.indexOf("battery:");
+  if (bp >= 0) {
+    String battLine = raw.substring(bp, raw.indexOf('\n', bp));
+    sscanf(battLine.c_str(), "battery: %fV (%d%%)", &battV, &battPct);
+  }
+
+  bool charging = false;
+  int cp = raw.indexOf("charging:");
+  if (cp >= 0) {
+    String chgLine = raw.substring(cp, raw.indexOf('\n', cp));
+    charging = chgLine.indexOf("yes") >= 0;
+  }
+
+  char buf[112];
+  snprintf(buf, sizeof(buf), "{\"on\":%s,\"ok\":%s,\"battV\":%.2f,\"battPct\":%d,\"charging\":%s}",
+    on ? "true" : "false", ok ? "true" : "false", battV, battPct, charging ? "true" : "false");
   server.send(200, "application/json", buf);
 }
 
@@ -779,6 +783,15 @@ void loop() {
     } else {
       wifiFailCount++;
       Serial.printf("WiFi reconnect failed (%d)\n", wifiFailCount);
+      // A software disconnect/reconnect can't fix a wedged WiFi/lwIP driver -
+      // only a full chip reboot recovers it. Without this, a wedged driver
+      // spins here forever (loop() keeps petting the watchdog, so it never
+      // fires) and the device stays unreachable until someone power-cycles it.
+      if (wifiFailCount >= 5) {
+        Serial.println("WiFi reconnect failed 5x in a row - forcing reboot");
+        delay(100);
+        ESP.restart();
+      }
     }
   }
 
