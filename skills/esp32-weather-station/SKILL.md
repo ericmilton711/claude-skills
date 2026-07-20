@@ -14,7 +14,7 @@
 - **Camera** (added 2026-07-03) and **Voice** (added 2026-07-12): restored `.cam-btn` CSS, the footer buttons, the `#camOverlay` div, and `showCam()`/`closeCam()` JS. Committed as `ba02a34`.
 - **Family Calendar** (added 2026-07-03): the commit had replaced `<div id="calEvents">` with a static "Not connected yet" placeholder and deleted the `loadCalendar()` fetch function entirely. Confirmed the ThinkCentre poller backend (`:8182/calendar`) was still alive and returning real events the whole time — this was purely a frontend regression. Restored the `calEvents` div and `loadCalendar()`/`setInterval` wiring.
 
-Both restorations OTA-flashed and verified live (page source shows the restored elements, `/calendar` backend returns real events).
+Both restorations OTA-flashed and verified live (page source shows the restored elements, `/calendar` backend returns real events). Eric confirmed working on the actual dashboard.
 
 **Lesson:** when bundling an unrelated fix into the same commit as other changes, double-check the diff doesn't silently drop something — a crash-fix commit message gave no signal that three separate UI features were also removed. Worth diffing the full commit, not just the section you meant to touch, before committing.
 
