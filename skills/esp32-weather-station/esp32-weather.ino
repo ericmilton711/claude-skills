@@ -422,7 +422,7 @@ const char page[] PROGMEM = R"rawliteral(
       </div>
       <div class="hero-events">
         <div class="hero-events-label">Today &mdash; Family Calendar</div>
-        <div class="event-row placeholder"><span class="event-title">Not connected yet</span></div>
+        <div id="calEvents"><div class="event-row placeholder"><span class="event-title">Loading...</span></div></div>
       </div>
       <div class="fc-strip" id="forecast"></div>
     </div>
@@ -518,6 +518,8 @@ const char page[] PROGMEM = R"rawliteral(
   function saveKids(){fetch('http://192.168.12.136:8181/kids/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kids:kidsData,weekStart:kidsWeekStart})}).catch(function(){});}
   function loadKids(){fetch('http://192.168.12.136:8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[];var wk=mondayKey(new Date());if(d.weekStart!==wk){kidsData.forEach(function(k){k.choreDone={};});kidsWeekStart=wk;saveKids();}else{kidsWeekStart=wk;}}).catch(function(){});}
   loadKids();setInterval(loadKids,120000);
+  function loadCalendar(){fetch('http://192.168.12.136:8182/calendar').then(function(r){return r.json()}).then(function(d){var el=document.getElementById('calEvents');if(!d.events||!d.events.length){el.innerHTML='<div class="event-row placeholder"><span class="event-title">No events today</span></div>';return;}var h='';for(var i=0;i<d.events.length;i++){var ev=d.events[i];h+='<div class="event-row"><span class="event-time">'+ev.time+'</span><span class="event-title">'+ev.title+'</span></div>';}el.innerHTML=h;}).catch(function(){document.getElementById('calEvents').innerHTML='<div class="event-row placeholder"><span class="event-title">Calendar offline</span></div>';});}
+  loadCalendar();setInterval(loadCalendar,300000);
   function toggleChore(ki,ci,el){var k=kidsData[ki];if(!k)return;var chore=k.chores[ci];if(!k.choreDone)k.choreDone={};k.choreDone[chore]=el.checked;saveKids();}
   function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c,ci){var done=k.choreDone&&k.choreDone[c];return'<label class="chore-item'+(done?' chore-done':'')+'"><input type="checkbox" class="chore-check"'+(done?' checked':'')+' onchange="toggleChore('+i+','+ci+',this)"><span>'+c+'</span></label>';}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
   function closeKid(){document.getElementById('kidOverlay').className='overlay';}
