@@ -1,7 +1,14 @@
 # PiCam Camera Server
 
-**Status:** WORKING. Live MJPEG stream on port 8080, integrated into MILTONHAUS Weather dashboard.
-**Date:** 2026-07-03
+**Status:** WORKING. Live MJPEG stream on port 8080, integrated into MILTONHAUS Weather dashboard. Video-only — no audio yet (see "Planned: Microphone" below).
+**Date:** 2026-07-03 (Camera/Voice buttons briefly disappeared from the dashboard 2026-07-16–2026-07-20 due to an unrelated commit; restored, see `esp32-weather-station` skill)
+
+## Planned: Microphone (2026-07-20)
+
+Eric wants **one-way ambient audio only** (not two-way intercom) alongside the video feed. No mic hardware on hand yet.
+
+- **Recommended:** [SunFounder USB 2.0 Mini Microphone](https://www.amazon.com/SunFounder-Microphone-Raspberry-Recognition-Software/dp/B01KLRBHGM) — plug-and-play, no driver, confirmed compatible with Pi 3.
+- **Once purchased and plugged into the Pi 3 (192.168.12.211):** build an audio capture service (e.g. `arecord`/`ffmpeg` piped to a simple HTTP audio stream, same pattern as the existing `mjpeg_server.py`) and add an `<audio>` element to the `#camOverlay` div in `esp32-weather.ino`, started/stopped alongside `showCam()`/`closeCam()`.
 
 ## Hardware
 

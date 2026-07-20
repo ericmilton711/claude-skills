@@ -5,8 +5,8 @@
 **IP:** 192.168.12.172 (static, configured on device)
 **MAC:** b6-7f-2b-ae-24-3a (randomized)
 **Role:** Weather dashboard display in Firefox (sideloaded), showing http://192.168.12.240/
-**Pi-hole group:** 10 (fire-tablet) — default-deny, weather dependencies whitelisted. Currently in group 0 (unrestricted) while setting up Google Voice.
-**Google Voice:** Web app at voice.google.com, accessed via "Voice" button in dashboard footer. Account: ericmilton711@gmail.com, number: (856) 354-5644. ID verification pending as of 2026-07-12.
+**Pi-hole group:** 10 (fire-tablet) — default-deny, weather dependencies whitelisted. Still in group 0 (unrestricted) as of 2026-07-20 while Google Voice calling is unresolved.
+**Google Voice:** Web app at voice.google.com, accessed via "Voice" button in dashboard footer. Account: ericmilton711@gmail.com, number: (856) 354-5644. ID verification cleared (confirmed no pending banner as of 2026-07-20). Messaging works. **Calling does not work on this device yet** — see "Google Voice" section below for full diagnosis and the Chrome sideload fix in progress.
 **Android SDK:** 30 (Android 11), ARM64
 **Lock screen PIN:** 645866
 
@@ -147,8 +147,33 @@ Google Voice runs as a web app in Firefox on the tablet (no Google Play Services
 - **Account:** ericmilton711@gmail.com
 - **Number:** (856) 354-5644
 - **Access:** "Voice" button in weather dashboard footer opens voice.google.com in a new tab
-- **Status:** ID verification pending as of 2026-07-12. Once approved, sign in at voice.google.com on the tablet.
-- **Note:** Google Play Services cannot be sideloaded on this Fire tablet (APK download sites block automated access, Silk browser too old for Cloudflare). Web app is the working solution.
+- **Status:** ID verification cleared. Messaging works fine. **Calling is broken on this device** (2026-07-20 diagnosis below).
+- **Note:** Google Play Services cannot be sideloaded on this Fire tablet (APK download sites block automated access, Silk browser too old for Cloudflare). Web app is the working solution for messaging.
+
+### Calling broken — diagnosis (2026-07-20)
+
+Symptom: texting works, but calls silently fail — no ringtone, no error, nothing.
+
+Ruled out, in order:
+1. **ID verification** — not pending, no banner shown.
+2. **Pi-hole** — tablet is in group 0 (unrestricted), nothing is being blocked.
+3. **Android app-level mic permission** — Firefox was set to **Deny**; fixed to Allow. Didn't fix it.
+4. **Firefox site-level mic permission** — Settings → Privacy and security → Site permissions → Microphone was already "Ask to allow" (correct). Didn't fix it.
+5. **Firefox calling itself** — tapping "Connect" on the Google-will-call-your-phone dialog does **literally nothing**. Firefox does not support Google Voice's calling flow at all on this device.
+6. **Silk (built-in browser)** — got further: shows a "Calling..." state, but zero audio/ringtone even with mic permission "Allow only while using the app" and tablet volume maxed.
+7. **Account/network sanity check** — test call placed from real desktop Chrome (Eric's Windows laptop) **connected successfully**. This rules out any account-side issue (E911/emergency address, verification, carrier/porting) — the account and number are fully functional.
+8. **Conclusion:** this is a browser limitation specific to the tablet. Neither Firefox nor Fire OS's (outdated) Silk browser pass Google Voice's WebRTC calling requirements, even though both handle messaging fine.
+
+### Fix in progress: sideload real Chrome
+
+Google Voice calling is Chrome-first; sideloading actual Chrome (same ADB pattern used for Firefox) is the next attempt.
+
+1. Download Chrome APK on the **Windows laptop** (not the tablet — avoids the Cloudflare block Silk hits) from [APKMirror, arm64-v8a + arm-v7a, Android 10+](https://www.apkmirror.com/apk/google-inc/chrome/variant-%7B%22arches_slug%22%3A%5B%22arm64-v8a%22%2C%22armeabi-v7a%22%5D%2C%22minapi_slug%22%3A%22minapi-29%22%7D/) — tablet is Android 11 (SDK 30), ARM64.
+2. `adb connect 192.168.12.172:<PORT>` (reconnect/re-pair if needed, see ADB section above).
+3. `adb install` the APK, same as the Firefox install steps above.
+4. Sign into voice.google.com in Chrome, test a call.
+
+**Caveat:** this tablet has no Google Play Services at all. Chrome may nag about it or have reduced functionality — untested as of 2026-07-20. If Chrome doesn't work either, the fallback is: use the phone's real Google Voice app for calls, and keep this tablet for messaging + the weather dashboard only.
 
 ### Opening Firefox with a specific URL via ADB
 

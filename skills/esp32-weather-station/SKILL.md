@@ -1,9 +1,17 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-07-16** — WiFi reconnect watchdog fix deployed (self-heals total-network-dropout crashes). See "What Changed 2026-07-16" below. Family calendar integration complete. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-07-20** — Camera and Voice footer buttons restored (had been accidentally dropped 2026-07-16). See "What Changed 2026-07-20" below. Family calendar integration complete. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
 **Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182.
-**Last Updated:** 2026-07-16
+**Last Updated:** 2026-07-20
+
+---
+
+## What Changed 2026-07-20 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Restored the Camera and Voice footer buttons.** They were added 2026-07-03 (Camera) and 2026-07-12 (Voice), then silently dropped as incidental cleanup bundled into the 2026-07-16 WiFi crash-fix commit (`a2ea9c0`) — that commit's message only mentioned the WiFi fix, no mention of removing the buttons, so it went unnoticed for 4 days. Restored `.cam-btn` CSS, the footer buttons, the `#camOverlay` div, and `showCam()`/`closeCam()` JS, then OTA-flashed and verified live. Committed to the skills repo as `ba02a34`.
+
+**Lesson:** when bundling an unrelated fix into the same commit as other changes, double-check the diff doesn't silently drop something — a crash-fix commit message gave no signal that UI features were also removed.
 
 ---
 
