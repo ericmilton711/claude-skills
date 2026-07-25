@@ -492,7 +492,7 @@ const char page[] PROGMEM = R"rawliteral(
       <h2><svg class="icon" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> PiCam Live</h2>
       <button class="close-btn" onclick="closeCam()">Back</button>
     </div>
-    <div class="overlay-body" style="text-align:center;"><img id="camStream" style="max-width:100%;max-height:80vh;border-radius:12px;border:2px solid rgba(255,255,255,0.1);" /></div>
+    <div class="overlay-body" style="text-align:center;"><img id="camStream" style="max-width:100%;max-height:80vh;border-radius:12px;border:2px solid rgba(255,255,255,0.1);" /><audio id="camAudio" autoplay></audio></div>
   </div>
   <script>
     void(function(){var c=document.getElementById('clock'),d=document.getElementById('date');setInterval(function(){var n=new Date();c.textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});d.textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'America/New_York'});},1000)}());
@@ -525,8 +525,8 @@ const char page[] PROGMEM = R"rawliteral(
   function toggleChore(ki,ci,el){var k=kidsData[ki];if(!k)return;var chore=k.chores[ci];if(!k.choreDone)k.choreDone={};k.choreDone[chore]=el.checked;saveKids();}
   function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c,ci){var done=k.choreDone&&k.choreDone[c];return'<label class="chore-item'+(done?' chore-done':'')+'"><input type="checkbox" class="chore-check"'+(done?' checked':'')+' onchange="toggleChore('+i+','+ci+',this)"><span>'+c+'</span></label>';}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
   function closeKid(){document.getElementById('kidOverlay').className='overlay';}
-  function showCam(){document.getElementById('camOverlay').className='overlay open';document.getElementById('camStream').src='http://192.168.12.211:8080/';}
-  function closeCam(){document.getElementById('camOverlay').className='overlay';document.getElementById('camStream').src='';}
+  function showCam(){document.getElementById('camOverlay').className='overlay open';document.getElementById('camStream').src='http://192.168.12.211:8080/';var a=document.getElementById('camAudio');a.src='http://192.168.12.211:8081/';a.load();a.play();}
+  function closeCam(){document.getElementById('camOverlay').className='overlay';document.getElementById('camStream').src='';var a=document.getElementById('camAudio');a.pause();a.src='';}
   function goFullscreen(){var el=document.documentElement;if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
   document.addEventListener('fullscreenchange',function(){document.getElementById('fsBtn').style.display=document.fullscreenElement?'none':'inline-block';});
   document.addEventListener('webkitfullscreenchange',function(){document.getElementById('fsBtn').style.display=document.webkitFullscreenElement?'none':'inline-block';});
