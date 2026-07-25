@@ -1,32 +1,23 @@
 # Server-Side LED Timer — Chicken Lights
 
-**Last Updated:** 2026-06-16
-**Status:** ✅ Live — ESP32-S3 at 192.168.12.241
+**Last Updated:** 2026-07-24
+**Status:** ✅ Live — see `chicken-leds-esp32` skill for current hardware/firmware/schedule details (this doc previously had stale, contradictory copies of that info — removed).
 
 ---
 
 ## Overview
 
-The chicken LEDs are controlled by an ESP32-S3 directly — no Pi required.
+The chicken LEDs are controlled by a classic ESP32 directly — no Pi required.
 The ESP32 syncs time via NTP and manages its own schedule autonomously.
-The ThinkCentre can override it anytime via `curl`.
+The ThinkCentre can override it anytime via `curl`, which is what this doc covers.
 
-**Hardware:** ESP32-S3 → GPIO 16 → SSR-41FDD #1 → LEDs (5× UV + 5× Blue at 9.5V)
-**Firmware:** `~/Documents/chicken-leds-esp32/chicken-leds-esp32.ino`
-**Pi-hole:** client_id 15, no group (full DNS access)
-**Pi-hole MAC:** 30:ed:a0:bb:45:a4
+**Firmware:** `~/Documents/chicken-leds-esp32/chicken-leds-esp32.ino` (see `chicken-leds-esp32` skill for full hardware/flash/schedule reference)
 
 ---
 
 ## Schedule
 
-| Time | State |
-|------|-------|
-| 12:00am | OFF |
-| 5:00am | ON |
-| 8:00am | OFF |
-| 6:00pm | ON |
-| (repeat) | |
+See `chicken-leds-esp32` skill for the current schedule and firmware details — this doc only covers the ThinkCentre-side override mechanism (`at`/cron + curl). Don't duplicate the schedule table here; it has gone stale before.
 
 ---
 
@@ -61,20 +52,7 @@ ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 'atrm
 
 ## Reflashing the Firmware
 
-ESP32-S3 must be plugged in via USB (`/dev/ttyACM0`):
-
-```bash
-/home/ericmilton/.local/bin/arduino-cli compile --upload \
-  -b esp32:esp32:esp32s3 \
-  -p /dev/ttyACM0 \
-  /home/ericmilton/Documents/chicken-leds-esp32/
-```
-
-To change the schedule, edit `applySchedule()` in the `.ino` file:
-```cpp
-// Current schedule: ON 5am-8am, ON 6pm-midnight
-bool shouldBeOn = (h >= 5 && h < 8) || (h >= 18);
-```
+See `chicken-leds-esp32` skill — board is a classic ESP32 (not S3), OTA at `http://192.168.12.241/update` or USB at `/dev/ttyUSB0`.
 
 ---
 

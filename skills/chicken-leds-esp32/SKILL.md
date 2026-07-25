@@ -59,10 +59,13 @@ ThinkCentre or MILTONHAUS Weather Dashboard can override via HTTP at any time.
 
 | Time | State |
 |------|-------|
-| 1:30am | OFF |
-| 4:00am | ON |
-| 9:00am | OFF |
-| 6:00pm | ON |
+| 1:00am | OFF |
+| 5:00am | ON |
+| 7:00am | OFF |
+| 7:00pm | ON, blinking (0.5s on / 0.25s off) |
+| 9:00pm | ON, solid |
+
+Ground truth is `applySchedule()` in the `.ino` — verify against it before trusting this table; it has drifted from the firmware before.
 
 ---
 
@@ -205,17 +208,21 @@ curl --max-time 90 \
 ```
 
 ### To change the schedule
-Edit `applySchedule()` in the `.ino`:
+Edit `applySchedule()` in the `.ino`. It now has three modes — off, on (solid), and blink (0.5s on / 0.25s off, driven by `schedBlinkTask`):
 ```cpp
-// ON 4am–9am, ON 6pm–1:30am
-bool shouldBeOn = (h >= 4 && h < 9) || (h >= 18) || (h == 0) || (h == 1 && m < 30);
+bool inBlinkWindow = (h == 19 || h == 20); // 7:00pm-8:59pm
+bool inOnWindow = (h >= 5 && h < 7) || (h >= 21) || (h < 1);
+int mode = inBlinkWindow ? 2 : (inOnWindow ? 1 : 0);
 // Schedule transitions clear manualOverride automatically
-if (shouldBeOn != lastScheduleState) {
-    lastScheduleState = shouldBeOn;
+if (mode != lastScheduleMode) {
+    lastScheduleMode = mode;
     manualOverride = false;
 }
-if (!manualOverride && shouldBeOn != ledsOn) setLeds(shouldBeOn);
+if (manualOverride) return;
+if (mode == 2) { /* start scheduledBlinkActive task if not already running */ }
+else { /* stop scheduled blink, setLeds(mode == 1) */ }
 ```
+`handleOn`/`handleOff`/`handleBlink` all clear `scheduledBlinkActive` first so a manual command doesn't get fought by the background blink task. `/status` shows `leds: on (blinking)` during the blink window.
 
 ---
 

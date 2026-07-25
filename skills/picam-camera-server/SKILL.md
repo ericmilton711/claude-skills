@@ -1,14 +1,20 @@
 # PiCam Camera Server
 
-**Status:** WORKING. Live MJPEG stream on port 8080, integrated into MILTONHAUS Weather dashboard. Video-only — no audio yet (see "Planned: Microphone" below).
-**Date:** 2026-07-03 (Camera/Voice buttons briefly disappeared from the dashboard 2026-07-16–2026-07-20 due to an unrelated commit; restored, see `esp32-weather-station` skill)
+**Status:** WORKING. Live MJPEG video (port 8080) + one-way ambient audio (port 8081), integrated into MILTONHAUS Weather dashboard.
+**Date:** 2026-07-24 — microphone (USB PnP Sound Device, TI PCM2902 codec, ALSA card 2) added and wired up.
 
-## Planned: Microphone (2026-07-20)
+## Microphone / Audio Stream
 
-Eric wants **one-way ambient audio only** (not two-way intercom) alongside the video feed. No mic hardware on hand yet.
+One-way ambient audio only (not two-way intercom), per Eric's request.
 
-- **Recommended:** [SunFounder USB 2.0 Mini Microphone](https://www.amazon.com/SunFounder-Microphone-Raspberry-Recognition-Software/dp/B01KLRBHGM) — plug-and-play, no driver, confirmed compatible with Pi 3.
-- **Once purchased and plugged into the Pi 3 (192.168.12.211):** build an audio capture service (e.g. `arecord`/`ffmpeg` piped to a simple HTTP audio stream, same pattern as the existing `mjpeg_server.py`) and add an `<audio>` element to the `#camOverlay` div in `esp32-weather.ino`, started/stopped alongside `showCam()`/`closeCam()`.
+- **Hardware:** generic USB microphone (PCM2902 codec), shows up as ALSA card 2 (`plughw:2,0`) on the Pi 3.
+- **Service:** `picam-audio.service` — `/home/eric/audio_server.py`, port 8081.
+- **How it works:** on each HTTP GET to `/`, spawns `arecord -D plughw:2,0 -f S16_LE -c1 -r16000 -t raw -` and streams a synthetic streaming-WAV header (oversized bogus data-chunk size, since total length is unknown up front) followed by the raw PCM bytes. `ffmpeg` is NOT installed on this Pi — no need, `arecord` + a hand-built WAV header is enough for a live one-way stream. Process is killed when the client disconnects.
+- **Test:** `curl http://192.168.12.211:8081/ -o test.wav` (a few seconds), then `file test.wav` should say `RIFF ... WAVE audio ... 16 bit, mono 16000 Hz`.
+- **Dashboard integration:** `<audio id="camAudio" autoplay>` in `#camOverlay` in `esp32-weather.ino`; `showCam()` sets its `src` and explicitly calls `.load()`/`.play()` (autoplay attribute alone isn't reliable on mobile Safari for a dynamically-set src), `closeCam()` pauses and clears `src`.
+- **Gotchas found 2026-07-24 (first test was silent):**
+  - Mic capture volume defaulted to **0%** even though ALSA reported it "on" — fixed with `amixer -c 2 sset Mic 100% unmute`, then persisted across reboots with `sudo alsactl store` (saved to `/var/lib/alsa/asound.state`, restored automatically by `alsa-restore.service`). If audio ever goes silent again, check `amixer -c 2 sget Mic` first.
+  - `socketserver.ThreadingTCPServer` needs `allow_reuse_address = True` (subclass it) or the service crash-loops on every restart with `OSError: Address already in use` until the OS's TIME_WAIT expires. Already fixed in the deployed script.
 
 ## Hardware
 
@@ -95,6 +101,18 @@ echo 645866 | sudo -S systemctl status picam-stream.service
 
 # Test snapshot
 curl -o test.jpg http://192.168.12.211:8080/snapshot
+
+# Check mic is detected
+arecord -l
+
+# Restart audio stream
+echo 645866 | sudo -S systemctl restart picam-audio.service
+
+# Check audio stream status
+echo 645866 | sudo -S systemctl status picam-audio.service
+
+# Test audio stream (few seconds of WAV, then inspect with `file`)
+curl --max-time 4 http://192.168.12.211:8081/ -o test.wav
 
 # Reboot
 echo 645866 | sudo -S reboot
