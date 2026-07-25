@@ -22,16 +22,20 @@ const uint8_t DS3231_ADDR = 0x68;
 WebServer server(80);
 bool ledsOn = false;
 bool manualOverride = false;
-bool lastScheduleState = false;
+int lastScheduleMode = -1;
 bool ntpSynced = false;
 bool rtcAvailable = false;
 
-// Blink state
+// Blink state (manual /blink endpoint)
 volatile bool blinkActive = false;
 TaskHandle_t blinkTaskHandle = NULL;
 int blinkDuration = 120;
 
-static char statusBuf[256];
+// Scheduled blink state
+volatile bool scheduledBlinkActive = false;
+TaskHandle_t schedBlinkTaskHandle = NULL;
+
+static char statusBuf[300];
 
 uint8_t bcd2dec(uint8_t bcd) { return (bcd >> 4) * 10 + (bcd & 0x0F); }
 
@@ -66,28 +70,67 @@ const char* getTime(struct tm* t) {
     return "none";
 }
 
+void schedBlinkTask(void* param) {
+    while (scheduledBlinkActive) {
+        setLeds(true);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+        if (!scheduledBlinkActive) break;
+        setLeds(false);
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+    schedBlinkTaskHandle = NULL;
+    vTaskDelete(NULL);
+}
+
+void stopSchedBlink() {
+    scheduledBlinkActive = false;
+    if (schedBlinkTaskHandle) {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        schedBlinkTaskHandle = NULL;
+    }
+}
+
 void applySchedule() {
     struct tm t;
     const char* src = getTime(&t);
     if (strcmp(src, "none") == 0) return;
     int h = t.tm_hour;
     int m = t.tm_min;
-    // ON 4am-9am, ON 6pm-1:30am
-    bool shouldBeOn = (h >= 4 && h < 9) || (h >= 18) || (h == 0) || (h == 1 && m < 30);
-    if (shouldBeOn != lastScheduleState) {
-        lastScheduleState = shouldBeOn;
+
+    // Blink windows: 6am-8am, 7pm-9pm
+    bool inBlinkWindow = (h >= 6 && h < 8) || (h >= 19 && h < 21);
+    // Solid ON: 4am-6am, 8am-9am, 9pm-1:30am
+    bool inOnWindow = (h >= 4 && h < 6) || (h == 8) || (h >= 21) || (h == 0) || (h == 1 && m < 30);
+
+    // mode: 0=off, 1=solid on, 2=blink
+    int mode = inBlinkWindow ? 2 : (inOnWindow ? 1 : 0);
+
+    if (mode != lastScheduleMode) {
+        lastScheduleMode = mode;
         manualOverride = false;
     }
-    if (!manualOverride && shouldBeOn != ledsOn) setLeds(shouldBeOn);
+    if (manualOverride) return;
+
+    if (mode == 2) {
+        if (!scheduledBlinkActive) {
+            scheduledBlinkActive = true;
+            xTaskCreatePinnedToCore(schedBlinkTask, "schedBlink", 2048, NULL, 1, &schedBlinkTaskHandle, 0);
+        }
+    } else {
+        if (scheduledBlinkActive) stopSchedBlink();
+        setLeds(mode == 1);
+    }
 }
 
 void handleOn() {
+    if (scheduledBlinkActive) stopSchedBlink();
     manualOverride = true;
     setLeds(true);
     server.send(200, "text/plain", "LEDs ON\n");
 }
 
 void handleOff() {
+    if (scheduledBlinkActive) stopSchedBlink();
     manualOverride = true;
     setLeds(false);
     server.send(200, "text/plain", "LEDs OFF\n");
@@ -99,7 +142,7 @@ void handleStatus() {
     bool synced = strcmp(clockSrc, "none") != 0;
     snprintf(statusBuf, sizeof(statusBuf),
         "leds:     %s\nclock:    %s\ntime:     %02d:%02d:%02d\nip:       %s\noverride: %s\n",
-        ledsOn ? "on" : "off",
+        scheduledBlinkActive ? "on (blinking)" : (ledsOn ? "on" : "off"),
         clockSrc,
         synced ? t.tm_hour : 0,
         synced ? t.tm_min  : 0,
@@ -133,6 +176,7 @@ void handleBlink() {
         server.send(200, "text/plain", "Blink already running\n");
         return;
     }
+    if (scheduledBlinkActive) stopSchedBlink();
     blinkDuration = 120;
     if (server.hasArg("sec")) {
         int s = server.arg("sec").toInt();

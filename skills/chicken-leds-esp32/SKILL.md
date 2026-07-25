@@ -59,9 +59,11 @@ ThinkCentre or MILTONHAUS Weather Dashboard can override via HTTP at any time.
 
 | Time | State |
 |------|-------|
-| 1:00am | OFF |
-| 5:00am | ON |
-| 7:00am | OFF |
+| 1:30am | OFF |
+| 4:00am | ON, solid |
+| 6:00am | ON, blinking (0.5s on / 0.25s off) |
+| 8:00am | ON, solid |
+| 9:00am | OFF |
 | 7:00pm | ON, blinking (0.5s on / 0.25s off) |
 | 9:00pm | ON, solid |
 
@@ -210,8 +212,8 @@ curl --max-time 90 \
 ### To change the schedule
 Edit `applySchedule()` in the `.ino`. It now has three modes — off, on (solid), and blink (0.5s on / 0.25s off, driven by `schedBlinkTask`):
 ```cpp
-bool inBlinkWindow = (h == 19 || h == 20); // 7:00pm-8:59pm
-bool inOnWindow = (h >= 5 && h < 7) || (h >= 21) || (h < 1);
+bool inBlinkWindow = (h >= 6 && h < 8) || (h >= 19 && h < 21); // 6-8am, 7-9pm
+bool inOnWindow = (h >= 4 && h < 6) || (h == 8) || (h >= 21) || (h == 0) || (h == 1 && m < 30);
 int mode = inBlinkWindow ? 2 : (inOnWindow ? 1 : 0);
 // Schedule transitions clear manualOverride automatically
 if (mode != lastScheduleMode) {
