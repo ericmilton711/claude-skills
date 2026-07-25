@@ -343,6 +343,8 @@ const char page[] PROGMEM = R"rawliteral(
     .led-toggle { display: flex; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 4px; margin-top: 6px; }
     .led-btn { flex: 1; border: none; background: none; font-family: inherit; font-weight: 700; font-size: clamp(0.68rem,1.6vh,0.78rem); padding: clamp(7px,1.4vh,9px) 0; border-radius: 11px; cursor: pointer; color: #a9b8ac; }
     .led-btn.active { background: #5fce8b; color: #0f1a13; }
+    .led-btn.blink { animation: pulse-blink 1s ease-in-out infinite; }
+    @keyframes pulse-blink { 0%,100%{ background:#5fce8b; } 50%{ background:#2a7a45; } }
     .led-btn:active { transform: scale(0.96); }
     /* ---- Kids ---- */
     .kid-strip { display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(2,1fr); gap: clamp(6px,1vh,8px); flex: 1; min-height: 0; }
@@ -510,7 +512,7 @@ const char page[] PROGMEM = R"rawliteral(
   function closeDayDetail(){document.getElementById('dayOverlay').className='overlay';}
   function chickenOn(){fetch('/chicken-on').then(function(){setTimeout(updateChicken,600);});}
   function chickenOff(){fetch('/chicken-off').then(function(){setTimeout(updateChicken,600);});}
-  function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var onBtn=document.getElementById('ledOnBtn'),offBtn=document.getElementById('ledOffBtn'),tag=document.getElementById('chiOffline'),bv=document.getElementById('battVal'),bolt=document.getElementById('battBolt');if(!d.ok){onBtn.classList.remove('active');offBtn.classList.remove('active');tag.style.display='inline';bv.textContent='--';bv.style.color='';bolt.style.display='none';}else{tag.style.display='none';onBtn.classList.toggle('active',d.on);offBtn.classList.toggle('active',!d.on);if(d.battPct>=0){bv.textContent=d.battPct+'% ('+d.battV.toFixed(1)+'V)';bv.style.color=d.battPct<20?'#e2703a':'';bolt.style.display=d.charging?'inline-block':'none';}else{bv.textContent='--';bv.style.color='';bolt.style.display='none';}}}).catch(function(){document.getElementById('ledOnBtn').classList.remove('active');document.getElementById('ledOffBtn').classList.remove('active');document.getElementById('chiOffline').style.display='inline';document.getElementById('battVal').textContent='--';document.getElementById('battBolt').style.display='none';});}
+  function updateChicken(){fetch('/chicken-status').then(function(r){return r.json();}).then(function(d){var onBtn=document.getElementById('ledOnBtn'),offBtn=document.getElementById('ledOffBtn'),tag=document.getElementById('chiOffline'),bv=document.getElementById('battVal'),bolt=document.getElementById('battBolt');if(!d.ok){onBtn.classList.remove('active','blink');offBtn.classList.remove('active');onBtn.textContent='ON';tag.style.display='inline';bv.textContent='--';bv.style.color='';bolt.style.display='none';}else{tag.style.display='none';onBtn.classList.toggle('active',d.on);offBtn.classList.toggle('active',!d.on);onBtn.classList.toggle('blink',d.blinking);onBtn.textContent=d.blinking?'BLINK':'ON';if(d.battPct>=0){bv.textContent=d.battPct+'% ('+d.battV.toFixed(1)+'V)';bv.style.color=d.battPct<20?'#e2703a':'';bolt.style.display=d.charging?'inline-block':'none';}else{bv.textContent='--';bv.style.color='';bolt.style.display='none';}}}).catch(function(){document.getElementById('ledOnBtn').classList.remove('active','blink');document.getElementById('ledOnBtn').textContent='ON';document.getElementById('ledOffBtn').classList.remove('active');document.getElementById('chiOffline').style.display='inline';document.getElementById('battVal').textContent='--';document.getElementById('battBolt').style.display='none';});}
   setInterval(updateChicken,5000);updateChicken();
   var kidsData=[];
   var kidsWeekStart='';
@@ -618,6 +620,7 @@ void handleChickenStatus() {
   int lp = raw.indexOf("leds:");
   String ledsLine = lp >= 0 ? raw.substring(lp, raw.indexOf('\n', lp)) : "";
   bool on = ledsLine.indexOf("off") < 0 && ledsLine.indexOf("on") >= 0;
+  bool blinking = ledsLine.indexOf("blinking") >= 0;
   bool ok = raw.length() > 0;
 
   float battV = -1;
@@ -635,9 +638,9 @@ void handleChickenStatus() {
     charging = chgLine.indexOf("yes") >= 0;
   }
 
-  char buf[112];
-  snprintf(buf, sizeof(buf), "{\"on\":%s,\"ok\":%s,\"battV\":%.2f,\"battPct\":%d,\"charging\":%s}",
-    on ? "true" : "false", ok ? "true" : "false", battV, battPct, charging ? "true" : "false");
+  char buf[140];
+  snprintf(buf, sizeof(buf), "{\"on\":%s,\"ok\":%s,\"blinking\":%s,\"battV\":%.2f,\"battPct\":%d,\"charging\":%s}",
+    on ? "true" : "false", ok ? "true" : "false", blinking ? "true" : "false", battV, battPct, charging ? "true" : "false");
   server.send(200, "application/json", buf);
 }
 
