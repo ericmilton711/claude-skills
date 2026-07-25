@@ -45,7 +45,7 @@ ThinkCentre or MILTONHAUS Weather Dashboard can override via HTTP at any time.
 | 1kΩ resistor | Installed |
 | ESP32 | Installed |
 | DS3231 RTC module | Installed |
-| INA219 I2C current sensor (HiLetgo 2-pack) | Ordered — for battery voltage + solar charging status on dashboard |
+| Resistor voltage divider (for battery voltage reading) | Planned — two resistors into ESP32 ADC pin to show charge level on dashboard |
 | DROK 5A buck converter | Installed |
 | D-Planet 5A buck converter | Installed |
 | DieHard Marine 12V battery | Installed |
