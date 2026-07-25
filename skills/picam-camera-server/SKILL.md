@@ -12,6 +12,19 @@ One-way ambient audio only (not two-way intercom), per Eric's request.
 - **How it works:** on each HTTP GET to `/`, spawns `arecord -D plughw:2,0 -f S16_LE -c1 -r16000 -t raw -` and streams a synthetic streaming-WAV header (oversized bogus data-chunk size, since total length is unknown up front) followed by the raw PCM bytes. `ffmpeg` is NOT installed on this Pi — no need, `arecord` + a hand-built WAV header is enough for a live one-way stream. Process is killed when the client disconnects.
 - **Test:** `curl http://192.168.12.211:8081/ -o test.wav` (a few seconds), then `file test.wav` should say `RIFF ... WAVE audio ... 16 bit, mono 16000 Hz`.
 - **Dashboard integration:** `<audio id="camAudio" autoplay>` in `#camOverlay` in `esp32-weather.ino`; `showCam()` sets its `src` and explicitly calls `.load()`/`.play()` (autoplay attribute alone isn't reliable on mobile Safari for a dynamically-set src), `closeCam()` pauses and clears `src`.
+
+## Remote Access (Tailscale) — added 2026-07-24
+
+Camera/audio don't work over Tailscale by default because `showCam()` hardcodes the LAN IP `192.168.12.211`, which a remote Tailscale client can't reach (see `esp32-weather-station` skill — remote access only works via a single-port proxy on the ThinkCentre, not a full subnet route).
+
+**Fix:** two new streaming reverse-proxy services on the ThinkCentre (100.70.179.60), mirroring `weather-proxy.service` but supporting infinite streams (the existing proxy does a blocking full `read()` which never returns for MJPEG/WAV):
+- `camera-proxy.service` — port 8241 → `http://192.168.12.211:8080` (video)
+- `audio-proxy.service` — port 8242 → `http://192.168.12.211:8081` (audio)
+- Both run `/opt/stream-proxy.py <upstream-url> <port>` (generic chunked passthrough proxy, `ThreadingTCPServer` with `allow_reuse_address=True`).
+
+`camBase()` in `esp32-weather.ino` picks the URL set based on `window.location.hostname`: LAN (`192.168.12.240`) uses the picam IPs directly; Tailscale (`100.70.179.60`) uses the two proxy ports above.
+
+**To verify:** `curl http://192.168.12.136:8241/snapshot` and `curl http://192.168.12.136:8242/ -o test.wav --max-time 3` from the LAN, or the same against `100.70.179.60` from a Tailscale client.
 - **Gotchas found 2026-07-24 (first test was silent):**
   - Mic capture volume defaulted to **0%** even though ALSA reported it "on" — fixed with `amixer -c 2 sset Mic 100% unmute`, then persisted across reboots with `sudo alsactl store` (saved to `/var/lib/alsa/asound.state`, restored automatically by `alsa-restore.service`). If audio ever goes silent again, check `amixer -c 2 sget Mic` first.
   - `socketserver.ThreadingTCPServer` needs `allow_reuse_address = True` (subclass it) or the service crash-loops on every restart with `OSError: Address already in use` until the OS's TIME_WAIT expires. Already fixed in the deployed script.

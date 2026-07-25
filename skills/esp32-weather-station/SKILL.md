@@ -424,6 +424,21 @@ firefox --headless --new-instance --profile /tmp/ffprof --window-size=1280,800 \
 - **Phone:** Galaxy S23 with Tailscale, IP 100.111.139.83
 - **Why not WireGuard:** T-Mobile CGNAT blocks inbound connections
 
+### Gotcha: hardcoded LAN IPs break under Tailscale (fixed 2026-07-24)
+
+The dashboard page itself loads fine remotely (proxied via `weather-proxy.service`), but several features made **client-side JS `fetch`/`<img>`/`<a>` calls straight to LAN IPs** (`192.168.12.136` for the ThinkCentre, `192.168.12.211` for the picam Pi) — those are unreachable from a remote Tailscale client, since only port 8240 on the ThinkCentre is proxied, not a full subnet route. Symptom looked like a generic "camera/calendar/chores broken" rather than an obvious network error (e.g. a small broken-image dot for `<img>`).
+
+Fixed with a shared helper in `esp32-weather.ino`, used everywhere the page talks to the ThinkCentre or picam:
+```js
+function thinkcentreHost(){var h=window.location.hostname;return h.indexOf('192.168.')===0?'192.168.12.136':h;}
+function camBase(){var h=window.location.hostname;if(h.indexOf('192.168.')===0){return{v:'http://192.168.12.211:8080/',a:'http://192.168.12.211:8081/'};}return{v:'http://'+h+':8241/',a:'http://'+h+':8242/'};}
+```
+Logic: if the page itself was loaded from a `192.168.*` address (LAN), talk to devices directly by their LAN IP. Otherwise (any Tailscale IP or MagicDNS hostname — don't hardcode a specific one, it's fragile), reuse whatever hostname the browser used to load the page, since that's the ThinkCentre's Tailscale address it's already reaching. Applies to: family calendar (`:8182/calendar`), kids chores (`:8181/kids`, `:8181/kids/save`, `:8181/kids-admin`), and the camera/audio streams (`camBase()`).
+
+The camera/audio streams needed dedicated proxies added on the ThinkCentre since they're infinite streams (MJPEG/WAV) — see `picam-camera-server` skill's "Remote Access (Tailscale)" section for `camera-proxy.service`/`audio-proxy.service` (ports 8241/8242). The calendar and kids-chores services didn't need a new proxy — they already bind `0.0.0.0`, so they're reachable directly via the ThinkCentre's Tailscale IP once the JS stopped hardcoding the LAN IP.
+
+**If something like this breaks again:** rule out browser caching first — the ESP32 doesn't send `Cache-Control` headers on the dashboard page, so a phone browser can serve a stale cached copy (with old JS) even after the firmware's been reflashed with a fix. A hard refresh / clear-cache resolved exactly this during the 2026-07-24 fix.
+
 ## Flashing
 
 ### Via OTA (preferred)
