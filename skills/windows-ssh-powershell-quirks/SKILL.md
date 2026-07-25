@@ -82,6 +82,10 @@ Checklist for "one specific site won't load on one specific device" (ruled out i
 
 If all of the above check out clean but the block persists for one device only, it's likely a **router-level per-device policy** (mesh router parental-control/threat-protection tier) that isn't visible from the device or from Pi-hole — needs router admin access to confirm.
 
+## 7. `ping` is not a valid "is this laptop on?" test
+
+Windows 11 blocks ICMP echo (ping) via the default Windows Defender Firewall profile — a 100% packet-loss ping does **not** mean the machine is off or unreachable. Confirmed 2026-07-24 on Eva's laptop: ping timed out completely while an SSH command (`ssh "eva milton@192.168.12.202" "echo alive"`) succeeded instantly and the device showed live Pi-hole query traffic. **Use SSH (or a live query in the Pi-hole log) to check reachability, never ping.**
+
 ## Related
 
 - [[reference_ntfy]] — ntfy topic/device map
