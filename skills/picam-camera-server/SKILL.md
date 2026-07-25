@@ -9,7 +9,7 @@ One-way ambient audio only (not two-way intercom), per Eric's request.
 
 - **Hardware:** generic USB microphone (PCM2902 codec), shows up as ALSA card 2 (`plughw:2,0`) on the Pi 3.
 - **Service:** `picam-audio.service` — `/home/eric/audio_server.py`, port 8081.
-- **How it works:** on each HTTP GET to `/`, spawns `arecord -D plughw:2,0 -f S16_LE -c1 -r16000 -t raw -` and streams a synthetic streaming-WAV header (oversized bogus data-chunk size, since total length is unknown up front) followed by the raw PCM bytes. `ffmpeg` is NOT installed on this Pi — no need, `arecord` + a hand-built WAV header is enough for a live one-way stream. Process is killed when the client disconnects.
+- **How it works:** a single `arecord` process captures from the mic and an `AudioBroadcaster` fans the PCM chunks to all connected HTTP clients. Each client gets a synthetic streaming-WAV header (oversized bogus data-chunk size, since total length is unknown) followed by the live PCM stream. `arecord` starts on the first client connection and stops when the last client disconnects. Multiple devices can listen simultaneously.
 - **Test:** `curl http://192.168.12.211:8081/ -o test.wav` (a few seconds), then `file test.wav` should say `RIFF ... WAVE audio ... 16 bit, mono 16000 Hz`.
 - **Dashboard integration:** `<audio id="camAudio" autoplay>` in `#camOverlay` in `esp32-weather.ino`; `showCam()` sets its `src` and explicitly calls `.load()`/`.play()` (autoplay attribute alone isn't reliable on mobile Safari for a dynamically-set src), `closeCam()` pauses and clears `src`.
 
