@@ -7,7 +7,7 @@
 
 One-way ambient audio only (not two-way intercom), per Eric's request.
 
-- **Hardware:** generic USB microphone (PCM2902 codec), shows up as ALSA card 2 (`plughw:2,0`) on the Pi 3.
+- **Hardware:** generic USB microphone (PCM2902 codec), shows up as ALSA card 1 (`plughw:1,0`) on the Pi 3. **Note:** USB sound card numbers can shift across reboots. If audio goes silent, run `arecord -l` to find the current card number and update `ALSA_DEVICE` in `audio_server.py`.
 - **Service:** `picam-audio.service` — `/home/eric/audio_server.py`, port 8081.
 - **How it works:** a single `arecord` process captures from the mic and an `AudioBroadcaster` fans the PCM chunks to all connected HTTP clients. Each client gets a synthetic streaming-WAV header (oversized bogus data-chunk size, since total length is unknown) followed by the live PCM stream. `arecord` starts on the first client connection and stops when the last client disconnects. Multiple devices can listen simultaneously.
 - **Test:** `curl http://192.168.12.211:8081/ -o test.wav` (a few seconds), then `file test.wav` should say `RIFF ... WAVE audio ... 16 bit, mono 16000 Hz`.
@@ -26,7 +26,7 @@ Camera/audio don't work over Tailscale by default because `showCam()` hardcodes 
 
 **To verify:** `curl http://192.168.12.136:8241/snapshot` and `curl http://192.168.12.136:8242/ -o test.wav --max-time 3` from the LAN, or the same against `100.70.179.60` from a Tailscale client.
 - **Gotchas found 2026-07-24 (first test was silent):**
-  - Mic capture volume defaulted to **0%** even though ALSA reported it "on" — fixed with `amixer -c 2 sset Mic 100% unmute`, then persisted across reboots with `sudo alsactl store` (saved to `/var/lib/alsa/asound.state`, restored automatically by `alsa-restore.service`). If audio ever goes silent again, check `amixer -c 2 sget Mic` first.
+  - Mic capture volume defaulted to **0%** even though ALSA reported it "on" — fixed with `amixer -c 1 sset Mic 100% unmute`, then persisted across reboots with `sudo alsactl store` (saved to `/var/lib/alsa/asound.state`, restored automatically by `alsa-restore.service`). If audio ever goes silent again, check `amixer -c 1 sget Mic` first. **Also check card number** — USB devices can shift across reboots (was card 2, now card 1 as of 2026-07-26).
   - `socketserver.ThreadingTCPServer` needs `allow_reuse_address = True` (subclass it) or the service crash-loops on every restart with `OSError: Address already in use` until the OS's TIME_WAIT expires. Already fixed in the deployed script.
 
 ## Hardware
