@@ -57,32 +57,15 @@ Key installed at `C:\ProgramData\ssh\administrators_authorized_keys` (admin acco
 
 ## Pi-hole
 
-- **Group:** 9 (`eva-laptop`) — default-deny
-- **Allowed:** Homeschool Connections, Teaching Textbooks, Duolingo, Kiddle, Vimeo, Zoom, Firefox/Mozilla, Windows essentials, Gmail, Google Chat, Google Docs/Drive/Sheets, Britannica
-- **Blocked:** Google Search (google.com/www.google.com), YouTube, DuckDuckGo, Bing, and every other search engine
-- **pki.goog** must stay whitelisted or Gmail TLS breaks (cert revocation)
-- **STANDING POLICY (set 2026-07-25, permanent until Eric says otherwise):** Chat + Gmail + Docs/Drive/Sheets allowed, all search engines + YouTube blocked. Do not revert.
+- **Group:** 9 (`eva-laptop`) — default-deny, always applied to client 13
+- **Allowed always:** Homeschool Connections, Teaching Textbooks, Duolingo, Kiddle, Vimeo, Zoom, Firefox/Mozilla, Windows essentials, Google Docs/Drive/Sheets, Britannica
+- **Blocked always:** Google Search (google.com/www.google.com), YouTube, DuckDuckGo, Bing, and every other search engine
+- **Gmail + Google Chat: time-windowed, NOT always-on** (changed 2026-07-25, supersedes the old "standing policy" below) — see [[project_eva_chat_email_timer]] and the dedicated skill `eva-chat-email-timer`. Full setup, cron, and the Windows-side tab-closer live there.
+- **pki.goog** must stay whitelisted or Gmail/Google TLS breaks (cert revocation) — this stayed on group 9 permanently, it's shared infra not exclusive to Chat/Gmail
 
-### Google Chat + Gmail — domains required (added 2026-07-25)
+~~STANDING POLICY (set 2026-07-25 early evening): Chat + Gmail + Docs/Drive/Sheets allowed 24/7, permanent until Eric says otherwise.~~ **Superseded the same day** — Eric decided Chat + Gmail should only work 9:30-10:30pm daily. Docs/Drive/Sheets remained always-on (unaffected).
 
-Chat was originally banned (deny rules 271-274), then explicitly re-allowed for group 9 only. Allow-regex rules now scoped to group 9 (in addition to pre-existing gmail infra: `googleapis.com`, `gstatic.com`, `googleusercontent.com`, `accounts.google.com`, `apis.google.com`, `ogs.google.com`, `pki.goog`, `workspace.google.com`):
-
-| Domain | Rule ID | Notes |
-|--------|---------|-------|
-| `gmail.com` | 251 | added group 9 |
-| `mail.google.com` | 250 | added group 9 |
-| `chat.google.com` | 258 | added group 9 — overrides old deny rule 271 (allow beats deny at same regex tier) |
-| `chat.usercontent.google.com` | 360 | new, group 9 only |
-| `hangouts.google.com` | 361 | new, group 9 only, legacy fallback |
-| `clients6.google.com` | 349 | added group 9 — covers signaler-pa/chat-pa/people-pa subdomains |
-| `clients4.google.com` | 362 | new, group 9 only, chat sync |
-| `mtalk.google.com` | 363 | new, group 9 only, push channel |
-
-Domain list modeled on Benedict's laptop (kids2/group 3), which already had full working Chat access. Old deny rules 271-274 are still in the DB but are overridden, not deleted.
-
-**Docs/Drive/Sheets** were already allowed pre-existing (rules 256, 257, 291) — unaffected by the Chat/Gmail change, still working.
-
-**Verify after any Pi-hole change:** SSH to the laptop and `nslookup chat.google.com. 192.168.12.136` (should resolve) vs `nslookup www.google.com. 192.168.12.136` (should return `0.0.0.0`). Always run `pihole reloaddns` on the ThinkCentre + `ipconfig /flushdns` on the laptop after any rule change.
+**Verify after any Pi-hole change:** SSH to the laptop and `nslookup chat.google.com. 192.168.12.136` (should resolve only during the 9:30-10:30pm window) vs `nslookup www.google.com. 192.168.12.136` (should always return `0.0.0.0`). Always run `pihole reloaddns` on the ThinkCentre + `ipconfig /flushdns` on the laptop after any rule change.
 
 ---
 
