@@ -58,9 +58,31 @@ Key installed at `C:\ProgramData\ssh\administrators_authorized_keys` (admin acco
 ## Pi-hole
 
 - **Group:** 9 (`eva-laptop`) — default-deny
-- **Allowed:** Homeschool Connections, Teaching Textbooks, Duolingo, Kiddle, Vimeo, Zoom, Firefox/Mozilla, Windows essentials, Gmail, Britannica
-- **Blocked:** Google Search, YouTube, Google Chat/Hangouts
+- **Allowed:** Homeschool Connections, Teaching Textbooks, Duolingo, Kiddle, Vimeo, Zoom, Firefox/Mozilla, Windows essentials, Gmail, Google Chat, Google Docs/Drive/Sheets, Britannica
+- **Blocked:** Google Search (google.com/www.google.com), YouTube, DuckDuckGo, Bing, and every other search engine
 - **pki.goog** must stay whitelisted or Gmail TLS breaks (cert revocation)
+- **STANDING POLICY (set 2026-07-25, permanent until Eric says otherwise):** Chat + Gmail + Docs/Drive/Sheets allowed, all search engines + YouTube blocked. Do not revert.
+
+### Google Chat + Gmail — domains required (added 2026-07-25)
+
+Chat was originally banned (deny rules 271-274), then explicitly re-allowed for group 9 only. Allow-regex rules now scoped to group 9 (in addition to pre-existing gmail infra: `googleapis.com`, `gstatic.com`, `googleusercontent.com`, `accounts.google.com`, `apis.google.com`, `ogs.google.com`, `pki.goog`, `workspace.google.com`):
+
+| Domain | Rule ID | Notes |
+|--------|---------|-------|
+| `gmail.com` | 251 | added group 9 |
+| `mail.google.com` | 250 | added group 9 |
+| `chat.google.com` | 258 | added group 9 — overrides old deny rule 271 (allow beats deny at same regex tier) |
+| `chat.usercontent.google.com` | 360 | new, group 9 only |
+| `hangouts.google.com` | 361 | new, group 9 only, legacy fallback |
+| `clients6.google.com` | 349 | added group 9 — covers signaler-pa/chat-pa/people-pa subdomains |
+| `clients4.google.com` | 362 | new, group 9 only, chat sync |
+| `mtalk.google.com` | 363 | new, group 9 only, push channel |
+
+Domain list modeled on Benedict's laptop (kids2/group 3), which already had full working Chat access. Old deny rules 271-274 are still in the DB but are overridden, not deleted.
+
+**Docs/Drive/Sheets** were already allowed pre-existing (rules 256, 257, 291) — unaffected by the Chat/Gmail change, still working.
+
+**Verify after any Pi-hole change:** SSH to the laptop and `nslookup chat.google.com. 192.168.12.136` (should resolve) vs `nslookup www.google.com. 192.168.12.136` (should return `0.0.0.0`). Always run `pihole reloaddns` on the ThinkCentre + `ipconfig /flushdns` on the laptop after any rule change.
 
 ---
 
