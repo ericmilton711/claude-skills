@@ -437,7 +437,9 @@ Logic: if the page itself was loaded from a `192.168.*` address (LAN), talk to d
 
 The camera/audio streams needed dedicated proxies added on the ThinkCentre since they're infinite streams (MJPEG/WAV) — see `picam-camera-server` skill's "Remote Access (Tailscale)" section for `camera-proxy.service`/`audio-proxy.service` (ports 8241/8242). The calendar and kids-chores services didn't need a new proxy — they already bind `0.0.0.0`, so they're reachable directly via the ThinkCentre's Tailscale IP once the JS stopped hardcoding the LAN IP.
 
-**If something like this breaks again:** rule out browser caching first — the ESP32 doesn't send `Cache-Control` headers on the dashboard page, so a phone browser can serve a stale cached copy (with old JS) even after the firmware's been reflashed with a fix. A hard refresh / clear-cache resolved exactly this during the 2026-07-24 fix.
+**Re-regression 2026-07-28:** `camBase()` was missing again from the live firmware — `showCam()` had hardcoded LAN IPs (`192.168.12.211:8080/8081`), breaking camera and audio over Tailscale. Re-added `camBase()` and OTA-flashed. The sketch in `~/esp32-weather/` was also stale (no audio element at all), so it was replaced with the skills copy before compiling.
+
+**If something like this breaks again:** rule out browser caching first — the ESP32 doesn't send `Cache-Control` headers on the dashboard page, so a phone browser can serve a stale cached copy (with old JS) even after the firmware's been reflashed with a fix. A hard refresh / clear-cache resolved exactly this during the 2026-07-24 fix. Also verify `~/esp32-weather/esp32-weather.ino` matches `~/.claude/skills/esp32-weather-station/esp32-weather.ino` — there are two copies and they can drift.
 
 ## Flashing
 
