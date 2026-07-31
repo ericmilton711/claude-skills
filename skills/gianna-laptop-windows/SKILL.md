@@ -184,9 +184,12 @@ Gianna has a USB CD drive plugged into the laptop. Asunder is installed for ripp
 ### How Gianna accesses it
 - **GNOME dock:** Asunder is pinned as the **first icon** on the favorites bar (CD icon)
 - **Nautilus sidebar:** "MP3s" is bookmarked in the file manager sidebar
+- **No desktop icons:** Fedora GNOME does not show desktop icons. Everything is via the dock and file manager sidebar.
 
 ### Asunder config
-Located at `~/.config/asunder`. Key settings:
+Config is managed through the Asunder GUI (Preferences menu), not by editing files directly. Writing the config file programmatically via SSH does not work reliably: asunder overwrites it on close and the file path varies. Always set preferences through the GUI.
+
+Current settings (set manually via GUI 2026-07-30):
 - Output: `/home/gianna/MP3s`
 - Format: MP3 (VBR)
 - CD device: `/dev/sr0`
