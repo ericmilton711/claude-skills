@@ -317,6 +317,7 @@ ssh themi@192.168.12.249
 - DNS: **DHCP (automatic)** — was static 192.168.12.136
 - **LibreOffice 26.2.4.2 installed** (2026-06-23, via winget)
 - **Browser lock installed** (2026-07-30) — same password as Eric's machines, script at `C:\Users\themi\browser-unlock.ps1`
+- **Edge disabled** (2026-07-30) — `msedge.exe` renamed to `msedge.exe.disabled`, Start Menu shortcut removed. Microsoft's uninstaller refuses (exit code 93), so exe was renamed instead. Firefox is the only usable browser.
 
 ### To Restore After Trip
 ```powershell

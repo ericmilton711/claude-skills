@@ -29,6 +29,23 @@ Remove-Item 'C:\Users\Public\Desktop\AppName.lnk' -Force
 
 6. **Verify** apps are gone from registry and desktop.
 
+## Microsoft Edge — Cannot Uninstall, Must Disable
+
+Edge's built-in uninstaller returns exit code 93 and refuses to remove itself, even with `--force-uninstall` and the `AllowUninstall` registry key. The workaround is to rename the executable:
+
+```powershell
+# Rename exe so it can't launch
+Rename-Item 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe' 'msedge.exe.disabled' -Force
+
+# Remove shortcuts
+Remove-Item 'C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk' -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\Desktop\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:PUBLIC\Desktop\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+```
+
+Do NOT remove Edge WebView2 Runtime — it's a system dependency used by many apps.
+
 ## Notes
 
 - Always write PowerShell logic to `.ps1` files and run with `powershell -ExecutionPolicy Bypass -File` — avoids bash `$_` escaping issues.
