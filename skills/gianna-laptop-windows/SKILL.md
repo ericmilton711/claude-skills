@@ -1,7 +1,7 @@
 # Gianna's Laptop — Acer Aspire A515-46
 
-**Last Updated:** 2026-05-25
-**Status:** BIOS still locked — needs CH341A reflash. Running Fedora. DNS and Pi-hole fully configured.
+**Last Updated:** 2026-07-30
+**Status:** BIOS still locked — needs CH341A reflash. Running Fedora. DNS and Pi-hole fully configured. CD ripping set up.
 
 ---
 
@@ -166,6 +166,49 @@ The CH341A connects to a PC via USB and reflashes the chip, wiping the password.
 2. Power on, tap **F12** immediately → select SD card from boot menu
 3. Follow Windows setup wizard
 4. After Windows is installed, set up Pi-hole and WireGuard (see `skills/kids-laptops-pihole/SKILL.md`)
+
+---
+
+## CD Ripping — Asunder (installed 2026-07-30)
+
+Gianna has a USB CD drive plugged into the laptop. Asunder is installed for ripping CDs to MP3.
+
+### What's installed
+- **asunder** — GTK CD ripper GUI
+- **lame** — MP3 encoder (used by asunder)
+- **cdparanoia** — CD audio extraction backend
+
+### Where MP3s go
+`/home/gianna/MP3s/` — organized by Artist > Album automatically.
+
+### How Gianna accesses it
+- **GNOME dock:** Asunder is pinned as the **first icon** on the favorites bar (CD icon)
+- **Nautilus sidebar:** "MP3s" is bookmarked in the file manager sidebar
+
+### Asunder config
+Located at `~/.config/asunder`. Key settings:
+- Output: `/home/gianna/MP3s`
+- Format: MP3 (VBR)
+- CD device: `/dev/sr0`
+- Eject on done: yes
+- Creates Artist/Album subdirectories
+
+### Permissions
+- Gianna is in the `cdrom` group (added 2026-07-30) for `/dev/sr0` access
+- Requires logout/login once after group was added
+
+### Usage
+1. Put a CD in the USB drive
+2. Click the CD icon (first icon on the dock)
+3. Click "Rip"
+4. CD ejects when done
+5. Open file manager, click "MP3s" in sidebar to find songs
+6. Plug in MP3 player and copy files over
+
+### If the CD drive isn't detected
+- Check `lsblk | grep sr` — should show `sr0`
+- Check `groups gianna` — should include `cdrom`
+- If cdrom group is missing: `sudo usermod -aG cdrom gianna` then logout/login
 
 ---
 
