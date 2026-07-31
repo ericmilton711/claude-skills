@@ -4,7 +4,7 @@ Locks browsers (Firefox, Safari) behind a password prompt. Password is required 
 
 **Password hash:** `b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b` (changed 2026-07-14)
 
-**Sync status (2026-07-14):** MacBook Pro — Fedora (.190) and Windows laptop (.220) both updated to the new hash. Rosemary's MacBook (.109) is unaffected — it uses its own separate password/hash.
+**Sync status (2026-07-30):** MacBook Pro — Fedora (.190), Windows laptop (.220), and Benedict's laptop (.239) all use the same hash. Rosemary's MacBook (.109) is unaffected — it uses its own separate password/hash.
 
 ---
 
@@ -19,6 +19,12 @@ Locks browsers (Firefox, Safari) behind a password prompt. Password is required 
 - **Script:** `~/.local/bin/browser-unlock`
 - **Desktop override:** `~/.local/share/applications/org.mozilla.firefox.desktop`
 - **Deployed:** 2026-06-26
+
+### Benedict's Windows Laptop (192.168.12.239)
+- **Script:** `C:\Users\themi\browser-unlock.ps1`
+- **Shortcuts rewired:** Taskbar pin, Start Menu (Firefox + Firefox Private Browsing)
+- **Password:** Same as Eric's machines
+- **Deployed:** 2026-07-30
 
 ### Rosemary's MacBook Pro — macOS (192.168.12.109)
 - **Script:** `~/.local/bin/browser-unlock`
