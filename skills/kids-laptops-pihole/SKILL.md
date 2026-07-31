@@ -197,7 +197,7 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 0 | Default | All other devices | — | none |
 | 1 | mac-mini | Mac Mini | 192.168.12.163 | same as kids1 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
-| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids + Gmail + Britannica |
+| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | **⚠️ Currently in group 6 (unrestricted) for trip — restore to group 3 after** |
 | 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
 | 7 | tower-of-gondor | Tower of Gondor + YTI Chromebook | 192.168.12.160, .219 | default-allow, blocks Google/Spotify/Apple Music |
 | 8 | gianna-laptop | Gianna's Fedora laptop | 192.168.12.226 | **default-allow** — blocks Google + YouTube only, Gmail allowed |
@@ -306,15 +306,31 @@ ssh themi@192.168.12.249
 
 ## Kids2 — Benedict's Windows Laptop (Lenovo V15 G2 IJL)
 
-**Status: ✅ Complete**
+**Status: ⚠️ Pi-hole restrictions OFF (trip mode, 2026-07-30)**
 
 - IP: 192.168.12.239
 - Hardware: Identical to Kids1 (Lenovo V15 G2 IJL)
 - RAM: 8GB (Kids1 has 16GB)
 - Username: themi
 - Password: 1229
-- Pi-hole group: `kids2` (Group ID: 3)
+- Pi-hole group: **Currently group 6 (unrestricted)** — was `kids2` (Group ID: 3)
+- DNS: **DHCP (automatic)** — was static 192.168.12.136
 - **LibreOffice 26.2.4.2 installed** (2026-06-23, via winget)
+- **Browser lock installed** (2026-07-30) — same password as Eric's machines, script at `C:\Users\themi\browser-unlock.ps1`
+
+### To Restore After Trip
+```powershell
+# Move back to group 3 (kids2)
+$auth = Invoke-RestMethod -Uri "http://192.168.12.136/api/auth" -Method Post -ContentType "application/json" -Body '{"password":"645866"}'
+$SID = $auth.session.sid
+$headers = @{ "sid" = $SID; "Content-Type" = "application/json" }
+Invoke-RestMethod -Uri "http://192.168.12.136/api/clients/192.168.12.239" -Method Put -Headers $headers -Body '{"groups":[3]}'
+ssh -i $env:USERPROFILE\.ssh\id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "echo 645866 | sudo -S docker exec pihole pihole reloaddns 2>/dev/null"
+
+# Set DNS back to Pi-hole (run on Benedict's laptop)
+netsh interface ip set dns name="Wi-Fi" static 192.168.12.136
+ipconfig /flushdns
+```
 
 ### SSH Access
 
