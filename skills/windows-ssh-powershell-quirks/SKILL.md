@@ -86,7 +86,24 @@ If all of the above check out clean but the block persists for one device only, 
 
 Windows 11 blocks ICMP echo (ping) via the default Windows Defender Firewall profile — a 100% packet-loss ping does **not** mean the machine is off or unreachable. Confirmed 2026-07-24 on Eva's laptop: ping timed out completely while an SSH command (`ssh "eva milton@192.168.12.202" "echo alive"`) succeeded instantly and the device showed live Pi-hole query traffic. **Use SSH (or a live query in the Pi-hole log) to check reachability, never ping.**
 
+## 8. Reaching a kid's laptop when it's off the home LAN (different Wi-Fi network)
+
+When a kids' laptop is on a foreign network (hotel/hotspot/relative's house) instead of the home LAN, its known home IP (e.g. `192.168.12.239`) usually won't respond — even SSH to that address times out or shows "no route to host," because the address only makes sense on the home subnet.
+
+**Try in this order:**
+
+1. **mDNS hostname first: `ssh user@<hostname>.local`.** Windows advertises its hostname over mDNS on the local network by default (confirmed working 2026-08-03 reaching Benedict's laptop as `kids2.local` on an unfamiliar guest Wi-Fi). This is the cleanest fix — no IP guessing needed, works regardless of what subnet the foreign router handed out.
+2. **If mDNS fails, try a same-subnet ARP trick as a fallback:** add a secondary IP address to your own machine's Wi-Fi interface inside the device's *old* subnet (e.g. `sudo ip addr add 192.168.12.50/24 dev wlp3s0` if the target's home IP was `192.168.12.239/24`). Two hosts sharing an IP subnet can ARP and talk directly over the same physical Wi-Fi broadcast domain even though the router's actual DHCP range is completely different. This worked intermittently in testing — treat it as a fallback, not primary, since some routers/APs enforce client isolation that blocks it outright (as seen previously on a phone hotspot).
+3. **Don't trust `ping` to rule out reachability** — see lesson 7. A failed ping doesn't mean SSH/mDNS won't work.
+
+**Diagnosing "should I even bother fixing this device's network config?":** before assuming a static IP is stuck and needs fixing, just SSH in and ask it:
+```powershell
+netsh interface ip set address name="Wi-Fi" source=dhcp
+```
+If the adapter is already on DHCP, this command is a harmless no-op and reports `DHCP is already enabled on this interface.` — a cheap way to confirm current state without needing to parse `ipconfig` output first.
+
 ## Related
 
 - [[reference_ntfy]] — ntfy topic/device map
+- [[reference_kids2_laptop]] — Benedict's laptop, reachable via `kids2.local` mDNS when off the home LAN
 - Eva's MSI laptop: `eva milton@192.168.12.202`, key auth, username has a space (must be quoted in ssh commands: `"eva milton@192.168.12.202"`)
