@@ -106,6 +106,10 @@ Check Indeed: https://www.indeed.com/q-cable-technician-l-lancaster,-pa-jobs.htm
 Field service technician.
 Check Indeed: https://www.indeed.com/q-field-technician-l-harrisburg,-pa-jobs.html
 
+**14. ADT — Low Voltage Technician (Job 3020926) — Lancaster, PA area** — **APPLIED 2026-08-03**
+National ADT Low Voltage Tech pay range ~$25.30–$46.98/hr; PA statewide Security Alarm Tech avg ~$26.01/hr ($54,098/yr). Lancaster-specific figure not confirmed.
+https://jobs.adt.com
+
 ---
 
 ## Companies to Monitor (hire periodically)
