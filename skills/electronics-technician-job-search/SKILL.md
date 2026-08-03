@@ -75,7 +75,7 @@ https://careers.agilitihealth.com
 
 ### Electronics Manufacturing / Assembly
 
-**8. ETEMCO — Lancaster, PA** (1370 Arcadia Rd)
+**8. ETEMCO — Lancaster, PA** (1370 Arcadia Rd) — **APPLIED 2026-08-03**
 PCB assembly and contract electronics manufacturing since 1952. YTI grad employer.
 Eric's SMT experience is a direct match.
 https://www.etemco.net/about/careers
