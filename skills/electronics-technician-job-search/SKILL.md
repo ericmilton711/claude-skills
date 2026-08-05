@@ -1,6 +1,6 @@
 # Electronics Technician Job Search
 
-**Last Updated:** 2026-08-03
+**Last Updated:** 2026-08-04
 **Status:** Active search — broadened to all entry-level electronics roles, not just BMET
 
 ---
@@ -41,9 +41,10 @@
 
 ### BMET / Medical
 
-**1. Intelas BMET I — York, PA** — $26–$30/hr
+**1. Intelas BMET I — York, PA** — $25–$36/hr
 Experience preferred, not required. Military training accepted.
-https://careers.compass-usa.com/biomedical-technician-i/job/88CA96BF918C79D0E74E48B1742BB7A4
+**Note (2026-08-04):** individual job-ID links (compass-usa.com, ZipRecruiter) expire fast — use the official careers page and search "York, PA":
+https://www.intelashealth.com/careers/
 
 **2. Penn State Health BMET I — Hershey & Enola, PA** (multiple openings)
 6 months experience OR internship. Military training accepted.
@@ -58,7 +59,8 @@ Phone: 717-945-7451
 
 **4. Penn Medicine BMET I — Lancaster General**
 1 year electromechanical OR completed program with internship.
-https://careers.pennmedicine.org/search/jobs/in/lancaster
+**Checked 2026-08-04:** Eric went through all 16 pages of the Lancaster General careers portal — no BMET or electronics-related openings currently listed. Recheck periodically, don't treat as active lead for now.
+https://careers.pennmedicine.org/search/lancaster-general-hospital/jobs
 
 **5. UPMC BMET — Harrisburg**
 Meeting happened 2026-07-16, was general vet info session. Still worth checking careers page.
@@ -81,9 +83,8 @@ Eric's SMT experience is a direct match.
 https://www.etemco.net/about/careers
 Email: information@etemco.net | Phone: 717-393-9653
 
-**9. ACT Power (Advanced Conversion Technology) — Middletown, PA**
-Electronic assemblers for PCBs, CCAs, through-hole and SMT. IPC-610 experience valued.
-Check Indeed for current postings: https://www.indeed.com/q-electronic-assembler-l-york,-pa-jobs.html
+**9. ACT Power (Advanced Conversion Technology) — Middletown, PA** — **APPLIED 2026-08-04**
+Electronics Test Technician. Pays $24-27/hr, below Eric's $28/hr minimum, but applied anyway (ESOP, DoD niche, growth potential).
 
 ### Defense / Test Technician
 
@@ -91,6 +92,13 @@ Check Indeed for current postings: https://www.indeed.com/q-electronic-assembler
 Test Technician — assembling, testing, troubleshooting TWT and power supply equipment.
 High voltage experience a plus. Likely requires U.S. Person status (Eric qualifies as veteran).
 Check Indeed: https://www.indeed.com/q-electronic-technician-l-lancaster,-pa-jobs.html
+
+### Utility / Test Technician
+
+**15. PPL Electric Utilities — Electrical Test Tech-Trainee — Lancaster, PA** — **APPLIED 2026-08-04**
+Direct match for Eric's 2-year Electronic/Electrical Engineering Technology degree (YTI). Requires passing a validated screening exam + PA driver's license. Temporary trainee role, up to 9 months, IBEW Local 1600 union, based at PPL's Lancaster Service Center.
+**Pay caveat (checked 2026-08-04):** Glassdoor/Indeed list a $51K–$81K/yr band, but that's likely the full Test Tech career band (trainee through senior), not the trainee rate. One source surfaced a $54,537/yr figure specifically — that's ~$26/hr, **below the $28/hr floor**. Trainee pay likely starts near there and steps up after training/certification into the higher end of the band. Could not confirm exact trainee-specific pay directly from PPL's own listing (Glassdoor blocked automated fetch, PPL's iCIMS portal is JS-rendered and didn't return content) — worth asking directly if an interview happens.
+https://careers.pplweb.com/jobs (search "Test Tech")
 
 ### Field Service / Installation
 
@@ -106,9 +114,20 @@ Check Indeed: https://www.indeed.com/q-cable-technician-l-lancaster,-pa-jobs.htm
 Field service technician.
 Check Indeed: https://www.indeed.com/q-field-technician-l-harrisburg,-pa-jobs.html
 
-**14. ADT — Low Voltage Technician (Job 3020926) — Lancaster, PA area** — **APPLIED 2026-08-03**
-National ADT Low Voltage Tech pay range ~$25.30–$46.98/hr; PA statewide Security Alarm Tech avg ~$26.01/hr ($54,098/yr). Lancaster-specific figure not confirmed.
+**14. ADT — Low Voltage Technician (Job 3020926) — Lancaster, PA area** — **APPLIED 2026-08-03, NOT ACCEPTED**
+National ADT Low Voltage Tech pay range ~$25.30–$46.98/hr; PA statewide Security Alarm Tech avg ~$26.01/hr ($54,098/yr). Lancaster-specific figure not confirmed. Rejected — do not re-apply.
 https://jobs.adt.com
+
+**16. Melitta Professional Coffee Solutions — Field Service Technician — York, PA**
+$25–27/hr, below Eric's $28/hr floor. Coffee equipment service; electromechanical/electronics troubleshooting transfers.
+Search "Melitta Field Service Technician York PA" on Indeed.
+
+**17. Advantage Sport & Fitness — Field Service Technician — Harrisburg, PA**
+$25–35/hr. Repairs fitness equipment (motors, electronics, controls) — not core electronics but solid pay range.
+Check Indeed.
+
+**18. RS Automation — Control Panel Builder/Industrial Controls Electrician — York, PA (per Indeed, $25–30/hr)**
+**Caveat (checked 2026-08-04):** company's own careers page (rsautomation.net/careers) currently shows only an Albion, NY opening. The York listing on Indeed may be stale — verify directly before applying.
 
 ---
 
@@ -122,9 +141,13 @@ https://jobs.adt.com
 | Teleflex | Wayne (~60 mi) | Medical device mfg | https://teleflex.jobs.net/jobs |
 | Eurofins Lancaster Labs | Lancaster | Lab/QC | https://www.eurofinsus.com/biopharma-services/laboratories/lancaster-laboratories/careers/career-opportunities/ |
 | Fresenius Medical Care | Chambersburg | Medical device | https://jobs.freseniusmedicalcare.com/ |
-| L3Harris | Various PA | Defense electronics | https://careers.l3harris.com/ |
-| ifm prover USA | Lancaster area | Electronics mfg | Check Indeed |
-| Avo Photonics | Lancaster area | Photonics/optics mfg | Check Indeed |
+| ifm prover USA | **Malvern, PA** (corrected 2026-08-04, not Lancaster) | Electronics mfg | https://www.indeed.com/cmp/Ifm-Prover-USA-1 — $21.50–23/hr, below floor, ~30-50mi from Lancaster/York, still in range |
+
+**Check-in 2026-08-04 (nothing currently open that fits):** WellSpan (York) — general careers page only, no BMET-specific posting. Rochling Medical (Denver PA) — only IT Technician and Sales/Marketing Coordinator open. Teleflex, B. Braun, Fresenius — no confirmed current entry-level electronics/BMET opening. Eurofins Lancaster Labs — only lab-prep/sample-registration roles ($17-18/hr, not electronics), skip.
+
+**Removed from monitor list 2026-08-04:**
+- **L3Harris** — PA electronics roles found are in Cranberry Twp (Pittsburgh area, out of range) and require 3+ yrs experience.
+- **Avo Photonics** — corrected location is **Horsham, PA**, a Philadelphia suburb, not Lancaster as previously assumed. Excluded per the no-Philadelphia rule. See Already Ruled Out below.
 
 ---
 
@@ -171,6 +194,9 @@ https://jobs.adt.com
 - **DentalEZ** — Lancaster, PA. Bad reviews. Skip.
 - **Any BMET II role** — requires 3+ years experience Eric doesn't have yet.
 - **Sodexo BMET 1 — Philadelphia** — outside commute range. Any Philadelphia listing is ruled out.
+- **Avo Photonics** — actually located in Horsham, PA (Philadelphia suburb), not Lancaster. Ruled out 2026-08-04.
+- **L3Harris (PA roles)** — Cranberry Twp (Pittsburgh area, out of commute range) and require 3+ yrs experience. Ruled out 2026-08-04.
+- **Munters Field Service Tech (HVAC/Data Center) — Harrisburg** — requires 5+ years HVAC experience, too senior. Ruled out 2026-08-04.
 
 ---
 
