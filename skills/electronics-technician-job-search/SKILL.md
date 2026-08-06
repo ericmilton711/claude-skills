@@ -1,7 +1,23 @@
 # Electronics Technician Job Search
 
-**Last Updated:** 2026-08-04
+**Last Updated:** 2026-08-06
 **Status:** Active search — broadened to all entry-level electronics roles, not just BMET
+
+---
+
+## Job Application Tracker
+
+**CSV file:** `applications.csv` (in this skill folder, synced via git to all machines)
+**Interactive script:** `tracker.py` (in this skill folder)
+
+Run the tracker: `python3 ~/.claude/skills/electronics-technician-job-search/tracker.py`
+
+**Claude Code behavior:**
+- When job search comes up, read `applications.csv` to see current state
+- Eric may update the CSV manually between conversations (on any machine). Treat his edits as truth.
+- When Eric says he applied somewhere, append a row: `company,title,YYYY-MM-DD,applied`
+- When Eric reports a status change (interview, rejected, etc.), update the matching row
+- After any CSV change, commit and push the skills repo so both machines stay in sync
 
 ---
 
