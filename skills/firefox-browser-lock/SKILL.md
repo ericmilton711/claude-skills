@@ -20,11 +20,13 @@ Locks browsers (Firefox, Safari) behind a password prompt. Password is required 
 - **Desktop override:** `~/.local/share/applications/org.mozilla.firefox.desktop`
 - **Deployed:** 2026-06-26
 
-### Benedict's Windows Laptop (192.168.12.239)
+### Benedict's Windows Laptop (kids2, 192.168.12.239 / kids2.local)
 - **Script:** `C:\Users\themi\browser-unlock.ps1`
-- **Shortcuts rewired:** Taskbar pin, Start Menu (Firefox + Firefox Private Browsing)
+- **Shortcuts rewired:** Taskbar pin, Start Menu (Firefox + Firefox Private Browsing), **Public Desktop** (`C:\Users\Public\Desktop\Firefox.lnk`)
 - **Password:** Same as Eric's machines
 - **Deployed:** 2026-07-30
+- **Gap found & fixed 2026-08-06:** the 2026-07-30 deployment only rewired the taskbar pin and Start Menu — it missed the `Firefox.lnk` on `C:\Users\Public\Desktop`, which still pointed straight at `firefox.exe`. Benedict used that icon to get on YouTube without the password. Always check **all three** locations (taskbar, Start Menu, Public Desktop) when deploying or auditing this on Windows.
+- **Microsoft Edge fully disabled 2026-08-06:** rather than wrap Edge, it was blocked outright since a kid only needs one legitimate browser. See "Fully Disabling a Browser (Windows)" below.
 
 ### Rosemary's MacBook Pro — macOS (192.168.12.109)
 - **Script:** `~/.local/bin/browser-unlock`
@@ -394,6 +396,49 @@ killall Dock
 
 ---
 
+## Fully Disabling a Browser (Windows)
+
+For a secondary browser a kid shouldn't use at all (e.g. Edge on a laptop where Firefox is the wrapped, approved browser), it's simpler and more durable to disable it outright rather than wrap it — one less password dialog to maintain, and no shortcut anywhere can accidentally bypass it.
+
+Requires an admin account (check with `whoami /groups` — SSH sessions to an admin-group Windows account over OpenSSH get a real elevated token, no UAC prompt needed).
+
+```powershell
+# 1. Disable Edge's self-update so Windows doesn't silently restore it
+Get-ScheduledTask | Where-Object { $_.TaskName -match "MicrosoftEdgeUpdate" } |
+    ForEach-Object { Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath }
+Stop-Service -Name "edgeupdate","edgeupdatem" -Force -ErrorAction SilentlyContinue
+Set-Service -Name "edgeupdate" -StartupType Disabled -ErrorAction SilentlyContinue
+Set-Service -Name "edgeupdatem" -StartupType Disabled -ErrorAction SilentlyContinue
+
+# 2. Take ownership and rename the real binary (Edge keeps versioned subfolders like
+#    150.0.xxxx.xx\ — but the top-level msedge.exe is the actual launcher, not a stub,
+#    so renaming just this one file is enough to kill every launch path)
+$exe = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+takeown /F $exe /A
+icacls $exe /grant "Administrators:F"
+Rename-Item -Path $exe -NewName "msedge.exe.blocked_by_parent" -Force
+
+# 3. Belt-and-suspenders: block it at the shell level too, in case the binary
+#    ever comes back via a Windows Update component repair
+$key = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+New-Item -Path $key -Force | Out-Null
+New-ItemProperty -Path $key -Name "DisallowRun" -Value 1 -PropertyType DWord -Force
+New-Item -Path "$key\DisallowRun" -Force | Out-Null
+New-ItemProperty -Path "$key\DisallowRun" -Name "1" -Value "msedge.exe" -PropertyType String -Force
+```
+
+**Gotcha:** Edge sometimes already has a stale `msedge.exe.disabled` file sitting in the Application folder from its own in-place update process (a leftover previous-version binary, different file size, owned by `NT AUTHORITY\SYSTEM`) — this is normal and unrelated to this lockdown. Pick a unique name for your renamed file (`msedge.exe.blocked_by_parent`) so `Rename-Item` doesn't collide with it.
+
+**To reverse:** re-enable the two scheduled tasks and the `edgeupdate`/`edgeupdatem` services, rename `msedge.exe.blocked_by_parent` back to `msedge.exe`, and remove the `DisallowRun` registry value.
+
+**Verify it's actually dead**, don't just trust the rename:
+```powershell
+Start-Process "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" -ErrorAction Stop
+# should throw "The system cannot find the file specified."
+```
+
+---
+
 ## Claude Code — Bypass the Lock
 
 When Claude Code needs to open a URL, call Firefox directly to skip the password prompt:
@@ -415,3 +460,5 @@ firefox "http://example.com"
 - Windows version uses Windows Forms for the dialog. Linux version uses zenity (pre-installed on Fedora/GNOME). macOS version uses `osascript` (native AppleScript dialog).
 - To lock terminal launches too: add a shell alias pointing to the wrapper script
 - Adaptable to Chromium/Chrome by changing the browser path and targeting the correct shortcut/desktop file
+- On Windows, audit **every** shortcut location, not just taskbar and Start Menu — `C:\Users\Public\Desktop\*.lnk` and `C:\Users\<user>\Desktop\*.lnk` are easy to miss and were the actual bypass on Benedict's laptop (2026-08-06)
+- A stray, unwrapped browser (Edge, IE) is itself a bypass even if Firefox is locked down — either wrap it too or disable it outright (see "Fully Disabling a Browser" above)
