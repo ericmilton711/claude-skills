@@ -25,6 +25,7 @@ bool sensorConnected = false;
 unsigned long lastSensorRead = 0;
 unsigned long lastWifiCheck = 0;
 int wifiFailCount = 0;
+int selfPingFails = 0;
 
 struct WxData {
   String oTemp = "--";
@@ -236,6 +237,36 @@ void weatherTask(void* param) {
   for (;;) {
     fetchWeather();
     vTaskDelay(pdMS_TO_TICKS(600000));
+  }
+}
+
+void selfPingTask(void* param) {
+  vTaskDelay(pdMS_TO_TICKS(120000));
+  for (;;) {
+    vTaskDelay(pdMS_TO_TICKS(120000));
+    if (otaInProgress || WiFi.status() != WL_CONNECTED) continue;
+    WiFiClient client;
+    bool ok = false;
+    if (client.connect(WiFi.localIP(), 80)) {
+      client.print("GET /health HTTP/1.0\r\nHost: local\r\n\r\n");
+      unsigned long t = millis();
+      while (!client.available() && millis() - t < 5000) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+      }
+      if (client.available()) ok = true;
+      client.stop();
+    }
+    if (ok) {
+      selfPingFails = 0;
+    } else {
+      selfPingFails++;
+      Serial.printf("Self-ping failed (%d/3)\n", selfPingFails);
+      if (selfPingFails >= 3) {
+        Serial.println("Web server unresponsive for 6 minutes - rebooting");
+        delay(100);
+        ESP.restart();
+      }
+    }
   }
 }
 
@@ -701,6 +732,7 @@ void setup() {
   server.on("/chicken-status", handleChickenStatus);
   server.on("/chicken-on", handleChickenOn);
   server.on("/chicken-off", handleChickenOff);
+  server.on("/health", []() { server.send(200, "text/plain", "ok"); });
 
   server.on("/update", HTTP_GET, []() {
     size_t totalLen = strlen(otaPage);
@@ -747,6 +779,9 @@ void setup() {
 
   xTaskCreatePinnedToCore(weatherTask, "weather", 10240, NULL, 1, NULL, 0);
   Serial.println("Weather fetch task started on core 0");
+
+  xTaskCreatePinnedToCore(selfPingTask, "selfping", 4096, NULL, 1, NULL, 0);
+  Serial.println("Self-ping watchdog started on core 0");
 
   // Hardware Task Watchdog: if loop() ever hangs (e.g. a TLS handshake that
   // never returns), the chip resets itself instead of going unreachable until

@@ -1,9 +1,28 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-07-20** — Camera, Voice, and Family Calendar all restored (all three had been accidentally dropped 2026-07-16 in the same commit). See "What Changed 2026-07-20" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-08-08** — Self-ping watchdog added to catch silent web server hangs. See "What Changed 2026-08-08" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
 **Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182.
-**Last Updated:** 2026-07-20
+**Last Updated:** 2026-08-08
+
+---
+
+## What Changed 2026-08-08 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Added self-ping watchdog to catch silent web server hangs.** The existing hardware watchdog only fires when `loop()` stops entirely. The failure on 2026-08-08 was different: `loop()` kept running and petting the watchdog, but `server.handleClient()` silently stopped processing HTTP requests. TCP connections were accepted at the lwIP layer, but no HTTP responses were served. The 2 AM scheduled reboot couldn't fire either, since it runs inside the same broken `loop()`.
+
+### Fix
+A FreeRTOS task (`selfPingTask`) runs on core 0, independent of `loop()`. Every 2 minutes it connects to the ESP32's own IP on port 80 and requests `/health`. If the web server fails to respond 3 consecutive times (6 minutes), it forces `ESP.restart()`. Skips checks during OTA and when WiFi is down. 2-minute grace period after boot.
+
+- New `/health` endpoint returns `"ok"` (200)
+- `selfPingTask` pinned to core 0 with 4KB stack
+- Global `selfPingFails` counter tracks consecutive failures
+
+### Why the existing watchdogs missed this
+- **Hardware WDT (30s):** `loop()` was still running, so it kept getting fed
+- **Heap watchdog (<10KB):** heap was fine
+- **WiFi fail counter (5x):** WiFi was connected, the problem was the WebServer library's internal state
+- **2 AM daily reboot:** runs inside `loop()`, which depends on `getLocalTime()` and `server.handleClient()` both working
 
 ---
 
