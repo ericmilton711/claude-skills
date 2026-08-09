@@ -2,18 +2,25 @@
 
 Locks browsers (Firefox, Safari) behind a password prompt. Password is required every time the browser is launched. The session file is deleted when the browser closes, so closing and reopening always requires the password again. 30-minute session window so links opened mid-browsing don't re-prompt.
 
-**Password hash:** `b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b` (changed 2026-07-14)
+**Password hash:** `bbac07878d5ebfc9079776ce25119974e7f7bb55f9bbad42195d6ee57f3fcc87` (changed 2026-08-09)
 
-**Sync status (2026-07-30):** MacBook Pro — Fedora (.190), Windows laptop (.220), and Benedict's laptop (.239) all use the same hash. Rosemary's MacBook (.109) is unaffected — it uses its own separate password/hash.
+**Sync status (2026-08-09):** MacBook Pro — Fedora (.190), Windows laptop (.219, drifted from .220), and Benedict's laptop (.239) all use the same hash. Rosemary's MacBook (.109) is unaffected — it uses its own separate password/hash.
+
+**Bypass found & NOT YET FIXED (2026-08-09):** Password change alone doesn't stop Benedict — on both his own laptop and Eric's Windows laptop, he's getting a fully unwrapped Firefox with no session token ever being written, meaning he isn't going through the password dialog at all. Two confirmed bypass vectors on Windows:
+1. **`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\firefox.exe`** registry key still points at the real `firefox.exe`. Typing "firefox" into Windows Search or Run (Win+R) launches it directly, no wrapper involved.
+2. **Firefox "Web App" shortcuts** (e.g. `...\Start Menu\Programs\Firefox Web Apps\Google Mail.lnk`, created automatically by Firefox's "Install this site as an app" feature) also launch `firefox.exe` directly with a full, unrestricted window.
+
+These exist independently of the taskbar/Start Menu/Public Desktop shortcuts that were already wrapped — a shortcut-swap approach can never be complete since Windows offers many paths to the real binary. Needs fixing: remove/redirect the App Paths key, delete or rewrap Web App shortcuts, and audit for more (any `.lnk` anywhere targeting `firefox.exe` directly, e.g. via `Get-ChildItem -Recurse -Filter *.lnk`).
 
 ---
 
 ## Deployed On
 
-### Eric's Windows Laptop (192.168.12.220)
+### Eric's Windows Laptop (192.168.12.220, drifts — was .219 on 2026-08-09)
 - **Script:** `C:\Users\ericm\.claude\hooks\browser-unlock.ps1`
 - **Shortcuts rewired:** Taskbar pin, Start Menu (Firefox + Firefox Private Browsing)
 - **Deployed:** 2026-06-27
+- **Password changed 2026-08-09** — Benedict was using this laptop's Firefox directly (confirmed live, 25 firefox.exe processes running, no session token file present at all). Same App Paths / Web-App-shortcut bypass suspected here as on his own laptop — not yet audited on this machine.
 
 ### MacBook Pro — Fedora (192.168.12.190)
 - **Script:** `~/.local/bin/browser-unlock`
@@ -57,7 +64,7 @@ Add-Type -AssemblyName System.Drawing
 
 $SessionFile = "$env:TEMP\browser_unlocked_$env:USERNAME"
 $SessionDuration = 1800
-$StoredHash = "b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b"
+$StoredHash = "bbac07878d5ebfc9079776ce25119974e7f7bb55f9bbad42195d6ee57f3fcc87"
 $Browser = "C:\Program Files\Mozilla Firefox\firefox.exe"
 
 if (Test-Path $SessionFile) {
@@ -183,7 +190,7 @@ $lnk.Save()
 
 SESSION_FILE="/tmp/browser_unlocked_$(whoami)"
 SESSION_DURATION=1800
-STORED_HASH="b7b022764972f70fe086f367d74e3a2b2bd2bde5dc066ca73fbbfef1b74dc85b"
+STORED_HASH="bbac07878d5ebfc9079776ce25119974e7f7bb55f9bbad42195d6ee57f3fcc87"
 BROWSER="/usr/bin/firefox"
 
 if [ -f "$SESSION_FILE" ]; then
