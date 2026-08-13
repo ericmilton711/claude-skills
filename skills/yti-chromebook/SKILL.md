@@ -24,6 +24,14 @@ Right after the unrestrict, the Chromebook couldn't load anything, including Hom
 
 **Why this happens:** the T-Mobile gateway (TMO-G5AR, `192.168.12.1`) has **no configurable web UI at all** — screenshotted 2026-08-13, it's just a status page and a support/FAQ page, no login wall, no network/DHCP settings. All gateway config (if any exists) is app-only via T-Mobile's mobile app. That means Pi-hole DNS routing for every kid device on this network is enforced entirely by a **manual per-device DNS override**, not router DHCP options — and this override can apparently reset itself over time (cause unclear — possibly a ChromeOS network profile reset). If this device (or any other kid device) reports "no internet" or shows unfiltered browsing again, check its on-device DNS setting first, before touching Pi-hole or the router.
 
+## Ad popups incident (2026-08-13)
+
+Right after being made permanently unrestricted, the Chromebook's browser started showing heavy ad popups ("windows keep popping up" — literal popup windows, not a figure of speech). Cause: group 14 has zero *domain* rules (by design, for the unrestrict), but it also wasn't a member of any *adlist* (gravity blocklist) group — Pi-hole's only adlist (StevenBlack hosts, ~97k ad/malware/tracker domains) was assigned to group 0 only, not group 14. So this device got no ad/tracker blocking at all.
+
+**Fix:** added group 14 to that adlist's `groups` array via `PUT /api/lists/<url-encoded-address>?type=block`, then ran `docker exec pihole pihole -g` on the ThinkCentre to regenerate the gravity database (NOT `pihole updategravity` — that's not a real subcommand, it just prints help; the correct command is `pihole -g`). Confirmed popups stopped after this.
+
+**Key takeaway:** domain rules (site-level allow/deny) and adlists (bulk ad/tracker blocklists) are separate axes in Pi-hole v6, each with their own `groups` array. "Permanently unrestricted" should mean no domain-level site blocking, but it's still worth keeping ad/tracker blocklists applied — that's not a content restriction, it's just decluttering. Check both axes when a group's behavior seems off.
+
 ## Reimage / enrollment considerations
 
 Eric wants to eventually Powerwash this Chromebook (Ctrl+Alt+Shift+R at sign-in → Restart → Powerwash) for a fresh start — not to escape restrictions, just routine cleanup before returning the device to YTI.
