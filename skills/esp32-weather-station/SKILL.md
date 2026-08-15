@@ -513,6 +513,27 @@ If upload fails: hold BOOT, press+release EN/RST, release BOOT, upload within a 
 
 **NEVER use `esptool erase_flash`** — wipes NVS, causes boot loops, loses network state.
 
+## Baseline Restore (Disaster Recovery) — added 2026-08-15
+
+A known-good firmware snapshot is kept in two places so a bad future change can be undone in ~30 seconds without recompiling:
+
+- **ThinkCentre:** `/home/milton/MILTONHAUS Weather Reset Script/` — `esp32-weather.ino` (source), `esp32-weather.ino.bin` (pre-compiled), `restore-baseline.sh`, `README.txt`
+- **Eric's laptop:** `~/esp32-weather-backups/2026-08-15-baseline/` — same `.ino` + `.bin`, plus `~/esp32-weather-backups/restore-baseline.sh`
+
+**To restore**, from a terminal on either machine (or any computer on the MILTONHAUS LAN):
+```bash
+"/home/milton/MILTONHAUS Weather Reset Script/restore-baseline.sh"   # on the ThinkCentre
+# or
+~/esp32-weather-backups/restore-baseline.sh                          # on Eric's laptop
+```
+It uploads the saved `.bin` via OTA to `192.168.12.240` and confirms `/health` responds afterward. Verified working 2026-08-15 (uptime/heap reset confirmed a real reboot, dashboard theme + Tailscale fix + chicken-status all intact post-restore).
+
+**Two recovery tiers, per the README on the ThinkCentre:**
+1. **Software restore** (dashboard reachable but broken) — run `restore-baseline.sh` above.
+2. **Hard power-cycle** (fully unresponsive, OTA has nothing to talk to) — toggle the "MILTONHAUS Weather Dashboard" device off/on in the Smart Life app (it's a Feit outdoor WiFi/Tuya plug at `192.168.12.162`, see `miltonhaus-devices` skill). Physically unplugging that same plug is the fallback if the app itself can't reach it.
+
+**Keeping the baseline current:** whenever a firmware change is confirmed working, re-copy it into both baseline locations (`.ino` + freshly compiled `.bin`) so the "restore" point tracks the latest known-good state, not this one snapshot forever.
+
 ## JSON API
 
 `GET /data` returns:
