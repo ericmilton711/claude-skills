@@ -241,16 +241,16 @@ void weatherTask(void* param) {
 }
 
 void selfPingTask(void* param) {
-  vTaskDelay(pdMS_TO_TICKS(120000));
+  vTaskDelay(pdMS_TO_TICKS(60000));
   for (;;) {
-    vTaskDelay(pdMS_TO_TICKS(120000));
+    vTaskDelay(pdMS_TO_TICKS(30000));
     if (otaInProgress || WiFi.status() != WL_CONNECTED) continue;
     WiFiClient client;
     bool ok = false;
     if (client.connect(WiFi.localIP(), 80)) {
       client.print("GET /health HTTP/1.0\r\nHost: local\r\n\r\n");
       unsigned long t = millis();
-      while (!client.available() && millis() - t < 5000) {
+      while (!client.available() && millis() - t < 3000) {
         vTaskDelay(pdMS_TO_TICKS(50));
       }
       if (client.available()) ok = true;
@@ -260,9 +260,9 @@ void selfPingTask(void* param) {
       selfPingFails = 0;
     } else {
       selfPingFails++;
-      Serial.printf("Self-ping failed (%d/3)\n", selfPingFails);
-      if (selfPingFails >= 3) {
-        Serial.println("Web server unresponsive for 6 minutes - rebooting");
+      Serial.printf("Self-ping failed (%d/4)\n", selfPingFails);
+      if (selfPingFails >= 4) {
+        Serial.println("Web server unresponsive for 2 minutes - rebooting");
         delay(100);
         ESP.restart();
       }
@@ -512,7 +512,7 @@ const char page[] PROGMEM = R"rawliteral(
     <div class="overlay-header">
       <h2 id="kidOverlayName">...</h2>
       <div style="display:flex;align-items:center;gap:12px;">
-        <a href="http://192.168.12.136:8181/kids-admin" target="_blank" style="color:#d8b45c;font-size:0.85rem;text-decoration:none;display:flex;align-items:center;gap:5px;"><svg class="icon" viewBox="0 0 24 24"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</a>
+        <a href="#" onclick="window.open('http://'+thinkcentreHost()+':8181/kids-admin','_blank');return false;" style="color:#d8b45c;font-size:0.85rem;text-decoration:none;display:flex;align-items:center;gap:5px;"><svg class="icon" viewBox="0 0 24 24"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit</a>
         <button class="close-btn" onclick="closeKid()">Back</button>
       </div>
     </div>
@@ -548,10 +548,11 @@ const char page[] PROGMEM = R"rawliteral(
   var kidsData=[];
   var kidsWeekStart='';
   function mondayKey(d){var day=d.getDay();var diff=(day===0?-6:1-day);var m=new Date(d);m.setDate(d.getDate()+diff);return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0');}
-  function saveKids(){fetch('http://192.168.12.136:8181/kids/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kids:kidsData,weekStart:kidsWeekStart})}).catch(function(){});}
-  function loadKids(){fetch('http://192.168.12.136:8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[];var wk=mondayKey(new Date());if(d.weekStart!==wk){kidsData.forEach(function(k){k.choreDone={};});kidsWeekStart=wk;saveKids();}else{kidsWeekStart=wk;}}).catch(function(){});}
+  function thinkcentreHost(){var h=window.location.hostname;return h.indexOf('192.168.')===0?'192.168.12.136':h;}
+  function saveKids(){fetch('http://'+thinkcentreHost()+':8181/kids/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kids:kidsData,weekStart:kidsWeekStart})}).catch(function(){});}
+  function loadKids(){fetch('http://'+thinkcentreHost()+':8181/kids').then(function(r){return r.json()}).then(function(d){kidsData=d.kids||[];var wk=mondayKey(new Date());if(d.weekStart!==wk){kidsData.forEach(function(k){k.choreDone={};});kidsWeekStart=wk;saveKids();}else{kidsWeekStart=wk;}}).catch(function(){});}
   loadKids();setInterval(loadKids,120000);
-  function loadCalendar(){fetch('http://192.168.12.136:8182/calendar').then(function(r){return r.json()}).then(function(d){var el=document.getElementById('calEvents');if(!d.events||!d.events.length){el.innerHTML='<div class="event-row placeholder"><span class="event-title">No events today</span></div>';return;}var h='';for(var i=0;i<d.events.length;i++){var ev=d.events[i];h+='<div class="event-row"><span class="event-time">'+ev.time+'</span><span class="event-title">'+ev.title+'</span></div>';}el.innerHTML=h;}).catch(function(){document.getElementById('calEvents').innerHTML='<div class="event-row placeholder"><span class="event-title">Calendar offline</span></div>';});}
+  function loadCalendar(){fetch('http://'+thinkcentreHost()+':8182/calendar').then(function(r){return r.json()}).then(function(d){var el=document.getElementById('calEvents');if(!d.events||!d.events.length){el.innerHTML='<div class="event-row placeholder"><span class="event-title">No events today</span></div>';return;}var h='';for(var i=0;i<d.events.length;i++){var ev=d.events[i];h+='<div class="event-row"><span class="event-time">'+ev.time+'</span><span class="event-title">'+ev.title+'</span></div>';}el.innerHTML=h;}).catch(function(){document.getElementById('calEvents').innerHTML='<div class="event-row placeholder"><span class="event-title">Calendar offline</span></div>';});}
   loadCalendar();setInterval(loadCalendar,300000);
   function toggleChore(ki,ci,el){var k=kidsData[ki];if(!k)return;var chore=k.chores[ci];if(!k.choreDone)k.choreDone={};k.choreDone[chore]=el.checked;saveKids();}
   function showKid(i){var k=kidsData[i]||{name:'---',chores:[],schedule:''};document.getElementById('kidOverlayName').textContent=k.name;var ch=(k.chores&&k.chores.length)?k.chores.map(function(c,ci){var done=k.choreDone&&k.choreDone[c];return'<label class="chore-item'+(done?' chore-done':'')+'"><input type="checkbox" class="chore-check"'+(done?' checked':'')+' onchange="toggleChore('+i+','+ci+',this)"><span>'+c+'</span></label>';}).join(''):'<div class="overlay-loading">No chores listed yet &mdash; tap Edit to add some.</div>';var sc=k.schedule?'<div class="schedule-text">'+k.schedule.split('\n').map(function(l){return l.trim()?'<p>'+l+'</p>':''}).join('')+'</div>':'<div class="overlay-loading">No schedule listed yet &mdash; tap Edit to add one.</div>';document.getElementById('kidDetail').innerHTML='<div class="kid-section"><div class="kid-section-title">Daily Chores</div>'+ch+'</div><div class="kid-section"><div class="kid-section-title">Work Schedule</div>'+sc+'</div>';document.getElementById('kidOverlay').className='overlay open';}
@@ -732,7 +733,10 @@ void setup() {
   server.on("/chicken-status", handleChickenStatus);
   server.on("/chicken-on", handleChickenOn);
   server.on("/chicken-off", handleChickenOff);
-  server.on("/health", []() { server.send(200, "text/plain", "ok"); });
+  server.on("/health", []() {
+    String h = "ok heap=" + String(ESP.getFreeHeap()) + " uptime=" + String(millis() / 1000) + "s";
+    server.send(200, "text/plain", h);
+  });
 
   server.on("/update", HTTP_GET, []() {
     size_t totalLen = strlen(otaPage);

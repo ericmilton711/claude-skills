@@ -1,9 +1,33 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-08-08** — Self-ping watchdog added to catch silent web server hangs. See "What Changed 2026-08-08" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-08-15** — Self-ping watchdog tightened (2 min detection, was 6), /health now reports heap+uptime, Tailscale hostname fix restored. ThinkCentre external monitor rewritten (was silently broken — see "What Changed 2026-08-15"). See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
-**Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182.
-**Last Updated:** 2026-08-08
+**Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182. Powered through a Feit outdoor WiFi (Tuya) smart plug named "MILTONHAUS Weather Dashboard" in the Smart Life app — separate from the grow-light plug in `home-assistant-plant-monitoring`.
+**Last Updated:** 2026-08-15
+
+---
+
+## What Changed 2026-08-15 (DEPLOYED — flash: 58% / RAM: 16%)
+
+**Fixed two divergent local .ino copies, tightened the self-ping watchdog, restored a regressed Tailscale fix, and fixed a completely broken ThinkCentre-side monitor.** Triggered by Eric reporting recurring "dashboard looks old / chicken LEDs shows offline" incidents "once or twice a week."
+
+### What was actually wrong
+1. **`~/esp32-weather/esp32-weather.ino` (working copy) was stale** (Jul 24) vs **`~/.claude/skills/esp32-weather-station/esp32-weather.ino`** (skills copy, Aug 9, actually deployed) — the working copy was missing the self-ping watchdog and battery/blink status entirely. The two copies had diverged in *opposite* directions: the working copy had the `thinkcentreHost()` Tailscale-safe hostname fix (2026-07-24), the skills copy had newer features but had **regressed** back to hardcoded `192.168.12.136` for kids chores/calendar (breaking them over Tailscale again). Merged both forward into one canonical file and overwrote the working copy with it — keep them in sync going forward, this has now drifted and been caught twice.
+2. **Self-ping watchdog window was too slow to matter.** It needed 3 consecutive fails at a 2-min interval (6 min) before forcing `ESP.restart()`. Live testing during this session showed the actual failure mode is often a **brief (~30-60s) self-resolving hang** — well under that threshold, so it never triggered a reboot or got logged; it just looked broken to Eric in the moment on the kiosk display. Tightened to a 30s interval / 4 fails (~2 min detection).
+3. **`/health` was a bare `"ok"` string** — no way to diagnose *why* it hangs (heap? uptime correlation?). Now returns `"ok heap=<bytes> uptime=<seconds>s"`.
+4. **The ThinkCentre's `esp32-watchdog.sh` (cron `*/5 * * * *`) was silently broken in three ways** and had been for its entire history: (a) `log()` used unquoted `$(date +%Y-%m-%d %H:%M:%S)` — the unquoted space splits into two args to `date`, which errors, so **every log line had a blank/missing timestamp**; (b) `log()` only captured `$1` of an unquoted multi-word message, so every line just read `DOWN:` or `SICK:` with no detail; (c) the healthy-path log line, `log OK: ESP32 healthy (HTTP $HTTP_CODE)`, has unquoted parens — a **hard bash syntax error** that crashed the script every single time it reached that branch, silently, with no log entry and no alert. Net effect: **zero successful checks were ever recorded** in ~4705 log lines, even though the device was independently confirmed healthy during this session — the log only ever captured failures, and told you nothing about frequency, timing, or the real up/down ratio.
+
+### Fix
+- Rewrote `/home/milton/esp32-watchdog.sh` from scratch: proper quoting throughout, real timestamps, full messages, and **ntfy push alerts on every state transition** (down/sick/recovered) via `/home/milton/notify.sh` instead of a log nobody reads. State tracked in `/tmp/esp32-weather-state`.
+- Moved its cron entry from `*/5 * * * *` to `* * * * *` (every minute) to match the tightened firmware-side detection window.
+- Old broken log preserved as `~/esp32-watchdog.log.old-broken` on the ThinkCentre (not deleted, but not trustworthy for frequency analysis — treat pre-2026-08-15 history as unknown).
+- Verified end-to-end: manual test run logged a correct timestamped state change, and a live test `notify.sh` push arrived on Eric's phone within seconds.
+
+### Device identity correction
+The MAC `fc:3c:d7:62:b5:6c` was recorded in `miltonhaus-devices` as the Raspberry Pi "MILTONRP3" (secondary Pi-hole) at `.162`. Live ARP + port probe (Tuya port 6668 open, no HTTP on 80, TTL 255) confirms **`192.168.12.162` is actually the Feit/Tuya smart plug** that powers this ESP32, not the Pi. The device inventory needs correcting — see `miltonhaus-devices` skill (not yet updated as of this writing; flag if the Pi's real current IP is needed).
+
+### Deferred
+Eric wants an eventual hard power-cycle failsafe (cut power via this same Tuya plug if even the tightened self-ping/external monitor can't recover it) for hang modes no software watchdog can escape. Needs a free Tuya IoT Cloud developer account linked to the Smart Life app to extract the plug's local key (`tinytuya` is already installed on the ThinkCentre, ready to go). Eric deferred the account-linking step — pick back up by walking through iot.tuya.com Cloud Project creation + Smart Life app linking, then `python3 -m tinytuya wizard`.
 
 ---
 
@@ -457,6 +481,8 @@ Logic: if the page itself was loaded from a `192.168.*` address (LAN), talk to d
 The camera/audio streams needed dedicated proxies added on the ThinkCentre since they're infinite streams (MJPEG/WAV) — see `picam-camera-server` skill's "Remote Access (Tailscale)" section for `camera-proxy.service`/`audio-proxy.service` (ports 8241/8242). The calendar and kids-chores services didn't need a new proxy — they already bind `0.0.0.0`, so they're reachable directly via the ThinkCentre's Tailscale IP once the JS stopped hardcoding the LAN IP.
 
 **Re-regression 2026-07-28:** `camBase()` was missing again from the live firmware — `showCam()` had hardcoded LAN IPs (`192.168.12.211:8080/8081`), breaking camera and audio over Tailscale. Re-added `camBase()` and OTA-flashed. The sketch in `~/esp32-weather/` was also stale (no audio element at all), so it was replaced with the skills copy before compiling.
+
+**Re-regression #3, 2026-08-15:** `thinkcentreHost()` was gone again — `saveKids()`/`loadKids()`/`loadCalendar()`/the kids-admin Edit link were all back to hardcoded `192.168.12.136`. Same root cause as before: the two `.ino` copies drifted independently (see "What Changed 2026-08-15" above) and whichever one got flashed didn't have the fix. Third time this exact class of regression has happened. If it happens a 4th time, stop patching the symptom and instead diff the two `.ino` files as a mandatory pre-flash check, every time, no exceptions.
 
 **If something like this breaks again:** rule out browser caching first — the ESP32 doesn't send `Cache-Control` headers on the dashboard page, so a phone browser can serve a stale cached copy (with old JS) even after the firmware's been reflashed with a fix. A hard refresh / clear-cache resolved exactly this during the 2026-07-24 fix. Also verify `~/esp32-weather/esp32-weather.ino` matches `~/.claude/skills/esp32-weather-station/esp32-weather.ino` — there are two copies and they can drift.
 
