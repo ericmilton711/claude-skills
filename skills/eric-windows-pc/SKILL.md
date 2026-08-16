@@ -1,6 +1,6 @@
 # Eric's Windows PC ("Eric" / Eric.lan)
 
-**Last Updated:** 2026-08-06
+**Last Updated:** 2026-08-16
 
 ---
 
@@ -9,7 +9,7 @@
 - **Hostname:** Eric
 - **Username:** ericm
 - **Password:** 645866
-- **Home network IP:** 192.168.12.220 (was .219, drifts — see `skills/miltonhaus-devices/SKILL.md`)
+- **Home network IP:** drifts between .219 and .220 — confirmed back at 192.168.12.219 on 2026-08-16 (was recorded as .220 before that). See `skills/miltonhaus-devices/SKILL.md`. Don't trust `ping` to check either address — Windows 11 blocks ICMP by default; use SSH directly instead.
 - **OS:** Windows 11
 - **Python:** 3.12.10, installed at `C:\Users\ericm\AppData\Local\Programs\Python\Python312\`. Both `python` and `python3` work from a terminal.
 
@@ -30,6 +30,9 @@ When Eric is away from the MILTONHAUS network with this laptop, it's still disco
 
 - **Desktop:** resume (`Eric C Milton 2026 Resume.docx`), cover letter, DD-214, externship timesheets, `Job Search Links.docx` (older, superseded by the tracker below).
 - **`C:\Users\ericm\`** (home dir root): a bunch of personal Python scripts (`homestead.py`, `blink.py`, `genqr.py`, etc.) — this is where scripts should go if Eric wants to just `cd` into a fresh terminal and run `python3 <script>.py` with no path, since a new terminal opens here by default.
+
+### Added 2026-08-16
+- **`C:\Users\ericm\esp32-weather-backups\`** — Windows copy of the ESP32 weather station firmware baseline restore kit (`restore-baseline.ps1`, `esp32-weather.ino`, `esp32-weather.ino.bin`, `README.txt`). See `esp32-weather-station` skill's "What Changed 2026-08-16" for full details and the other 3 copies (ThinkCentre private + Samba share, Eric's Fedora laptop).
 
 ### Added 2026-08-06
 - **`Desktop\Job Hunt Tracker.md`** — snapshot of the `electronics-technician-job-search` skill content, sent over for offline viewing on this laptop.

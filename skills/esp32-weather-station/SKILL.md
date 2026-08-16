@@ -1,9 +1,41 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-08-15** — Self-ping watchdog tightened (2 min detection, was 6), /health now reports heap+uptime, Tailscale hostname fix restored. ThinkCentre external monitor rewritten (was silently broken — see "What Changed 2026-08-15"). See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-08-16** — Underlying WiFi instability is NOT fixed: the ESP32 is self-restarting every 10-50 min all night (the 2026-07-16 self-heal fix is working, just triggering constantly). Watchdog notification spam quieted via debounce. Baseline restore now also available on Eric's Windows PC. See "What Changed 2026-08-16" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
 **Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182. Powered through a Feit outdoor WiFi (Tuya) smart plug named "MILTONHAUS Weather Dashboard" in the Smart Life app — separate from the grow-light plug in `home-assistant-plant-monitoring`.
-**Last Updated:** 2026-08-15
+**Last Updated:** 2026-08-16
+
+---
+
+## What Changed 2026-08-16
+
+**Root-caused a phone-battery-draining ntfy notification spam issue, debounced the watchdog, and fixed/expanded the baseline restore tooling.** Triggered by Eric showing a screenshot of ~15 "Weather ESP32 DOWN"/"recovered" notifications overnight, saying it was draining his phone battery.
+
+### What was actually wrong
+1. **The ESP32 isn't just dropping pings — it's actually rebooting every 10-50 minutes, all night.** `esp32-watchdog.log` on the ThinkCentre shows every "recovered" event reporting `uptime=30-190s` — a fresh boot, not a transient hiccup. The 2026-07-16 self-restart-after-5-failed-reconnects fix (see "What Changed 2026-07-16") is working exactly as designed (no more permanent wedge), but it's being triggered far more often than expected, meaning the underlying WiFi instability is much worse than assumed. **This is still unresolved** — worth checking signal/interference near the station, or lengthening the BLE/WiFi coexistence interval beyond 30s (see `feedback_esp32_ble_wifi_coexistence` memory).
+2. **`esp32-watchdog.sh` (cron, every minute) notified on every single state flip**, and since each down blip lasted almost exactly one 60s cron cycle before recovering, every reboot produced 2 phone notifications, all night.
+3. **The baseline restore `README.txt` gave instructions that only worked on one specific machine.** It said "run from any computer on the MILTONHAUS network" but then gave the ThinkCentre's absolute path (`/home/milton/MILTONHAUS Weather Reset Script/restore-baseline.sh`) as the command — which doesn't exist on Eric's laptop or Windows PC. Eric hit this directly (`bash: ... No such file or directory`).
+4. **The Samba-shared copy of the reset script folder wasn't actually in the Samba share.** It had been placed at `/home/milton/MILTONHAUS Weather Reset Script/` on the ThinkCentre (a normal home-dir path, not visible over the network), while the actual Samba share root is `/srv/shared/` (see `samba-msi-sharing` skill). Eric said "I don't see it on the Shared files" — correctly, since it wasn't there.
+5. **No Windows version of `restore-baseline.sh` existed**, even though Eric has a Windows PC ("Eric") and the fallback USB-flash instructions already assumed a Windows COM-port workflow.
+
+### Fix
+1. **Debounced `esp32-watchdog.sh`**: added a 2-consecutive-check requirement (`/tmp/esp32-weather-streak`, `/tmp/esp32-weather-confirmed`) before firing a notification, alongside the existing `/tmp/esp32-weather-state`. Filters single-minute reboot blips; still alerts on genuinely sustained (2+ min) outages. Deployed to `/home/milton/esp32-watchdog.sh` on the ThinkCentre, debounce state files reset after deploy.
+2. **Fixed `README.txt`** to give the correct command per machine instead of one path for "any computer":
+   - ThinkCentre: `"/home/milton/MILTONHAUS Weather Reset Script/restore-baseline.sh"`
+   - Eric's laptop: `~/esp32-weather-backups/restore-baseline.sh`
+   - From Eric's laptop, to run the ThinkCentre's copy remotely: `ssh milton@192.168.12.136 '"/home/milton/MILTONHAUS Weather Reset Script/restore-baseline.sh"'`
+   - Eric's Windows PC: `C:\Users\ericm\esp32-weather-backups\restore-baseline.ps1` (PowerShell)
+3. **Moved the reset-script folder into the actual Samba share.** It's now at `/srv/shared/MILTONHAUS Weather Reset Script/` on the ThinkCentre (visible as `\\192.168.12.136\shared\MILTONHAUS Weather Reset Script\` from Windows, or the Nautilus `smb://192.168.12.136/shared` bookmark on Eric's laptop) — confirmed correct `samba_share_t` SELinux context on the copied files. Note: Eric moved this folder around once already while browsing it in Nautilus (it briefly lived inside a `MILTONHAUS Projects` subfolder) — if it's ever "missing" again, check `find /srv/shared -iname '*weather*'` before assuming it was deleted.
+4. **Added `restore-baseline.ps1`** — a PowerShell port of the bash restore script. Key differences from the bash version: uses `$PSScriptRoot` instead of `$(dirname "$0")`, calls `curl.exe` explicitly (bare `curl` in PowerShell resolves to `Invoke-WebRequest`, which doesn't support `--form` the same way), and uses backtick line-continuation instead of `\`. Confirmed Windows 11 ships real `curl.exe` (v8.21.0) at `C:\Windows\System32\curl.exe` — no install needed. Deployed to `C:\Users\ericm\esp32-weather-backups\` on Eric's Windows PC, alongside its own `.ino`/`.ino.bin`/`README.txt` copies (transferred via `scp` over password auth with pexpect — see `windows-ssh-powershell-quirks` skill; the destination folder itself had to be created via `powershell -EncodedCommand` since plain `ssh ... mkdir "C:\Users\..."` silently mis-parsed the backslashes through pexpect's argument splitting).
+5. **Noted Eric's Windows PC had drifted IP** from its recorded `192.168.12.220` to `192.168.12.219` (confirmed via SSH, not ping — Windows blocks ICMP by default). See `eric-windows-pc` skill.
+
+### Baseline restore locations (now 3, previously 2)
+- **ThinkCentre (private):** `/home/milton/MILTONHAUS Weather Reset Script/`
+- **ThinkCentre (Samba share):** `/srv/shared/MILTONHAUS Weather Reset Script/`
+- **Eric's Fedora laptop:** `~/esp32-weather-backups/` (baseline `.ino`/`.bin` in `2026-08-15-baseline/` subfolder — different layout than the other two, which keep everything flat)
+- **Eric's Windows PC:** `C:\Users\ericm\esp32-weather-backups\`
+
+All four copies should have `README.txt` kept in sync — the fix in this section is already propagated to all of them as of 2026-08-16.
 
 ---
 
