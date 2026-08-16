@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include "esp_task_wdt.h"
+#include "esp_system.h"
 
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
@@ -680,6 +681,22 @@ void handleChickenStatus() {
 void handleChickenOn()  { chickenGet("/leds-on");  server.send(200, "text/plain", "ok"); }
 void handleChickenOff() { chickenGet("/leds-off"); server.send(200, "text/plain", "ok"); }
 
+const char* resetReasonStr() {
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:   return "poweron";
+    case ESP_RST_EXT:       return "ext_pin";
+    case ESP_RST_SW:        return "sw_restart";
+    case ESP_RST_PANIC:     return "panic";
+    case ESP_RST_INT_WDT:   return "int_wdt";
+    case ESP_RST_TASK_WDT:  return "task_wdt";
+    case ESP_RST_WDT:       return "other_wdt";
+    case ESP_RST_DEEPSLEEP: return "deepsleep";
+    case ESP_RST_BROWNOUT:  return "brownout";
+    case ESP_RST_SDIO:      return "sdio";
+    default:                return "unknown";
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("\n=== MILTONHAUS Weather Station ===");
@@ -734,7 +751,9 @@ void setup() {
   server.on("/chicken-on", handleChickenOn);
   server.on("/chicken-off", handleChickenOff);
   server.on("/health", []() {
-    String h = "ok heap=" + String(ESP.getFreeHeap()) + " uptime=" + String(millis() / 1000) + "s";
+    char h[112];
+    snprintf(h, sizeof(h), "ok heap=%u uptime=%lus reset=%s rssi=%ddBm",
+             (unsigned)ESP.getFreeHeap(), millis() / 1000, resetReasonStr(), WiFi.RSSI());
     server.send(200, "text/plain", h);
   });
 

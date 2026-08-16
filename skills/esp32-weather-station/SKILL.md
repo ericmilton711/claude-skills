@@ -1,9 +1,26 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-08-16** — Underlying WiFi instability is NOT fixed: the ESP32 is self-restarting every 10-50 min all night (the 2026-07-16 self-heal fix is working, just triggering constantly). Watchdog notification spam quieted via debounce. Baseline restore now also available on Eric's Windows PC. See "What Changed 2026-08-16" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-08-16** — Underlying WiFi instability is NOT fixed: the ESP32 is self-restarting every 10-50 min all night (the 2026-07-16 self-heal fix is working, just triggering constantly). Watchdog notification spam quieted via debounce. `/health` now reports `reset=`/`rssi=` — confirmed reboots are `sw_restart` (repeated WiFi reconnect failure), NOT `panic`/`task_wdt`/`brownout`, so it's not a code hang or power issue. Moved to better ventilation 2026-08-16 but still reproduced afterward (RSSI -69 to -72dBm) — heat is not confirmed as the cause; weak/marginal WiFi signal is the live suspect. Baseline restore now also available on Eric's Windows PC. See "What Changed 2026-08-16 — Reboot diagnostics" and "What Changed 2026-08-16" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
 **Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182. Powered through a Feit outdoor WiFi (Tuya) smart plug named "MILTONHAUS Weather Dashboard" in the Smart Life app — separate from the grow-light plug in `home-assistant-plant-monitoring`.
 **Last Updated:** 2026-08-16
+
+---
+
+## What Changed 2026-08-16 — Reboot diagnostics
+
+**Added `reset=`/`rssi=` to `/health` to diagnose *why* the ESP32 keeps rebooting, instead of just detecting *that* it did.** Triggered by Eric asking about root cause after the notification-spam debounce (below) just quieted the symptom without explaining the underlying WiFi instability flagged in the entry below and in `project_esp32_weather_wifi_crash_fix` memory.
+
+### Change
+- Added `resetReasonStr()` (wraps `esp_reset_reason()`) and exposed `WiFi.RSSI()` on the existing `/health` endpoint. Now returns e.g. `ok heap=197980 uptime=12s reset=sw_restart rssi=-72dBm` instead of just `ok heap=... uptime=...s`. Needed `#include "esp_system.h"`. Used `snprintf` into a fixed `char[112]` buffer rather than `String` concatenation (per the no-String-concat-in-hot-paths rule) even though `/health` itself is low-frequency.
+- Compiled and OTA-flashed from `~/esp32-weather/esp32-weather.ino` (confirmed byte-identical to the skills copy before editing — no drift this time). Re-synced both copies (`.ino` + `firmware.bin`) after flashing.
+
+### Finding
+First real reboot caught with the new fields: `reset=sw_restart rssi=-69dBm`. `sw_restart` means the reboot came from the firmware's own 5-failed-reconnects-in-a-row escalation (see "What Changed 2026-07-16"), **not** `task_wdt`/`panic` (code hang) or `brownout` (power/smart-plug issue). This rules out a code hang or a bad power supply as the direct trigger — the chip really is just failing to re-associate with WiFi repeatedly.
+
+Eric moved the ESP32 to a more ventilated spot the same day (testing the "runs warm, no heatsink" TODO as a possible cause) — RSSI was -72dBm right after the move and -69dBm ~50 min later, and reboots continued on the same 10-40 min cadence either way. **Heat is not confirmed as the cause.** Current leading suspect is weak/marginal WiFi signal (-69 to -72dBm is weak-to-moderate) or 2.4GHz interference between the station and the T-Mobile gateway — not yet root-caused. The T-Mobile gateway's web UI has no config options (see `reference_tmobile_gateway` memory), so channel/interference can't be checked from the router side.
+
+**Next step, not yet done:** watch a `reset=panic` or `reset=brownout` on a future reboot (would reopen the heat/power theories), or try moving the station physically closer to the AP / adding a WiFi extender to test whether stronger signal reduces the reboot frequency.
 
 ---
 
