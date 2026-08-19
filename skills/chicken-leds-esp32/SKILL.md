@@ -1,7 +1,17 @@
 # Chicken LEDs — ESP32 Controller
 
-**Last Updated:** 2026-07-03
-**Status:** ✅ Fully deployed. OTA enabled. Blink endpoint live. Dashboard integrated. Timezone correct. Manual override + ntfy phone notifications active.
+**Last Updated:** 2026-08-19
+**Status:** ⚠ Fully deployed but currently DOWN as of 2026-08-19 — see "What Changed 2026-08-19" below. OTA enabled. Blink endpoint live. Dashboard integrated. Timezone correct. Manual override + ntfy phone notifications active.
+
+---
+
+## What Changed 2026-08-19
+
+**Confirmed fully unreachable — needs a physical power cycle.** Found while debugging an unrelated kids-dashboard issue: `ping 192.168.12.241` returns `Destination Host Unreachable` even from the ThinkCentre itself (not just a timeout — the device isn't answering ARP, i.e. it's not really on the network at all right now, not just a hung web server).
+
+**Why it won't self-heal:** unlike the weather ESP32 (`esp32-weather-station` skill), this firmware has **no WiFi-fail-reboot escalation and no self-ping watchdog** — `setup()` calls `WiFi.begin()` exactly once with no reconnect/restart logic if the connection drops or wedges. The weather ESP32 was hit by the same class of "wedged WiFi driver, nothing escalates to a reboot" bug back on 2026-07-16 and got a fix (force `ESP.restart()` after 5 consecutive failed reconnects); this firmware never got the equivalent fix. Worth porting that pattern over — see the weather station skill's "What Changed 2026-07-16" section for the exact code.
+
+**Fix for right now:** physical power cycle at the coop (unplug/replug, or toggle at the battery/fuse). No software fix is possible while it's this unreachable — OTA needs the web server to be responding, which requires the device to be on the network at all.
 
 ---
 

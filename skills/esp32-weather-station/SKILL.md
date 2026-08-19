@@ -1,9 +1,34 @@
 # ESP32 Weather Station
 
-> **⚠ CURRENT AS OF 2026-08-16** — Underlying WiFi instability is NOT fixed: the ESP32 is self-restarting every 10-50 min all night (the 2026-07-16 self-heal fix is working, just triggering constantly). Watchdog notification spam quieted via debounce. `/health` now reports `reset=`/`rssi=` — confirmed reboots are `sw_restart` (repeated WiFi reconnect failure), NOT `panic`/`task_wdt`/`brownout`, so it's not a code hang or power issue. Moved to better ventilation 2026-08-16 but still reproduced afterward (RSSI -69 to -72dBm) — heat is not confirmed as the cause; weak/marginal WiFi signal is the live suspect. Baseline restore now also available on Eric's Windows PC. See "What Changed 2026-08-16 — Reboot diagnostics" and "What Changed 2026-08-16" below. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
+> **⚠ CURRENT AS OF 2026-08-19** — Underlying WiFi instability is NOT fixed and got noticeably worse overnight 2026-08-18→19 (dense DOWN/SICK cycles every few minutes around 6-6:30am, vs. the usual 10-50 min cadence). For the first time, a reboot came back as `reset=panic` (a genuine crash) instead of the usual `reset=sw_restart` — worth watching for recurrence, since prior notes only ever saw `sw_restart`. RSSI has also been seen as weak as -81dBm (vs. the -69 to -72dBm range previously recorded), right after a manual power-cycle. Root cause still unconfirmed; heat, weak signal, and now possibly extra HTTP load (this session ran many diagnostic curls + an OTA flash while it was already unstable) are all still on the table. See "What Changed 2026-08-19" below for the kids-dashboard fix shipped this session, and "What Changed 2026-08-16 — Reboot diagnostics" for the diagnostic-fields background. See "What Changed 2026-07-03" for architecture. Dark "Forest" palette via taste-skill (redesigned 2026-07-02).
 
 **Status:** Deployed at 192.168.12.240. Dark "Forest" theme (redesigned 2026-07-02). NWS weather (real station obs). DHT11 reading. Hero temp layout (no boxed card) + glass side panel (indoor gauge, conditions, Chicken Lights segmented toggle) + 3x2 kid chip grid. All emoji replaced with inline-SVG icons. Family calendar (themiltonfam@gmail.com) live via ThinkCentre poller on port 8182. Powered through a Feit outdoor WiFi (Tuya) smart plug named "MILTONHAUS Weather Dashboard" in the Smart Life app — separate from the grow-light plug in `home-assistant-plant-monitoring`.
-**Last Updated:** 2026-08-16
+**Last Updated:** 2026-08-19
+
+---
+
+## What Changed 2026-08-19
+
+**Fixed a kids-dashboard data-loss bug: editing a kid's Work/Activity Schedule or Daily Chores via `/kids-admin` could get silently overwritten by the countertop Fire tablet within about 2 minutes, and vice versa.** Triggered by Eric reporting Benedict's and Evangelina's "work/activity" section reset to a different week and his recent entries were gone.
+
+### Root cause
+`app.py` (ThinkCentre, port 8181) had exactly one save endpoint, `/kids/save`, which did a full `json.dump()` overwrite with whatever JSON it was handed — no merge, no schema. Two different clients called it with two different partial views of the data:
+- `/kids-admin` (the admin page) POSTs only `{name, chores, schedule}` per kid — no `choreDone`, no `weekStart`.
+- The dashboard's own `saveKids()` (fired on every chore-checkbox tap, and on the weekly reset) POSTs its **entire in-memory `kidsData`** — including `chores`/`schedule` as last fetched, which could be stale if fetched before an admin edit (the tablet only polls `/kids` every 2 minutes).
+
+Either save silently wiped out whatever the other endpoint's fields held, and there was no backup/history — `kids.json` was just overwritten in place every time. Confirmed via `journalctl -u kids-dashboard.service`: device `192.168.12.172` (the Fire tablet — see `fire-tablet-kiosk` skill) had POSTed to `/kids/save` four times over Aug 17-18, and Benedict's/Evangelina's `chores` arrays were sitting at bare day-name placeholders (`"Monday:"`, `"Tuesday:"`, etc., nothing after the colon) with empty `choreDone`.
+
+### Fix
+1. **`app.py`:** `save()` now backs up the previous `kids.json` to `/home/milton/kids-dashboard/backups/kids-<timestamp>.json` before every write (keeps last 30). `/kids/save` now merges only `chores`/`schedule` into the existing kid record by name — it can no longer touch `choreDone`/`weekStart`. Added a new `/kids/choredone` endpoint that merges only `choreDone` per kid + top-level `weekStart` — it can no longer touch `chores`/`schedule`, even with a stale payload.
+2. **Firmware (`esp32-weather.ino`):** `saveKids()` changed to POST to `/kids/choredone` with just `{kids:[{name, choreDone}], weekStart}` instead of the old full-array POST to `/kids/save`. `toggleChore()` and the weekly-reset logic in `loadKids()` are unchanged otherwise — they still call `saveKids()`, it just talks to the new endpoint now.
+3. Verified with live test POSTs against both endpoints on the ThinkCentre confirming each only touches its own fields — then restored `kids.json` from the pre-test backup (the test itself briefly overwrote Benedict's real schedule with test data; recovered via the exact backup mechanism just added).
+4. Compiled + OTA-flashed to 192.168.12.240 (58% flash / 16% RAM — unchanged). Confirmed the new firmware serves the updated JS and the tablet (`.172`) continues polling `/kids` with no errors post-flash.
+
+### Baseline refreshed
+Firmware baseline snapshots (see "Baseline Restore" below) updated to 2026-08-19 at all 3 currently-reachable locations (ThinkCentre private + Samba share, Eric's Fedora laptop). Eric's Windows PC was off the network at the time — a new cron job on the ThinkCentre (`/home/milton/sync-windows-baseline.py`, hourly via `0 * * * *`) polls for it and pushes the update automatically the first time it's reachable, then stops (checks a version marker so it doesn't re-copy every hour once synced).
+
+### Unrelated finding from the same session: chicken LED ESP32 fully down
+While debugging the above, confirmed the chicken LED ESP32 (192.168.12.241) is completely unreachable — even the ThinkCentre gets `Destination Host Unreachable`, not just a timeout. Unlike this weather ESP32, `chicken-leds-esp32.ino` has no WiFi-fail-reboot escalation or self-ping watchdog at all (see `chicken-leds-esp32` skill) — needs a manual power cycle at the coop. Worth porting this weather ESP32's 5-fail-reconnect force-restart pattern (see "What Changed 2026-07-16") over to the chicken firmware at some point.
 
 ---
 
@@ -232,10 +257,10 @@ This was built entirely client-side, without touching `kids-dashboard/app.py`, b
 On every `loadKids()` poll (every 2 minutes), the dashboard computes the current week's Monday date. If it doesn't match the `weekStart` stored in `kids.json`, every kid's `choreDone` is cleared and the new `weekStart` is POSTed back via `/kids/save` — so completed chores stay checked all week and clear automatically Sunday night → Monday morning.
 
 ### Toggling
-`toggleChore(kidIndex, choreIndex, checkboxEl)` looks up the chore text from `kidsData` (not from a DOM attribute, to avoid HTML-escaping issues with chore text), flips `choreDone[chore]`, and POSTs the whole `kidsData` array + current `weekStart` back to `/kids/save`.
+`toggleChore(kidIndex, choreIndex, checkboxEl)` looks up the chore text from `kidsData` (not from a DOM attribute, to avoid HTML-escaping issues with chore text), flips `choreDone[chore]`, and POSTs (as of 2026-08-19) just `{name, choreDone}` per kid + current `weekStart` to `/kids/choredone` — see "What Changed 2026-08-19" above.
 
-### Known tradeoff
-If a parent edits the chores list via `/kids-admin` (served by `app.py`, which only sends `{name, chores, schedule}` on save), that save overwrites the kids array and drops `choreDone`/`weekStart` for everyone — so an admin edit resets all check-state for that day. Acceptable since chore edits are infrequent; a proper fix would move this tracking server-side into `app.py` (see `project_thinkcentre_ssh_exec_hang` memory — deferred because SSH exec was down on the ThinkCentre when this was built).
+### Known tradeoff — FIXED 2026-08-19
+~~If a parent edits the chores list via `/kids-admin` (served by `app.py`, which only sends `{name, chores, schedule}` on save), that save overwrites the kids array and drops `choreDone`/`weekStart` for everyone — so an admin edit resets all check-state for that day.~~ No longer true — `/kids/save` (admin) and `/kids/choredone` (tablet) now merge only their own fields server-side, so neither can drop the other's data anymore. See "What Changed 2026-08-19" above for the fix (this also closed the original deferral noted in `project_thinkcentre_ssh_exec_hang` memory — SSH exec on the ThinkCentre is fine now).
 
 ---
 
@@ -298,7 +323,8 @@ OTA is useless when the web server is the thing that's broken. Keep a micro-USB 
 - Runs as `kids-dashboard.service` (systemd, auto-starts on boot)
 - Data stored in `/home/milton/kids-dashboard/kids.json`
 - **Admin page:** `http://192.168.12.136:8181/kids-admin` — edit chores (one per line) + schedule for each kid, hit Save. No Claude Code needed.
-- **API:** `GET /kids` returns JSON, `POST /kids/save` saves JSON (CORS enabled)
+- **API:** `GET /kids` returns JSON. `POST /kids/save` merges only `chores`/`schedule` per kid by name (admin page). `POST /kids/choredone` merges only `choreDone` per kid + top-level `weekStart` (tablet checkbox taps + weekly reset). Both CORS-enabled. Split 2026-08-19 — see "What Changed 2026-08-19" above; previously a single `/kids/save` endpoint did a full overwrite and either client could silently wipe the other's data.
+- Every save backs up the prior `kids.json` to `/home/milton/kids-dashboard/backups/` first (last 30 kept) — added 2026-08-19.
 - ESP32 dashboard fetches kids data every 2 minutes from `http://192.168.12.136:8181/kids`
 
 ### To update kids' chores/schedule
@@ -562,18 +588,22 @@ If upload fails: hold BOOT, press+release EN/RST, release BOOT, upload within a 
 
 **NEVER use `esptool erase_flash`** — wipes NVS, causes boot loops, loses network state.
 
-## Baseline Restore (Disaster Recovery) — added 2026-08-15
+## Baseline Restore (Disaster Recovery) — added 2026-08-15, refreshed 2026-08-19
 
-A known-good firmware snapshot is kept in two places so a bad future change can be undone in ~30 seconds without recompiling:
+A known-good firmware snapshot is kept in four places so a bad future change can be undone in ~30 seconds without recompiling:
 
-- **ThinkCentre:** `/home/milton/MILTONHAUS Weather Reset Script/` — `esp32-weather.ino` (source), `esp32-weather.ino.bin` (pre-compiled), `restore-baseline.sh`, `README.txt`
-- **Eric's laptop:** `~/esp32-weather-backups/2026-08-15-baseline/` — same `.ino` + `.bin`, plus `~/esp32-weather-backups/restore-baseline.sh`
+- **ThinkCentre (private):** `/home/milton/MILTONHAUS Weather Reset Script/` — `esp32-weather.ino` (source), `esp32-weather.ino.bin` (pre-compiled), `restore-baseline.sh`, `README.txt`
+- **ThinkCentre (Samba share):** `/srv/shared/MILTONHAUS Weather Reset Script/` — same contents, visible over the network
+- **Eric's Fedora laptop:** `~/esp32-weather-backups/2026-08-19-baseline/` — same `.ino` + `.bin`, plus `~/esp32-weather-backups/restore-baseline.sh` (points at this dated subfolder)
+- **Eric's Windows PC:** `C:\Users\ericm\esp32-weather-backups\` (flat, no dated subfolder) — as of 2026-08-19 this one is still the older 2026-08-16 build; the PC was off the network when the others were refreshed. See "Automatic Windows PC sync" below.
 
-**To restore**, from a terminal on either machine (or any computer on the MILTONHAUS LAN):
+**To restore**, from a terminal on any of the above machines:
 ```bash
 "/home/milton/MILTONHAUS Weather Reset Script/restore-baseline.sh"   # on the ThinkCentre
 # or
 ~/esp32-weather-backups/restore-baseline.sh                          # on Eric's laptop
+# or, on Windows PowerShell:
+C:\Users\ericm\esp32-weather-backups\restore-baseline.ps1
 ```
 It uploads the saved `.bin` via OTA to `192.168.12.240` and confirms `/health` responds afterward. Verified working 2026-08-15 (uptime/heap reset confirmed a real reboot, dashboard theme + Tailscale fix + chicken-status all intact post-restore).
 
@@ -581,7 +611,15 @@ It uploads the saved `.bin` via OTA to `192.168.12.240` and confirms `/health` r
 1. **Software restore** (dashboard reachable but broken) — run `restore-baseline.sh` above.
 2. **Hard power-cycle** (fully unresponsive, OTA has nothing to talk to) — toggle the "MILTONHAUS Weather Dashboard" device off/on in the Smart Life app (it's a Feit outdoor WiFi/Tuya plug at `192.168.12.162`, see `miltonhaus-devices` skill). Physically unplugging that same plug is the fallback if the app itself can't reach it.
 
-**Keeping the baseline current:** whenever a firmware change is confirmed working, re-copy it into both baseline locations (`.ino` + freshly compiled `.bin`) so the "restore" point tracks the latest known-good state, not this one snapshot forever.
+**Keeping the baseline current:** whenever a firmware change is confirmed working, re-copy it into all baseline locations (`.ino` + freshly compiled `.bin`) so the "restore" point tracks the latest known-good state, not this one snapshot forever. The Fedora laptop copy lives in a dated subfolder (`YYYY-MM-DD-baseline/`) — when refreshing it, create a new dated subfolder and update `restore-baseline.sh`'s `BASELINE_DIR` line to match, rather than overwriting the old dated folder in place (keeps the folder name honest about what's actually in it). The two ThinkCentre copies and the Windows PC copy are flat (no dated subfolder) — just overwrite the files directly.
+
+### Automatic Windows PC sync — added 2026-08-19
+Eric's Windows PC drifts on/off the network unpredictably (see `eric-windows-pc` skill), so instead of remembering to push a baseline update by hand once it's on, `/home/milton/sync-windows-baseline.py` runs hourly via cron on the ThinkCentre (`0 * * * *`, output logged to `/home/milton/sync-windows-baseline.log`):
+- Does a cheap TCP-connect probe (2s timeout) against both of the Windows PC's known IPs (`.219`/`.220`) — costs nothing when it's off, which is most of the time.
+- If reachable, checks a `.baseline-version` marker file in `C:\Users\ericm\esp32-weather-backups\` against the version baked into the script; skips the copy if it already matches.
+- If it doesn't match, uses `pexpect` (password auth, `ericm`/`645866` — Windows PC has no SSH key auth configured) to `scp` the `.ino`/`.ino.bin`/`README.txt` over and write the new version marker.
+- Writes a local flag file (`/home/milton/.win-baseline-synced-<version>`) once done, so it stops doing even the reachability probe after that version is confirmed synced.
+- **When bumping the baseline again in the future:** update `VERSION` in the script to the new date, and the flag-file check will naturally let it push again once the PC is next reachable.
 
 ## JSON API
 
