@@ -1,6 +1,6 @@
 # Kids Laptops — Pi-hole Parental Controls
 
-**Last Updated:** 2026-06-23
+**Last Updated:** 2026-09-10
 **Status:** Kids1 ✅ Kids2 ✅ Patrick's Chromebook ✅ Tower of Gondor (Kids Research) ✅ Gianna ✅ complete. Ev's Chromebook pending.
 
 ---
@@ -197,7 +197,7 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 0 | Default | All other devices | — | none |
 | 1 | mac-mini | Mac Mini | 192.168.12.163 | same as kids1 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
-| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | **⚠️ Currently in group 6 (unrestricted) for trip — restore to group 3 after** |
+| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids (NO Google — all Google allows removed 2026-09-10) |
 | 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
 | 7 | tower-of-gondor | Tower of Gondor + YTI Chromebook | 192.168.12.160, .219 | default-allow, blocks Google/Spotify/Apple Music |
 | 8 | gianna-laptop | Gianna's Fedora laptop | 192.168.12.226 | **default-allow** — blocks Google + YouTube only, Gmail allowed |
@@ -306,32 +306,33 @@ ssh themi@192.168.12.249
 
 ## Kids2 — Benedict's Windows Laptop (Lenovo V15 G2 IJL)
 
-**Status: ⚠️ Pi-hole restrictions OFF (trip mode, 2026-07-30)**
+**Status: ✅ Restored to group 3 (2026-09-10)**
 
 - IP: 192.168.12.239
 - Hardware: Identical to Kids1 (Lenovo V15 G2 IJL)
 - RAM: 8GB (Kids1 has 16GB)
 - Username: themi
 - Password: 1229
-- Pi-hole group: **Currently group 6 (unrestricted)** — was `kids2` (Group ID: 3)
-- DNS: **DHCP (automatic)** — was static 192.168.12.136
+- Pi-hole group: `kids2` (Group ID: 3)
+- DNS: **Static 192.168.12.136** (fixed 2026-09-10, was pointing at router 192.168.12.1)
 - **LibreOffice 26.2.4.2 installed** (2026-06-23, via winget)
 - **Browser lock installed** (2026-07-30) — same password as Eric's machines, script at `C:\Users\themi\browser-unlock.ps1`
 - **Edge disabled** (2026-07-30) — `msedge.exe` renamed to `msedge.exe.disabled`, Start Menu shortcut removed. Microsoft's uninstaller refuses (exit code 93), so exe was renamed instead. Firefox is the only usable browser.
+- **SSH key auth working** (2026-09-10) — key in `C:\ProgramData\ssh\administrators_authorized_keys` (themi is admin)
+- **Firefox DoH disabled** (2026-09-10) — via registry policy, NOT policies.json
+- **Google allows removed from group 3** (2026-09-10) — google.com, googleapis.com, gstatic.com, gmail.com, etc. all removed. Benedict should NOT have Google access.
+- **Lambert WireGuard DNS** also set to Pi-hole (was 192.168.1.104, metric 5 overrode Wi-Fi DNS)
 
-### To Restore After Trip
-```powershell
-# Move back to group 3 (kids2)
-$auth = Invoke-RestMethod -Uri "http://192.168.12.136/api/auth" -Method Post -ContentType "application/json" -Body '{"password":"645866"}'
-$SID = $auth.session.sid
-$headers = @{ "sid" = $SID; "Content-Type" = "application/json" }
-Invoke-RestMethod -Uri "http://192.168.12.136/api/clients/192.168.12.239" -Method Put -Headers $headers -Body '{"groups":[3]}'
-ssh -i $env:USERPROFILE\.ssh\id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "echo 645866 | sudo -S docker exec pihole pihole reloaddns 2>/dev/null"
-
-# Set DNS back to Pi-hole (run on Benedict's laptop)
-netsh interface ip set dns name="Wi-Fi" static 192.168.12.136
-ipconfig /flushdns
-```
+### Fixes Applied 2026-09-10
+Three issues were preventing Pi-hole from working on this laptop:
+1. **DNS was pointing at the router** (192.168.12.1 via DHCP), not Pi-hole. Fixed with `netsh interface ip set dns "Wi-Fi" static 192.168.12.136`.
+2. **Lambert WireGuard interface** had DNS set to 192.168.1.104 with metric 5 (higher priority than Wi-Fi at metric 35), so Windows used that DNS instead. Fixed with `netsh interface ip set dns "lambert" static 192.168.12.136`.
+3. **Firefox DNS-over-HTTPS** was enabled by default, bypassing system DNS entirely. Disabled via registry:
+   ```
+   reg add "HKLM\SOFTWARE\Policies\Mozilla\Firefox\DNSOverHTTPS" /v Enabled /t REG_DWORD /d 0 /f
+   reg add "HKLM\SOFTWARE\Policies\Mozilla\Firefox\DNSOverHTTPS" /v Locked /t REG_DWORD /d 1 /f
+   ```
+4. **Google was explicitly allowed** in group 3 (25 allow rules including google.com, googleapis.com, gstatic.com regex allows). All removed via Pi-hole API.
 
 ### SSH Access
 
@@ -365,16 +366,10 @@ ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "
 
 ### Allowed Sites
 - Same as Kids1 (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, kiddle.co, supporting CDN domains)
-- **Gmail access** (Google Search and YouTube remain blocked):
-  - `mail.google.com`
-  - `accounts.google.com`
-  - `gmail.com`
-  - `googleapis.com`
-  - `googleusercontent.com`
-  - `gstatic.com`
+- **NO Google access** — all Google allows (google.com, googleapis.com, gstatic.com, gmail.com, googleusercontent.com, etc.) removed from group 3 on 2026-09-10
 - **Britannica** (added 2026-04-17):
   - `britannica.com`, `www.britannica.com`, `cdn.britannica.com`
-  - Supporting: `static.cloudflareinsights.com`, `fonts.googleapis.com`, `www.googleapis.com`, `www.googletagmanager.com`, `launchpad-wrapper.privacymanager.io`, `www.googletagservices.com`, `dev.visualwebsiteoptimizer.com`
+  - Supporting: `static.cloudflareinsights.com`, `launchpad-wrapper.privacymanager.io`, `dev.visualwebsiteoptimizer.com`
 
 ### WireGuard Setup
 - Config: `C:\lambert.conf` (uses direct IP `174.54.51.209:51820` — NOT hostname)
