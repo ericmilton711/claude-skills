@@ -1,20 +1,21 @@
-# Eva's Chat + Email Timer — 9:30-10:30pm Daily Window
+# Eva's Nightly Gmail/Chat Window — 8:45-10:30pm Daily
 
-**Set up:** 2026-07-25
-**Status:** Live. Two independent layers enforce the same window: Pi-hole (network) + a Windows scheduled task (tab-closer).
+**Set up:** 2026-07-25 (originally chat/email only)
+**Updated:** 2026-09-10 (reverted from full unrestrict back to Gmail/Chat only)
+**Status:** Live. Pi-hole cron adds group 13 (Gmail/Chat allows) at 8:45pm, removes it at 10:30pm. Group 9 (default-deny) stays on the whole time, so Search/YouTube remain blocked even during the window. Windows scheduled task still closes Gmail/Chat tabs at 10:30pm as a belt-and-suspenders measure.
 
 ---
 
 ## What this does
 
-Eva (MSI laptop, `eva milton@192.168.12.202`, Pi-hole client_id 13) can only use **Google Chat** and **Gmail** between **9:30pm and 10:30pm** every day. Outside that window both are DNS-blocked. Everything else on her laptop (Docs/Drive/Sheets, Duolingo, homeschool sites, search-engine blocks) is unaffected — this only touches Chat + Gmail.
+Eva (MSI laptop, `eva milton@192.168.12.202`, Pi-hole client_id 13, group 9) gets **Gmail and Google Chat only** between **8:45pm and 10:30pm** every night. Google Search, YouTube, and everything else stays blocked. Outside that window she is locked to group 9 alone (default-deny with only approved educational sites allowed).
 
-This supersedes the "Chat + Gmail always allowed" standing policy that was set earlier the same day (2026-07-25) — see `eva-msi-laptop` skill.
+~~Previous full-unrestrict mode (2026-08-11 to 2026-09-10) removed Eva from all groups, giving full internet. Reverted because Eva was accessing Google Search and YouTube during the window.~~
 
-Two layers, because DNS blocking alone can't cut off an already-open tab immediately:
+Two layers:
 
-1. **Pi-hole (network layer)** — blocks/allows the actual DNS resolution for Chat/Gmail domains. This is the real enforcement; Eva has no access to it.
-2. **Windows Scheduled Task (client layer)** — force-closes any open Gmail/Chat browser tab at 10:30pm sharp, so a session that was open right at the cutoff doesn't linger for a few minutes waiting on DNS caches/connection cycling.
+1. **Pi-hole (network layer)** — adds group 13 (Gmail/Chat domain allows) at 8:45pm on top of group 9. Removes group 13 at 10:30pm. Group 9 stays on permanently, keeping Search/YouTube/everything-else blocked. Eva has no access to the ThinkCentre.
+2. **Windows Scheduled Task (client layer)** — force-closes any open Gmail/Chat browser tab at 10:30pm sharp, so a session that was open right at the cutoff doesn't linger.
 
 ---
 
@@ -41,13 +42,13 @@ Domains moved from group 9 → group 13 (via `PUT /api/domains/allow/regex/<url-
 | `(^\|[.])clients4[.]google[.]com$` | 362 | 9 | **13** |
 | `(^\|[.])mtalk[.]google[.]com$` | 363 | 9 | **13** |
 
-Client 13 (Eva) is a **permanent** member of group 9, and a member of group 13 **only during the 9:30-10:30pm window**. Pi-hole ORs allow-rules across all groups a client belongs to, so being added to group 13 makes the Chat/Gmail domains resolve; removing her from group 13 makes them block again (falls back to group 9's default-deny catch-all).
+Client 13 (Eva) is a **permanent** member of group 9, and a member of group 13 **only during the 8:45-10:30pm window**. Pi-hole ORs allow-rules across all groups a client belongs to, so being added to group 13 makes the Chat/Gmail domains resolve; removing her from group 13 makes them block again (falls back to group 9's default-deny catch-all). Group 9 stays on the whole time, so Search/YouTube/everything-else remains blocked.
 
 ### Cron on ThinkCentre (controls the window)
 
 ```
-30 21 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,13);" && docker exec pihole pihole reloaddns # eva-chat-email open
-30 22 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id=13 AND group_id=13;" && docker exec pihole pihole reloaddns # eva-chat-email close
+45 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,13);" && docker exec pihole pihole reloaddns # eva-open (gmail/chat only)
+30 22 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id=13 AND group_id=13;" && docker exec pihole pihole reloaddns # eva-close (back to group 9 only)
 ```
 
 Check current membership:

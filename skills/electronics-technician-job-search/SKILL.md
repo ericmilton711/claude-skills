@@ -62,11 +62,10 @@ Experience preferred, not required. Military training accepted.
 **Note (2026-08-04):** individual job-ID links (compass-usa.com, ZipRecruiter) expire fast — use the official careers page and search "York, PA":
 https://www.intelashealth.com/careers/
 
-**2. Penn State Health BMET I — Hershey & Enola, PA** (multiple openings)
+**2. Penn State Health BMET I — Hershey & Enola, PA**
 6 months experience OR internship. Military training accepted.
-- https://www.pennstatehealth.org/careers/biomedical-equipment-technician-i-clinical-engineering-2
-- https://www.pennstatehealth.org/careers/biomedical-equipment-technician-i-day-shift-clinical-engineering
-- https://www.pennstatehealth.org/careers/biomed-equipment-technician-clinical-engineering-9
+**Checked 2026-08-06:** No BMET results on careers search. Direct links return "Access denied." No current openings. Recheck periodically.
+https://www.pennstatehealth.org/careers/results
 
 **3. SpiTrex MDI — Lancaster, PA** (medical device manufacturing)
 CNC experience is a direct match. Right in Lancaster.

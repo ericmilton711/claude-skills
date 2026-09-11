@@ -104,7 +104,7 @@ POST /api/domains/allow/exact  — add an exact-match whitelist entry
 | 192.168.12.194 | Ev Chromebook | 6 (ev-temp-unrestricted) |
 | 192.168.12.160 | Tower of Gondor (M900) | 7 (tower-of-gondor) |
 | 192.168.12.226 | Gianna Fedora laptop | 8 (gianna-laptop) |
-| 192.168.12.202 | Eva Windows laptop | 6 (ev-temp-unrestricted) — moved from 9 on 2026-06-13, fully unrestricted |
+| 192.168.12.202 | Eva Windows laptop | 9 (eva-laptop) — restored from group 6 on 2026-09-10; Gmail/Chat via group 13 during 8:45-10:30pm window only |
 | 192.168.12.172 | Fire HD 10 - weather dashboard | 10 (fire-tablet) |
 
 ---
