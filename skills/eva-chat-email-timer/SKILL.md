@@ -1,8 +1,8 @@
-# Eva's Nightly Gmail/Chat Window — 8:45-10:30pm Daily
+# Eva + Benedict Nightly Unrestrict — 8:30-10:30pm Daily
 
-**Set up:** 2026-07-25 (originally chat/email only)
-**Updated:** 2026-09-10 (reverted from full unrestrict back to Gmail/Chat only)
-**Status:** Live. Pi-hole cron adds group 13 (Gmail/Chat allows) at 8:45pm, removes it at 10:30pm. Group 9 (default-deny) stays on the whole time, so Search/YouTube remain blocked even during the window. Windows scheduled task still closes Gmail/Chat tabs at 10:30pm as a belt-and-suspenders measure.
+**Set up:** 2026-07-25 (originally Eva Gmail/Chat only)
+**Updated:** 2026-09-11 (changed to full unrestrict for both Eva AND Benedict, 8:30-10:30pm)
+**Status:** Live. Pi-hole cron moves Eva (client 13) and Benedict (client 3) to group 6 (effectively unrestricted) at 8:30pm, restores them to their normal groups (Eva→9, Benedict→3) at 10:30pm. Previous Gmail/Chat-only timer (group 13) removed since full unrestrict is a superset. Windows scheduled task on Eva's laptop still closes Gmail/Chat tabs at 10:30pm as a belt-and-suspenders measure.
 
 ---
 
@@ -47,16 +47,16 @@ Client 13 (Eva) is a **permanent** member of group 9, and a member of group 13 *
 ### Cron on ThinkCentre (controls the window)
 
 ```
-45 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,13);" && docker exec pihole pihole reloaddns # eva-open (gmail/chat only)
-30 22 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id=13 AND group_id=13;" && docker exec pihole pihole reloaddns # eva-close (back to group 9 only)
+30 20 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id IN (13,3); INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,6),(3,6);" && docker exec pihole pihole reloaddns # eva-benedict-open
+30 22 * * * docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "DELETE FROM client_by_group WHERE client_id IN (13,3); INSERT OR IGNORE INTO client_by_group (client_id, group_id) VALUES (13,9),(3,3);" && docker exec pihole pihole reloaddns # eva-benedict-close
 ```
 
 Check current membership:
 ```bash
 ssh -o BatchMode=yes -i ~/.ssh/id_ed25519 milton@192.168.12.136 \
-  'docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "SELECT * FROM client_by_group WHERE client_id=13;"'
+  'docker exec pihole pihole-FTL sqlite3 /etc/pihole/gravity.db "SELECT * FROM client_by_group WHERE client_id IN (3,13);"'
 ```
-Two rows (9 and 13) = currently inside the window. One row (9 only) = outside the window (blocked).
+During the window: Eva shows group 6, Benedict shows group 6. Outside: Eva shows group 9, Benedict shows group 3.
 
 **Manual override** (e.g. cron already passed for the day but you want to open it now): just run the INSERT/DELETE line directly over SSH, same as the cron body.
 

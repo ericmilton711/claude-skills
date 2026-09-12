@@ -282,7 +282,7 @@ The SSH part is the delivery truck, the quoted part is the package.
 | Device | Open | Close | Added |
 |--------|------|-------|-------|
 | YTI Chromebook (client 11, .219) | 7:00pm daily | 8:30pm daily | 2026-06-18 |
-| Eva (.202) + Benedict (.239) | 1:00pm 2026-06-24 (one-time) | 4:00pm 2026-06-24 (one-time) | 2026-06-23 |
+| Eva (.202) + Benedict (.239) | 8:30pm daily | 10:30pm daily | 2026-09-11 |
 
 Cron entries on ThinkCentre (`crontab -l`):
 ```
