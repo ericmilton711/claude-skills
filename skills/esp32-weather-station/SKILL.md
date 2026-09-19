@@ -544,18 +544,18 @@ firefox --headless --new-instance --profile /tmp/ffprof --window-size=1280,800 \
 
 ### Gotcha: hardcoded LAN IPs break under Tailscale (fixed 2026-07-24)
 
-The dashboard page itself loads fine remotely (proxied via `weather-proxy.service`), but several features made **client-side JS `fetch`/`<img>`/`<a>` calls straight to LAN IPs** (`192.168.12.136` for the ThinkCentre, `192.168.12.211` for the picam Pi) — those are unreachable from a remote Tailscale client, since only port 8240 on the ThinkCentre is proxied, not a full subnet route. Symptom looked like a generic "camera/calendar/chores broken" rather than an obvious network error (e.g. a small broken-image dot for `<img>`).
+The dashboard page itself loads fine remotely (proxied via `weather-proxy.service`), but several features made **client-side JS `fetch`/`<img>`/`<a>` calls straight to LAN IPs** (`192.168.12.136` for the ThinkCentre, `192.168.12.212` for the picam Pi) — those are unreachable from a remote Tailscale client, since only port 8240 on the ThinkCentre is proxied, not a full subnet route. Symptom looked like a generic "camera/calendar/chores broken" rather than an obvious network error (e.g. a small broken-image dot for `<img>`).
 
 Fixed with a shared helper in `esp32-weather.ino`, used everywhere the page talks to the ThinkCentre or picam:
 ```js
 function thinkcentreHost(){var h=window.location.hostname;return h.indexOf('192.168.')===0?'192.168.12.136':h;}
-function camBase(){var h=window.location.hostname;if(h.indexOf('192.168.')===0){return{v:'http://192.168.12.211:8080/',a:'http://192.168.12.211:8081/'};}return{v:'http://'+h+':8241/',a:'http://'+h+':8242/'};}
+function camBase(){var h=window.location.hostname;if(h.indexOf('192.168.')===0){return{v:'http://192.168.12.212:8080/',a:'http://192.168.12.212:8081/'};}return{v:'http://'+h+':8241/',a:'http://'+h+':8242/'};}
 ```
 Logic: if the page itself was loaded from a `192.168.*` address (LAN), talk to devices directly by their LAN IP. Otherwise (any Tailscale IP or MagicDNS hostname — don't hardcode a specific one, it's fragile), reuse whatever hostname the browser used to load the page, since that's the ThinkCentre's Tailscale address it's already reaching. Applies to: family calendar (`:8182/calendar`), kids chores (`:8181/kids`, `:8181/kids/save`, `:8181/kids-admin`), and the camera/audio streams (`camBase()`).
 
 The camera/audio streams needed dedicated proxies added on the ThinkCentre since they're infinite streams (MJPEG/WAV) — see `picam-camera-server` skill's "Remote Access (Tailscale)" section for `camera-proxy.service`/`audio-proxy.service` (ports 8241/8242). The calendar and kids-chores services didn't need a new proxy — they already bind `0.0.0.0`, so they're reachable directly via the ThinkCentre's Tailscale IP once the JS stopped hardcoding the LAN IP.
 
-**Re-regression 2026-07-28:** `camBase()` was missing again from the live firmware — `showCam()` had hardcoded LAN IPs (`192.168.12.211:8080/8081`), breaking camera and audio over Tailscale. Re-added `camBase()` and OTA-flashed. The sketch in `~/esp32-weather/` was also stale (no audio element at all), so it was replaced with the skills copy before compiling.
+**Re-regression 2026-07-28:** `camBase()` was missing again from the live firmware — `showCam()` had hardcoded LAN IPs (`192.168.12.212:8080/8081`), breaking camera and audio over Tailscale. Re-added `camBase()` and OTA-flashed. The sketch in `~/esp32-weather/` was also stale (no audio element at all), so it was replaced with the skills copy before compiling.
 
 **Re-regression #3, 2026-08-15:** `thinkcentreHost()` was gone again — `saveKids()`/`loadKids()`/`loadCalendar()`/the kids-admin Edit link were all back to hardcoded `192.168.12.136`. Same root cause as before: the two `.ino` copies drifted independently (see "What Changed 2026-08-15" above) and whichever one got flashed didn't have the fix. Third time this exact class of regression has happened. If it happens a 4th time, stop patching the symptom and instead diff the two `.ino` files as a mandatory pre-flash check, every time, no exceptions.
 

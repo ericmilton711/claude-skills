@@ -10,16 +10,16 @@ One-way ambient audio only (not two-way intercom), per Eric's request.
 - **Hardware:** generic USB microphone (PCM2902 codec), shows up as ALSA card 1 (`plughw:1,0`) on the Pi 3. **Note:** USB sound card numbers can shift across reboots. If audio goes silent, run `arecord -l` to find the current card number and update `ALSA_DEVICE` in `audio_server.py`.
 - **Service:** `picam-audio.service` — `/home/eric/audio_server.py`, port 8081.
 - **How it works:** a single `arecord` process captures from the mic and an `AudioBroadcaster` fans the PCM chunks to all connected HTTP clients. Each client gets a synthetic streaming-WAV header (oversized bogus data-chunk size, since total length is unknown) followed by the live PCM stream. `arecord` starts on the first client connection and stops when the last client disconnects. Multiple devices can listen simultaneously.
-- **Test:** `curl http://192.168.12.211:8081/ -o test.wav` (a few seconds), then `file test.wav` should say `RIFF ... WAVE audio ... 16 bit, mono 16000 Hz`.
+- **Test:** `curl http://192.168.12.212:8081/ -o test.wav` (a few seconds), then `file test.wav` should say `RIFF ... WAVE audio ... 16 bit, mono 16000 Hz`.
 - **Dashboard integration:** `<audio id="camAudio" autoplay>` in `#camOverlay` in `esp32-weather.ino`; `showCam()` sets its `src` and explicitly calls `.load()`/`.play()` (autoplay attribute alone isn't reliable on mobile Safari for a dynamically-set src), `closeCam()` pauses and clears `src`.
 
 ## Remote Access (Tailscale) — added 2026-07-24
 
-Camera/audio don't work over Tailscale by default because `showCam()` hardcodes the LAN IP `192.168.12.211`, which a remote Tailscale client can't reach (see `esp32-weather-station` skill — remote access only works via a single-port proxy on the ThinkCentre, not a full subnet route).
+Camera/audio don't work over Tailscale by default because `showCam()` hardcodes the LAN IP `192.168.12.212`, which a remote Tailscale client can't reach (see `esp32-weather-station` skill — remote access only works via a single-port proxy on the ThinkCentre, not a full subnet route).
 
 **Fix:** two new streaming reverse-proxy services on the ThinkCentre (100.70.179.60), mirroring `weather-proxy.service` but supporting infinite streams (the existing proxy does a blocking full `read()` which never returns for MJPEG/WAV):
-- `camera-proxy.service` — port 8241 → `http://192.168.12.211:8080` (video)
-- `audio-proxy.service` — port 8242 → `http://192.168.12.211:8081` (audio)
+- `camera-proxy.service` — port 8241 → `http://192.168.12.212:8080` (video)
+- `audio-proxy.service` — port 8242 → `http://192.168.12.212:8081` (audio)
 - Both run `/opt/stream-proxy.py <upstream-url> <port>` (generic chunked passthrough proxy, `ThreadingTCPServer` with `allow_reuse_address=True`).
 
 `camBase()` in `esp32-weather.ino` picks the URL set based on `window.location.hostname`: LAN (`192.168.12.240`) uses the picam IPs directly; Tailscale (`100.70.179.60`) uses the two proxy ports above.
@@ -38,10 +38,10 @@ Camera/audio don't work over Tailscale by default because `showCam()` hardcodes 
 
 ## Network
 
-- **IP:** 192.168.12.211
+- **IP:** 192.168.12.212
 - **Hostname:** picam
 - **User:** eric / 645866
-- **SSH:** `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.211`
+- **SSH:** `ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no eric@192.168.12.212`
 
 ## OS
 
@@ -69,8 +69,8 @@ Note: `vcgencmd get_camera` reports `detected=0` but this is a legacy tool issue
 **Script:** `/home/eric/mjpeg_server.py`
 
 Python HTTP server that captures JPEG frames via `rpicam-still` (640x480, quality 60, vflip+hflip) and serves them as:
-- MJPEG stream at `http://192.168.12.211:8080/` (multipart/x-mixed-replace)
-- Single snapshot at `http://192.168.12.211:8080/snapshot`
+- MJPEG stream at `http://192.168.12.212:8080/` (multipart/x-mixed-replace)
+- Single snapshot at `http://192.168.12.212:8080/snapshot`
 
 Captures at ~2 fps. CORS headers included for cross-origin dashboard access.
 
@@ -101,7 +101,7 @@ Changes in `esp32-weather.ino`:
 
 ```bash
 # SSH in
-ssh -i ~/.ssh/id_ed25519 eric@192.168.12.211
+ssh -i ~/.ssh/id_ed25519 eric@192.168.12.212
 
 # Check camera
 rpicam-hello --list-cameras
@@ -113,7 +113,7 @@ echo 645866 | sudo -S systemctl restart picam-stream.service
 echo 645866 | sudo -S systemctl status picam-stream.service
 
 # Test snapshot
-curl -o test.jpg http://192.168.12.211:8080/snapshot
+curl -o test.jpg http://192.168.12.212:8080/snapshot
 
 # Check mic is detected
 arecord -l
@@ -125,7 +125,7 @@ echo 645866 | sudo -S systemctl restart picam-audio.service
 echo 645866 | sudo -S systemctl status picam-audio.service
 
 # Test audio stream (few seconds of WAV, then inspect with `file`)
-curl --max-time 4 http://192.168.12.211:8081/ -o test.wav
+curl --max-time 4 http://192.168.12.212:8081/ -o test.wav
 
 # Reboot
 echo 645866 | sudo -S reboot
