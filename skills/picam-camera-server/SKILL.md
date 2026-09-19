@@ -97,6 +97,35 @@ Changes in `esp32-weather.ino`:
 10. Added camera overlay button to weather dashboard (OTA flashed)
 11. Fixed upside-down image with `--vflip --hflip` flags
 
+## Troubleshooting — IP Drift & Port Conflicts (2026-09-19)
+
+The Pi's DHCP IP drifted from .211 to .212, breaking the camera on the dashboard, the ThinkCentre Tailscale proxies, and the ESP32 firmware's `camBase()`. Symptoms: camera button shows nothing on phone/tablet, stream URL unreachable.
+
+**Diagnosis steps:**
+1. Ping sweep to find new IP: `for i in $(seq 200 230); do ping -n 1 -w 200 192.168.12.$i > /dev/null 2>&1 && echo "192.168.12.$i is up"; done`
+2. SSH to candidate IPs and check `hostname` — look for `picam`
+3. Verify stream: `curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://<new-ip>:8080/snapshot`
+
+**Port conflict on restart:** `picam-stream.service` uses `socketserver.ThreadingTCPServer` without `SO_REUSEADDR` in the main script, so if the old process is still holding port 8080 when systemd restarts it, the new instance fails with `OSError: [Errno 98] Address already in use` and enters a restart loop. Fix:
+```bash
+echo 645866 | sudo -S systemctl stop picam-stream.service
+echo 645866 | sudo -S systemctl reset-failed picam-stream.service
+echo 645866 | sudo -S killall -9 python3
+echo 645866 | sudo -S fuser -k 8080/tcp
+# wait a few seconds for socket to release
+echo 645866 | sudo -S systemctl start picam-stream.service
+```
+
+**Full update checklist when IP changes:**
+1. Update `picam-camera-server` SKILL.md (this file) — all IP references
+2. Update `esp32-weather-station` SKILL.md — camBase() docs
+3. Update both `.ino` copies (`~/esp32-weather/` and `~/.claude/skills/esp32-weather-station/`) — camBase() function
+4. Update ThinkCentre proxy services: `sudo sed -i 's/OLD_IP/NEW_IP/g' /etc/systemd/system/camera-proxy.service /etc/systemd/system/audio-proxy.service && sudo systemctl daemon-reload && sudo systemctl restart camera-proxy.service audio-proxy.service`
+5. Recompile and OTA flash ESP32: `arduino-cli.exe compile --fqbn esp32:esp32:esp32:PartitionScheme=min_spiffs ~/esp32-weather && curl --max-time 90 --form "update=@%TEMP%\esp32-build\esp32-weather.ino.bin;type=application/octet-stream" http://192.168.12.240/update`
+6. Hard refresh dashboard on phones/tablets (old JS with old IP may be cached)
+7. Update memory files (`ssh_all_devices.md`, `project_pi3b_found.md`)
+8. Commit and push skills repo
+
 ## Remote Commands
 
 ```bash
