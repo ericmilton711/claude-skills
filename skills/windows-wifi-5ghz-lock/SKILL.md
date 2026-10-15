@@ -3,7 +3,7 @@
 Eric's Lenovo (Windows 11, MediaTek Wi-Fi 6 MT7921, interface "Wi-Fi 4").
 
 ## Current State
-**2.4 GHz Only** as of 2026-10-14. Was on 5 GHz since 2026-10-12, switched back due to poor 5 GHz connectivity.
+**Dual Band** as of 2026-10-14. Tried 5G Only (fast but unstable), then 2.4G Only (weak signal, 8.5 Mbps TX), settled on Dual Band (66% signal, 68.5 Mbps TX, 0% packet loss).
 
 ## Diagnosis
 ```powershell
