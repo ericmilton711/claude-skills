@@ -35,7 +35,7 @@ SID=$(curl -s -X POST http://192.168.12.136/api/auth \
 | Device | IP | Normal Group |
 |--------|----|-------------|
 | Patrick's laptop (kids1) | 192.168.12.249 | 2 |
-| Benedict's laptop (kids2) | 192.168.12.239 | 3 |
+| Benedict's laptop (benedict-laptop) | 192.168.12.242 | 17 |
 | Eva's MSI laptop | 192.168.12.202 | 9 |
 | Tower of Gondor | 192.168.12.160 | 7 |
 
@@ -121,7 +121,7 @@ Register-ScheduledTask -TaskName "RestoreBenedictPihole" -Action $action -Trigge
 | Device | IP | Normal Group | API URL |
 |--------|----|-------------|---------|
 | Kids1 (Patrick) | 192.168.12.249 | 2 | `api/clients/192.168.12.249` |
-| Kids2 (Benedict) | 192.168.12.239 | 3 | `api/clients/192.168.12.239` |
+| Benedict | 192.168.12.242 | 17 | `api/clients/192.168.12.242` |
 | Eva's MSI | 192.168.12.202 | 9 | `api/clients/192.168.12.202` |
 | Tower of Gondor | 192.168.12.160 | 7 | `api/clients/192.168.12.160` |
 
@@ -197,7 +197,8 @@ Get-NetAdapterBinding -ComponentId ms_tcpip6 | Where-Object { $_.Enabled } | For
 | 0 | Default | All other devices | — | none |
 | 1 | mac-mini | Mac Mini | 192.168.12.163 | same as kids1 |
 | 2 | kids1 | Kids1 Windows laptop | 192.168.12.249 | standard kids |
-| 3 | kids2 | Kids2 Windows laptop | 192.168.12.239 | standard kids (NO Google — all Google allows removed 2026-09-10) |
+| 3 | kids2 | (legacy, Benedict moved to group 17) | 192.168.12.239 | standard kids (NO Google) |
+| 17 | benedict-laptop | Benedict's Windows laptop | 192.168.12.242 | same as kids2 + musora.com allowed |
 | 4 | patricks-chromebook | Patrick's Chromebook + Tower of Gondor | 192.168.12.221, .160 | standard kids + Britannica |
 | 7 | tower-of-gondor | Tower of Gondor + YTI Chromebook | 192.168.12.160, .219 | default-allow, blocks Google/Spotify/Apple Music |
 | 8 | gianna-laptop | Gianna's Fedora laptop | 192.168.12.226 | **default-allow** — blocks Google + YouTube only, Gmail allowed |
@@ -304,24 +305,25 @@ ssh themi@192.168.12.249
 
 ---
 
-## Kids2 — Benedict's Windows Laptop (Lenovo V15 G2 IJL)
+## Kids2 — Benedict's Windows Laptop (Lenovo 82QY / IdeaPad 3 15ALC6)
 
-**Status: ✅ Restored to group 3 (2026-09-10)**
+**Status: ✅ Moved to dedicated group 17 (2026-11-02)**
 
-- IP: 192.168.12.239
-- Hardware: Identical to Kids1 (Lenovo V15 G2 IJL)
+- IP: 192.168.12.242 (was .239, DHCP drifted as of 2026-11-02)
+- Hardware: Lenovo 82QY (IdeaPad 3 15ALC6, AMD Ryzen)
+- Drive: SK Hynix HFS256GEJ4X112N, 256GB NVMe M.2 2280
 - RAM: 8GB (Kids1 has 16GB)
 - Username: themi
 - Password: 1229
-- Pi-hole group: `kids2` (Group ID: 3)
-- DNS: **Static 192.168.12.136** (fixed 2026-09-10, was pointing at router 192.168.12.1)
+- Pi-hole group: `benedict-laptop` (Group ID: 17) — default-deny with musora.com allowed
+- DNS: **Static 192.168.12.136** (both Wi-Fi and Lambert adapter)
 - **LibreOffice 26.2.4.2 installed** (2026-06-23, via winget)
 - **Browser lock installed** (2026-07-30) — same password as Eric's machines, script at `C:\Users\themi\browser-unlock.ps1`
 - **Edge disabled** (2026-07-30) — `msedge.exe` renamed to `msedge.exe.disabled`, Start Menu shortcut removed. Microsoft's uninstaller refuses (exit code 93), so exe was renamed instead. Firefox is the only usable browser.
-- **SSH key auth working** (2026-09-10) — key in `C:\ProgramData\ssh\administrators_authorized_keys` (themi is admin)
+- **SSH key auth working** (2026-11-02) — key re-added to `C:\ProgramData\ssh\administrators_authorized_keys` with correct public key (ericmilton@fedora). Previous key (ericm@Eric) was wrong.
 - **Firefox DoH disabled** (2026-09-10) — via registry policy, NOT policies.json
 - **Google allows removed from group 3** (2026-09-10) — google.com, googleapis.com, gstatic.com, gmail.com, etc. all removed. Benedict should NOT have Google access.
-- **Lambert WireGuard DNS** also set to Pi-hole (was 192.168.1.104, metric 5 overrode Wi-Fi DNS)
+- **Lambert WireGuard DNS** set to Pi-hole (re-fixed 2026-11-02, had reverted to 192.168.1.104)
 
 ### Fixes Applied 2026-09-10
 Three issues were preventing Pi-hole from working on this laptop:
@@ -333,6 +335,13 @@ Three issues were preventing Pi-hole from working on this laptop:
    reg add "HKLM\SOFTWARE\Policies\Mozilla\Firefox\DNSOverHTTPS" /v Locked /t REG_DWORD /d 1 /f
    ```
 4. **Google was explicitly allowed** in group 3 (25 allow rules including google.com, googleapis.com, gstatic.com regex allows). All removed via Pi-hole API.
+
+### Fixes Applied 2026-11-02
+1. **IP drifted** from .239 to .242 (DHCP). Updated Pi-hole client entry.
+2. **SSH key was wrong** — `administrators_authorized_keys` had `ericm@Eric` key, but Eric's Windows PC uses the `ericmilton@fedora` key. Re-written with correct key via physical access.
+3. **Lambert WireGuard DNS reverted** to 192.168.1.104, causing DNS timeouts. Fixed with `Set-DnsClientServerAddress -InterfaceIndex 39 -ServerAddresses 192.168.12.136`.
+4. **Moved to dedicated Pi-hole group 17** (`benedict-laptop`) — copied all group 3 allow rules plus added musora.com regex allow. Group 0 (Default) has the `.*` deny rule, so "group 0" is NOT unrestricted.
+5. **musora.com** added as regex allow `(^|\.)musora\.com$` in group 17.
 
 ### SSH Access
 
@@ -366,6 +375,7 @@ ssh -tt -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no milton@192.168.12.136 "
 
 ### Allowed Sites
 - Same as Kids1 (homeschoolconnections.com, teachingtextbooks.com, teachingtextbooksapp.com, duolingo.com, kiddle.co, supporting CDN domains)
+- **musora.com** (added 2026-11-02) — regex allow `(^|\.)musora\.com$` in group 17
 - **NO Google access** — all Google allows (google.com, googleapis.com, gstatic.com, gmail.com, googleusercontent.com, etc.) removed from group 3 on 2026-09-10
 - **Britannica** (added 2026-04-17):
   - `britannica.com`, `www.britannica.com`, `cdn.britannica.com`
